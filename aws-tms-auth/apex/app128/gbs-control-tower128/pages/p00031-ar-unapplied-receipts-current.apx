@@ -554,7 +554,7 @@ page 31 (
     pageItem P31_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10

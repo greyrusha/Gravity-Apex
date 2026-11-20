@@ -694,7 +694,7 @@ page 32 (
     pageItem P32_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10
@@ -714,15 +714,8 @@ page 32 (
             alignment: left
         }
         lov {
-            type: sqlQuery
-            sqlQuery:
-                ```sql
-                select d, r from (
-                  select 'TEREX US' d, '1003' r, 1 seq from dual
-                  union all select 'TEREX UK 120','5001',2 from dual
-                  union all select 'TEREX CH','10001',3 from dual
-                ) order by seq
-                ```
+            type: sharedComponent
+            lov: @tms-approved-ledgers
             displayExtraValues: false
             displayNullValue: false
         }

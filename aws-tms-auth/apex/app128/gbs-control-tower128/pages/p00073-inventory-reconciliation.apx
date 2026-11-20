@@ -3225,17 +3225,15 @@ page 73 (
     )
 
     pageItem P73_LEDGER_ID (
-        type: popupLov
+        type: selectList
         label {
             label: Ledger *
             alignment: left
         }
-        settings {
-            displayAs: NOT_ENTERABLE
-        }
         lov {
-            type: sqlQuery
-            sqlQuery: select l.name||' ('||l.currency_code||')' d,to_char(l.ledger_id) r from apps.gl_ledgers@ADG l where l.ledger_id in (1003,5001,10001) and l.object_type_code='L' order by l.name
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
             nullDisplayValue: Select ledger
         }
         layout {
@@ -3249,7 +3247,7 @@ page 73 (
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
-            valuePlaceholder: Select ledger
+            height: 1
         }
     )
 
@@ -3260,7 +3258,7 @@ page 73 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
             type: sqlQuery
@@ -3294,11 +3292,11 @@ page 73 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
             type: sqlQuery
-            sqlQuery: select gp.period_name d,gp.period_name r from apps.gl_periods@ADG gp,apps.gl_ledgers@ADG l where l.ledger_id=to_number(:P73_LEDGER_ID) and l.ledger_id in (1003,5001,10001) and gp.period_set_name=l.period_set_name and gp.period_type=l.accounted_period_type and gp.adjustment_period_flag='N' and gp.start_date<=trunc(sysdate) group by gp.period_name order by max(gp.start_date) desc
+            sqlQuery: select period_name d,period_name r from xxinv128_org_period_mv where ledger_id=to_number(:P73_LEDGER_ID default null on conversion error) and period_start_date<=trunc(sysdate) group by period_name order by max(period_start_date) desc
             nullDisplayValue: Select period
         }
         cascadingLov {
@@ -3498,9 +3496,21 @@ page 73 (
                 declare l_rows clob;l_owners clob;l_exceptions clob;l_stock_orgs clob;l_meta clob;l_capture varchar2(255);l_primary varchar2(255);l_wip varchar2(255);l_transit varchar2(255);begin
                 if xx_tms_security_pkg.can_access(:APP_USER,:APP_ID) then null;else raise_application_error(-20730,'You are not authorized to use Inventory Reconciliation.');end if;
                 if not apex_collection.collection_exists(p_collection_name=>'INV128_P73_IR_V11_01') then
-                apex_ir.reset_report(p_page_id=>73,p_region_id=>15421947847694280,p_report_id=>15422132589694280);
-                apex_ir.reset_report(p_page_id=>73,p_region_id=>15425624636694280,p_report_id=>15425882616694280);
-                apex_ir.reset_report(p_page_id=>73,p_region_id=>15429315056694316,p_report_id=>15429587993694316);
+                for r in (
+                  select reg.region_id,
+                         case reg.static_id
+                           when 'inv73-report-accounting' then 'inv73-accounting'
+                           when 'inv73-report-wip' then 'inv73-wip'
+                           when 'inv73-report-transit' then 'inv73-transit'
+                         end as report_alias
+                    from apex_application_page_regions reg
+                   where reg.application_id=to_number(:APP_ID)
+                     and reg.page_id=73
+                     and reg.source_type_code='DYNAMIC_QUERY'
+                     and reg.static_id in ('inv73-report-accounting','inv73-report-wip','inv73-report-transit')
+                ) loop
+                  apex_ir.reset_report(p_page_id=>73,p_region_id=>r.region_id,p_report_alias=>r.report_alias);
+                end loop;
                 apex_collection.create_collection(p_collection_name=>'INV128_P73_IR_V11_01');
                 end if;
                 select json_mergepatch(xxinv128_report_pkg.get_meta,xxinv128_diag_pkg.get_meta returning clob) into l_meta from dual;

@@ -1,0 +1,130 @@
+/* App 115 only. Loaded by its two native theme styles. */
+body.tms-modern-finance { --tms-bg:#f4f5fa;--tms-panel:#fff;--tms-soft:#fafafe;--tms-text:#222539;--tms-muted:#62697f;--tms-line:#dfe2ed;--tms-accent:#4840a8;--tms-on-accent:#fff;--tms-selected:#eeecfb;--tms-success-bg:#eaf5ef;--tms-success-text:#27613f;--tms-warning-bg:#fff4df;--tms-warning-text:#805615;color-scheme:light; }
+body.tms-dark-mode { --tms-bg:#15191e;--tms-panel:#1c222a;--tms-soft:#222a34;--tms-text:#e4e8ed;--tms-muted:#aab6c5;--tms-line:#3b4553;--tms-accent:#67d4df;--tms-on-accent:#122529;--tms-selected:#23383e;--tms-success-bg:#243f32;--tms-success-text:#a0dfbc;--tms-warning-bg:#403623;--tms-warning-text:#f0ce8f;color-scheme:dark; }
+body:is(.tms-modern-finance,.tms-dark-mode) {
+ --ut-body-background-color:var(--tms-bg);--ut-body-main-background-color:var(--tms-bg);--ut-body-main-content-background-color:var(--tms-bg);
+ --ut-component-background-color:var(--tms-panel);--ut-component-text-default-color:var(--tms-text);--ut-component-text-title-color:var(--tms-text);--ut-component-text-muted-color:var(--tms-muted);--ut-component-border-color:var(--tms-line);--ut-component-inner-border-color:var(--tms-line);
+ --ut-header-background-color:var(--tms-panel);--ut-header-text-color:var(--tms-text);--ut-header-border-color:var(--tms-line);
+ --ut-body-title-background-color:var(--tms-bg);--ut-body-title-text-color:var(--tms-text);--ut-body-title-border-color:var(--tms-line);
+ --ut-body-nav-background-color:var(--tms-panel);--ut-body-nav-text-color:var(--tms-text);--ut-body-sidebar-background-color:var(--tms-panel);
+ --ut-region-background-color:var(--tms-panel);--ut-region-header-background-color:var(--tms-panel);--ut-region-header-text-color:var(--tms-text);--ut-region-border-color:var(--tms-line);
+ --ut-link-text-color:var(--tms-accent);--ut-link-hover-text-color:var(--tms-accent);--ut-palette-primary:var(--tms-accent);--ut-palette-primary-contrast:var(--tms-on-accent);
+ --ut-button-hot-background-color:var(--tms-accent);--ut-button-hot-text-color:var(--tms-on-accent);--ut-button-hot-border-color:var(--tms-accent);
+ --ut-field-input-background-color:var(--tms-panel);--ut-field-input-text-color:var(--tms-text);--ut-field-input-border-color:var(--tms-line);--ut-field-label-text-color:var(--tms-muted);--ut-field-fl-label-text-color:var(--tms-muted);
+ --ut-report-header-background-color:var(--tms-soft);--ut-report-header-text-color:var(--tms-muted);--ut-report-header-cell-border-color:var(--tms-line);--ut-report-cell-border-color:var(--tms-line);
+ --ut-footer-background-color:var(--tms-bg);--ut-footer-text-color:var(--tms-muted);--ut-tabs-item-active-text-color:var(--tms-accent);--ut-tabs-item-active-highlight-color:var(--tms-accent);
+ font-family:"Segoe UI",Arial,sans-serif;background:var(--tms-bg);color:var(--tms-text);
+}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Body,.t-Body-main,.t-Body-content,.t-Body-contentInner,.t-Body-title,.t-BreadcrumbRegion,.t-Footer){background:var(--tms-bg);color:var(--tms-text);background-image:none!important;}
+body:is(.tms-modern-finance,.tms-dark-mode) .t-Body-title{min-height:0;padding:12px 24px;border-bottom:0;}
+body:is(.tms-modern-finance,.tms-dark-mode) .t-Header-branding{background:var(--tms-panel);color:var(--tms-text);border-bottom:1px solid var(--tms-line);box-shadow:none;}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Header-logo-link,.t-Header-navBar .t-Button,.t-Header-controls .t-Button){color:var(--tms-text);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Body-nav,.t-TreeNav,.t-TreeNav .a-TreeView-node--topLevel>.a-TreeView-content){background:var(--tms-panel);color:var(--tms-muted);}
+body:is(.tms-modern-finance,.tms-dark-mode) .t-TreeNav .a-TreeView-label{color:inherit;}
+/* APEX applies selection to the row and content, not their parent node. */
+body:is(.tms-modern-finance,.tms-dark-mode) #t_TreeNav .a-TreeView-row:is(.is-selected,.is-current--top,.is-focused,.is-hover){background:var(--tms-selected);}
+body:is(.tms-modern-finance,.tms-dark-mode) #t_TreeNav .a-TreeView-content:is(.is-selected,.is-current--top,.is-hover,:hover,:focus-within){background:var(--tms-selected);color:var(--tms-accent);}
+body:is(.tms-modern-finance,.tms-dark-mode) #t_TreeNav .a-TreeView-content:is(.is-selected,.is-current--top){box-shadow:inset 3px 0 var(--tms-accent);}
+body:is(.tms-modern-finance,.tms-dark-mode) #t_TreeNav .a-TreeView-content:is(.is-selected,.is-current--top,.is-hover,:hover,:focus-within) :is(.a-TreeView-label,.fa,.a-Icon,.a-TreeView-toggle){color:var(--tms-accent);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Region,.t-IRR-region){background:var(--tms-panel);color:var(--tms-text);border:1px solid var(--tms-line);border-radius:10px;box-shadow:0 3px 12px #00000006;}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Region-header,.t-Region-body,.t-Region-buttons,.t-Region-buttons--bottom,.t-ButtonRegion,.t-ButtonRegion-wrap){background:var(--tms-panel);color:var(--tms-text);border-color:var(--tms-line);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(h1,h2,h3,.t-Region-title,.t-BreadcrumbRegion-title){color:var(--tms-text);font-weight:600;}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Button--hot,.t-Button--primary){background:var(--tms-accent);color:var(--tms-on-accent);border-color:var(--tms-accent);box-shadow:none;}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.apex-item-text,.apex-item-select,.apex-item-textarea,.apex-item-multi,.apex-item-group--popup-lov){background:var(--tms-panel);color:var(--tms-text);border-color:var(--tms-line);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Report-report,.a-IRR-table,.a-GV-table){background:var(--tms-panel);color:var(--tms-text);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Report-report,.a-IRR-table,.a-GV-table) td{background:var(--tms-panel);border-color:var(--tms-line);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.t-Report-report,.a-IRR-table,.a-GV-table) th,
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.a-IRR-header,.a-GV-header){background:var(--tms-soft)!important;color:var(--tms-text)!important;border-color:var(--tms-line)!important;}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.a-IRR-headerLink,.t-Report-colHead a){color:var(--tms-text)!important;}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.a-IRR-toolbar,.a-IRR-controlsContainer,.a-IRR-controlGroup,.a-IRR-paginationWrap,.a-GV-footer){background:var(--tms-soft);color:var(--tms-text);border-color:var(--tms-line);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.a-Menu-content,.a-Menu,.ui-dialog,.ui-dialog-content,.ui-dialog-titlebar,.a-PopupLOV-dialog,.a-PopupLOV-results,.a-IconList-item,.t-Dialog-body){background:var(--tms-panel);color:var(--tms-text);border-color:var(--tms-line);}
+body:is(.tms-modern-finance,.tms-dark-mode) :is(.a-Menu-label,.a-Menu-statusCol,.a-Menu-accel,.ui-dialog-title){color:var(--tms-text);}
+body:is(.tms-modern-finance,.tms-dark-mode) .a-Menu-item.is-focused{background:var(--tms-selected);color:var(--tms-accent);}
+/* Scope notice is informational branding, not an operational warning. */
+body:is(.tms-modern-finance,.tms-dark-mode) #R193451098872245833 div[style*="background"]{background:var(--tms-soft)!important;color:var(--tms-muted)!important;border-left-color:var(--tms-accent)!important;border-bottom:1px solid var(--tms-line);}
+body:is(.tms-modern-finance,.tms-dark-mode) #R193451098872245833 .fa{color:var(--tms-accent)!important;}
+body:is(.tms-modern-finance,.tms-dark-mode) .tms-appearance-entry{display:flex;align-items:center;padding:0 12px;}
+body:is(.tms-modern-finance,.tms-dark-mode) #tms-appearance-picker{font:inherit;font-size:13px;min-height:36px;padding:6px 28px 6px 10px;border:1px solid var(--tms-line);border-radius:6px;background:var(--tms-panel);color:var(--tms-text);max-width:150px;}
+@media(max-width:640px){body:is(.tms-modern-finance,.tms-dark-mode) .tms-appearance-entry{padding:0 4px;}body:is(.tms-modern-finance,.tms-dark-mode) #tms-appearance-picker{font-size:12px;max-width:115px;}}
+body:is(.tms-modern-finance,.tms-dark-mode) .t-Body-title:not(:has(h1:not(:empty))){display:none;}
+body:is(.tms-modern-finance,.tms-dark-mode) .t-Alert--info{background:var(--tms-soft);color:var(--tms-text);border-color:var(--tms-line);}
+/* Success, warning and error alerts and inline semantic colors retain native meanings. */
+body:is(.tms-modern-finance,.tms-dark-mode) :is(a,button,input,select,textarea):focus-visible{outline:2px solid var(--tms-accent);outline-offset:3px;}
+@media(prefers-reduced-motion:reduce){body:is(.tms-modern-finance,.tms-dark-mode) *{scroll-behavior:auto!important;}}
+
+/* App 115: Dark-mode corrections for Pages 1, 22-24, 32-34 and 61 only.
+   Each component class is unique to its page in the current page inventory. */
+body.tms-dark-mode .kpi-card-body {
+  background-color: var(--tms-soft);
+  color: var(--tms-text);
+  border-left-color: var(--tms-accent);
+}
+body.tms-dark-mode :is(.p22-status, .p24-status, .p32-status, .p34-status) {
+  background: var(--tms-soft);
+  color: var(--tms-text);
+  border-left-color: var(--tms-line);
+}
+body.tms-dark-mode :is(.p22-status--info, .p24-status, .p32-status--info, .p34-status) {
+  background: var(--tms-selected);
+  border-left-color: var(--tms-accent);
+}
+body.tms-dark-mode :is(.p22-status--warning, .p32-status--warning) {
+  background: var(--tms-warning-bg);
+  border-left-color: var(--tms-warning-text);
+}
+body.tms-dark-mode :is(.p22-status--success, .p24-status--success, .p32-status--success, .p34-status--success) {
+  background: var(--tms-success-bg);
+  border-left-color: var(--tms-success-text);
+}
+body.tms-dark-mode :is(.p22-status--error, .p24-status--error, .p32-status--error, .p34-status--error) {
+  background: #422b30;
+  border-left-color: #f1a3ab;
+}
+body.tms-dark-mode :is(.p23-kpi-label, .p24-kpi-label, .p33-kpi-label, .p34-kpi-label) {
+  color: var(--tms-muted);
+}
+body.tms-dark-mode :is(.p24-variance-row, .p34-variance-row) > td {
+  background: var(--tms-warning-bg) !important;
+  color: var(--tms-text);
+}
+body.tms-dark-mode :is(.p24-variance-row, .p34-variance-row) > td a {
+  color: var(--tms-accent);
+}
+body.tms-dark-mode .p33-kpi--alert {
+  background: #422b30;
+  color: var(--tms-text);
+  border-left-color: #f1a3ab;
+}
+body.tms-dark-mode .p22-amount-help summary {
+  color: var(--tms-accent);
+}
+body.tms-dark-mode .p22-amount-help summary:hover {
+  text-decoration: underline;
+}
+body.tms-dark-mode .p22-amount-help summary:focus-visible {
+  outline: 2px solid var(--tms-accent);
+  outline-offset: 3px;
+}
+body.tms-dark-mode :is(.p23-aging-drill, .p33-aging-drill) {
+  color: var(--tms-text);
+}
+body.tms-dark-mode :is(.p23-aging-drill, .p33-aging-drill):is(:hover, :focus) {
+  background: var(--tms-selected);
+  color: var(--tms-text);
+}
+body.tms-dark-mode :is(.p23-aging-drill, .p33-aging-drill):focus-visible {
+  outline: 2px solid var(--tms-accent);
+  outline-offset: 3px;
+}
+body.tms-dark-mode :is(.p23-aging-track, .p33-aging-track) {
+  background: var(--tms-line);
+}
+body.tms-dark-mode :is(.p23-aging-bar, .p33-aging-bar) {
+  background: var(--tms-accent);
+}
+body.tms-dark-mode .p61-count {
+  color: var(--tms-accent);
+}
+body.tms-dark-mode .p61-count:hover {
+  background: var(--tms-selected);
+}

@@ -1012,7 +1012,7 @@ page 61 (
     pageItem P61_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 20

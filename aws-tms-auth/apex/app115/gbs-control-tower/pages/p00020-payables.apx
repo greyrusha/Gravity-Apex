@@ -1,0 +1,724 @@
+page 20 (
+    name: Payables Accounting Exceptions
+    alias: PAYABLES
+    title: Payables Accounting Exceptions
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    css {
+        inline:
+            ```css
+            .xxme-status {
+                display: inline-block;
+                min-width: 105px;
+                padding: 4px 10px;
+                border-radius: 12px;
+                color: #fff;
+                font-size: 0.75rem;
+                font-weight: 700;
+                line-height: 1.2;
+                text-align: center;
+                white-space: nowrap;
+                letter-spacing: 0.02em;
+            }
+            
+            .xxme-status-RED {
+                background-color: #c62828;
+            }
+            
+            .xxme-status-AMBER {
+                background-color: #d98200;
+            }
+            
+            .xxme-status-GREEN {
+                background-color: #2e7d32;
+            }
+            
+            .xxme-status-INFORMATIONAL {
+                background-color: #287c96;
+            }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Payables Accounting Exceptions
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 40
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region filters (
+        name: Filters
+        title: Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region gl-readiness (
+        name: Payables Exceptions
+        title: Payables Exceptions
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                SELECT s.*,
+                       CASE
+                           WHEN s.exception_type = 'PROCESSING/ACCOUNTING ERROR'
+                           THEN 'View Details'
+                       END AS detail_action
+                FROM TABLE(
+                    xxme_ap_ar_detail_pkg.get_summary(
+                        200,
+                        :P20_PERIOD_NAME,
+                        :P20_DB_LINK
+                    )
+                ) s
+                ```
+            pageItemsToSubmit: [
+                P20_PERIOD_NAME
+                P20_DB_LINK
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound:
+                ```
+                <div class="t-Alert t-Alert--success t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-check-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">No AP exceptions found</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        No Payables accounting exceptions were found for the selected period and ledger scope.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        advanced {
+            savedReportMappingIdentifier: 11876291524291841
+        }
+
+        column DETAIL_ACTION (
+            type: link
+            heading {
+                heading: Details
+            }
+            layout {
+                sequence: 15
+            }
+            link {
+                target: {
+                    page: 42
+                    items: {
+                        P42_PERIOD_NAME: &P20_PERIOD_NAME.
+                        P42_APPLICATION_ID: 200
+                        P42_LEDGER_ID: #LEDGER_ID#
+                        P42_ORG_ID: #ORG_ID#
+                        P42_ENTITY_CODE: #ENTITY_CODE#
+                        P42_EXCEPTION_TYPE: #EXCEPTION_TYPE#
+                        P42_RUN_SLA: Y
+                        P42_RUN_PERIOD: &P20_PERIOD_NAME.
+                        P42_SOURCE_PAGE: 20
+                        P42_DB_LINK: &P20_DB_LINK.
+                    }
+                    clearCache: 42
+                }
+                linkText: #DETAIL_ACTION#
+                linkAttributes: class="t-Button t-Button--small t-Button--noUI" aria-label="View accounting error details"
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column EARLIEST_EXCEPTION_DATE (
+            type: plainText
+            heading {
+                heading: Earliest Exception Date
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column ENTITY_CODE (
+            type: plainText
+            heading {
+                heading: Entity Code
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column EVENT_COUNT (
+            type: plainText
+            heading {
+                heading: Event Count
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column EXCEPTION_TYPE (
+            type: plainText
+            heading {
+                heading: Exception Type
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column LATEST_EXCEPTION_DATE (
+            type: plainText
+            heading {
+                heading: Latest Exception Date
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column LEDGER_ID (
+            type: hidden
+            heading {
+                heading: Ledger Id
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column OLDEST_EXCEPTION_AGE_DAYS (
+            type: plainText
+            heading {
+                heading: Oldest Exception Age Days
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column OPERATING_UNIT (
+            type: plainText
+            heading {
+                heading: Operating Unit
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Org Id
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column REFRESH_TIMESTAMP (
+            type: hidden
+            heading {
+                heading: Refresh Timestamp
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column SEVERITY (
+            type: hidden
+            heading {
+                heading: Internal Legacy Severity
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column TRANSACTION_COUNT (
+            type: plainText
+            heading {
+                heading: Transaction Count
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Payables Exceptions
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn DETAIL_ACTION (
+                sequence: 1
+            )
+
+            displayColumn EARLIEST_EXCEPTION_DATE (
+                sequence: 10
+            )
+
+            displayColumn ENTITY_CODE (
+                sequence: 6
+            )
+
+            displayColumn EVENT_COUNT (
+                sequence: 8
+            )
+
+            displayColumn EXCEPTION_TYPE (
+                sequence: 7
+            )
+
+            displayColumn LATEST_EXCEPTION_DATE (
+                sequence: 11
+            )
+
+            displayColumn LEDGER_ID (
+                sequence: 2
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 3
+            )
+
+            displayColumn OLDEST_EXCEPTION_AGE_DAYS (
+                sequence: 12
+            )
+
+            displayColumn OPERATING_UNIT (
+                sequence: 5
+            )
+
+            displayColumn ORG_ID (
+                sequence: 4
+            )
+
+            displayColumn REFRESH_TIMESTAMP (
+                sequence: 13
+            )
+
+            displayColumn TRANSACTION_COUNT (
+                sequence: 9
+            )
+
+        )
+
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    pageItem P20_ACTIVE_HOLDS_URL (
+        type: hidden
+        layout {
+            sequence: 30
+            slot: body
+        }
+    )
+
+    pageItem P20_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 20
+            region: @filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P20_PERIOD_NAME (
+        type: selectList
+        label {
+            label: Accounting Period
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close
+        layout {
+            sequence: 30
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button open-ap-holds (
+        buttonName: OPEN_AP_HOLDS
+        label: Open AP Holds
+        layout {
+            sequence: 10
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button refresh-gl (
+        buttonName: REFRESH_AP
+        label: Refresh
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction new (
+        name: New
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @open-ap-holds
+        }
+
+        action generate-active-holds-url (
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    :P20_ACTIVE_HOLDS_URL := apex_page.get_url(
+                        p_page        => 21,
+                        p_clear_cache => '21',
+                        p_items       => 'P21_DB_LINK',
+                        p_values      => :P20_DB_LINK
+                    );
+                    ```
+                itemsToSubmit: P20_DB_LINK
+                itemsToReturn: P20_ACTIVE_HOLDS_URL
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action open-active-holds (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.navigation.openInNewWindow(
+                        $v("P20_ACTIVE_HOLDS_URL"),
+                        "tms_ap_active_holds"
+                    );
+                    ```
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction refresh-gl-report (
+        name: Refresh AP Report
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @refresh-gl
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @gl-readiness
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction return-to-dashboard (
+        name: Return to Dashboard
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: window.close();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)
+

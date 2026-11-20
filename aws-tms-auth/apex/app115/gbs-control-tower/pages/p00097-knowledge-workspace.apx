@@ -1,0 +1,1063 @@
+page 97 (
+    name: Knowledge Workspace
+    alias: KNOWLEDGE-WORKSPACE
+    title: Knowledge Workspace
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region draft-difference-preview (
+        name: Draft Difference and Preview
+        title: Draft Difference and Preview
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                    l_effective_title varchar2(500);
+                    l_effective       clob;
+                    l_draft_title     varchar2(500);
+                    l_draft           clob;
+                begin
+                    if :P97_ITEM_ID is not null then
+                        begin
+                            select title, content into l_effective_title, l_effective
+                              from xxme_ai_km_effective_v where item_id = :P97_ITEM_ID;
+                        exception when no_data_found then null; end;
+                    end if;
+                    if :P97_REVISION_ID is not null then
+                        begin
+                            select title, content into l_draft_title, l_draft
+                              from xxme_ai_km_revisions
+                             where revision_id = :P97_REVISION_ID
+                               and item_id = :P97_ITEM_ID;
+                        exception when no_data_found then null; end;
+                    end if;
+                    sys.htp.prn('<div class="row"><div class="col col-6"><h3>Effective revision</h3><pre class="km-diff">'||
+                        apex_escape.html(nvl(l_effective_title,'No effective revision')||chr(10)||dbms_lob.substr(l_effective,30000,1))||'</pre></div>');
+                    sys.htp.prn('<div class="col col-6"><h3>Working draft</h3><pre class="km-diff">'||
+                        apex_escape.html(nvl(l_draft_title,'No saved draft')||chr(10)||dbms_lob.substr(l_draft,30000,1))||'</pre></div></div>');
+                end;
+                
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region draft-editor (
+        name: Draft Editor
+        title: Draft Editor
+        type: staticContent
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P97_CAN_EDIT = 'Y'
+        }
+    )
+
+    region effective-knowledge-preview (
+        name: Effective Knowledge
+        title: Effective Knowledge
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                    l_title   varchar2(500);
+                    l_content clob;
+                begin
+                    if :P97_ITEM_ID is null then
+                        sys.htp.prn('<p class="u-textMuted">The effective preview will be available after this draft is published.</p>');
+                    else
+                      select title, content into l_title, l_content
+                        from xxme_ai_km_effective_v
+                       where item_id = :P97_ITEM_ID;
+                      sys.htp.prn('<h3>'||apex_escape.html(l_title)||'</h3><pre class="km-preview">'||apex_escape.html(dbms_lob.substr(l_content,32000,1))||'</pre>');
+                    end if;
+                exception
+                    when no_data_found then
+                        sys.htp.prn('<p class="u-textMuted">No effective published revision is available.</p>');
+                end;
+                
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region knowledge-summary (
+        name: Knowledge Summary
+        title: Knowledge Summary
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                    procedure outp(p_text varchar2) is begin sys.htp.prn(p_text); end;
+                begin
+                    if :P97_MODE = 'NEW' then
+                        outp('<div class="t-Alert t-Alert--info"><div class="t-Alert-body"><strong>Teach new knowledge.</strong> New items are created as human-readable Knowledge Manager drafts. No vector is exposed or activated until the governed publish workflow succeeds.</div></div>');
+                    else
+                      for r in (
+                        select k.*, i.created_by, i.created_on
+                          from xxme_ai_km_effective_v k
+                          join xxme_ai_km_items i on i.item_id = k.item_id
+                         where k.item_id = :P97_ITEM_ID
+                    ) loop
+                        outp('<dl class="t-AVPList t-AVPList--leftAligned">');
+                        outp('<dt>Source</dt><dd>'||apex_escape.html(r.source_name||' ('||r.source_code||')')||'</dd>');
+                        outp('<dt>Ownership / Editability</dt><dd>'||apex_escape.html(r.ownership_code||' / '||r.edit_mode)||'</dd>');
+                        outp('<dt>Status / Mandatory / Version</dt><dd>'||apex_escape.html(r.lifecycle_status||' / '||r.is_mandatory||' / '||r.version_no)||'</dd>');
+                        outp('<dt>Embedding</dt><dd>'||apex_escape.html(r.embedding_status||' / '||nvl(r.embedding_model,'-')||' / '||nvl(to_char(r.embedded_on,'YYYY-MM-DD HH24:MI:SS TZH:TZM'),'-') )||'</dd>');
+                        outp('<dt>Created</dt><dd>'||apex_escape.html(r.created_by||' / '||to_char(r.created_on,'YYYY-MM-DD HH24:MI:SS TZH:TZM'))||'</dd>');
+                        outp('<dt>Last Updated</dt><dd>'||apex_escape.html(r.updated_by||' / '||to_char(r.updated_on,'YYYY-MM-DD HH24:MI:SS TZH:TZM'))||'</dd>');
+                        outp('<dt>Published</dt><dd>'||apex_escape.html(nvl(r.published_by,'-')||' / '||nvl(to_char(r.published_on,'YYYY-MM-DD HH24:MI:SS TZH:TZM'),'-'))||'</dd>');
+                        outp('</dl>');
+                        if r.edit_mode = 'TOOL_DEFINITION' then
+                            outp('<div class="t-Alert t-Alert--warning"><div class="t-Alert-body">This APEX agent tool contract is read-only here. Change the corresponding tool definition, then synchronize and re-embed it.</div></div>');
+                        elsif r.edit_mode = 'OVERRIDE_ONLY' then
+                            outp('<div class="t-Alert t-Alert--warning"><div class="t-Alert-body">The authoritative source is externally controlled. It cannot be edited here; use a governed override with explicit provenance and precedence.</div></div>');
+                        elsif r.edit_mode = 'GOVERNED_SOURCE' then
+                            outp('<div class="t-Alert t-Alert--info"><div class="t-Alert-body">Edits create a candidate revision. The authoritative Oracle source must be approved, updated, synchronized, and re-embedded before publication.</div></div>');
+                        end if;
+                      end loop;
+                    end if;
+                end;
+                
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region retirement-action (
+        name: Retirement Action
+        title: Retirement Action
+        type: staticContent
+        source {
+            htmlCode: <p>Retiring an item preserves its complete history but removes its active retrieval representation.</p>
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P97_CAN_RETIRE = 'Y'
+        }
+    )
+
+    pageItem P97_CAN_EDIT (
+        type: hidden
+        layout {
+            sequence: 60
+            slot: body
+        }
+    )
+
+    pageItem P97_CAN_RETIRE (
+        type: hidden
+        layout {
+            sequence: 70
+            slot: body
+        }
+    )
+
+    pageItem P97_CLOSE_IMPACT (
+        type: textField
+        label {
+            label: Close Impact
+            alignment: left
+        }
+        layout {
+            sequence: 120
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            valueRequired: true
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_CONDITION_TYPE (
+        type: textField
+        label {
+            label: Condition Type
+            alignment: left
+        }
+        layout {
+            sequence: 110
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            valueRequired: true
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_CONTENT (
+        type: textarea
+        label {
+            label: Human-Readable Knowledge
+            alignment: left
+        }
+        settings {
+            autoHeight: true
+            charCounter: true
+            trimSpaces: none
+        }
+        layout {
+            sequence: 50
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 80
+            height: 18
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P97_DISPLAY_SEQUENCE (
+        type: numberField
+        label {
+            label: Display Sequence
+            alignment: left
+        }
+        layout {
+            sequence: 140
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 10
+        }
+        validation {
+            valueRequired: true
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_DOMAIN_NAME (
+        type: textField
+        label {
+            label: Domain
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P97_EDIT_MODE (
+        type: hidden
+        layout {
+            sequence: 80
+            slot: body
+        }
+    )
+
+    pageItem P97_ENABLED_FLAG (
+        type: selectList
+        label {
+            label: Enabled
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Yes;Y,No;N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 150
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_IS_MANDATORY (
+        type: selectList
+        label {
+            label: Mandatory
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:No;N,Yes;Y
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 70
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+        readOnly {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_ITEM_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+    )
+
+    pageItem P97_ITEM_LOCK_VERSION (
+        type: hidden
+        layout {
+            sequence: 40
+            slot: body
+        }
+    )
+
+    pageItem P97_KNOWLEDGE_TYPE (
+        type: textField
+        label {
+            label: Knowledge Type
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P97_METADATA_JSON (
+        type: hidden
+        layout {
+            sequence: 60
+            slot: body
+        }
+    )
+
+    pageItem P97_MODE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+    )
+
+    pageItem P97_PRIORITY (
+        type: numberField
+        label {
+            label: Priority
+            alignment: left
+        }
+        settings {
+            numberAlignment: end
+            virtualKeyboard: text
+        }
+        layout {
+            sequence: 80
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 10
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: 50
+        }
+        readOnly {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_PRIORITY_ELIGIBLE (
+        type: selectList
+        label {
+            label: Priority Eligible
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Yes;Y,No;N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 130
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_QUESTION_SCOPE (
+        type: textField
+        label {
+            label: Question Scope
+            alignment: left
+        }
+        layout {
+            sequence: 100
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            valueRequired: true
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_REVISION_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+    )
+
+    pageItem P97_REVISION_LOCK_VERSION (
+        type: hidden
+        layout {
+            sequence: 50
+            slot: body
+        }
+    )
+
+    pageItem P97_RULE_CODE (
+        type: textField
+        label {
+            label: Rule Code
+            alignment: left
+        }
+        layout {
+            sequence: 90
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        serverSideCondition {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+        readOnly {
+            type: always
+        }
+    )
+
+    pageItem P97_SOURCE_KEY (
+        type: textField
+        label {
+            label: Source Key
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 50
+            valuePlaceholder: Stable human-readable key
+        }
+        validation {
+            valueRequired: true
+        }
+        readOnly {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    pageItem P97_TITLE (
+        type: textField
+        label {
+            label: Title
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @draft-editor
+            slot: regionBody
+            alignment: left
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 80
+        }
+        validation {
+            valueRequired: true
+        }
+        readOnly {
+            type: item=value
+            item: P97_EDIT_MODE
+            value: GOVERNED_SOURCE
+        }
+    )
+
+    button back-to-browse (
+        buttonName: BACK_TO_BROWSE
+        label: Back to Browse
+        layout {
+            sequence: 10
+            region: @knowledge-summary
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 96
+                clearCache: 96
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button open-knowledge-history (
+        buttonName: OPEN_HISTORY
+        label: Version History and Audit
+        layout {
+            sequence: 30
+            region: @knowledge-summary
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-history
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 99
+                items: {
+                    P99_ITEM_ID: &P97_ITEM_ID.
+                }
+                clearCache: 99
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P97_ITEM_ID
+        }
+    )
+
+    button open-test-publish (
+        buttonName: OPEN_TEST_PUBLISH
+        label: Test and Publish
+        layout {
+            sequence: 20
+            region: @knowledge-summary
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-flask
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 98
+                items: {
+                    P98_ITEM_ID: &P97_ITEM_ID.
+                    P98_REVISION_ID: &P97_REVISION_ID.
+                }
+                clearCache: 98
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P97_REVISION_ID
+        }
+    )
+
+    button retire-item (
+        buttonName: RETIRE_ITEM
+        label: Retire Knowledge Item
+        layout {
+            sequence: 10
+            region: @retirement-action
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+            ]
+            icon: fa-archive
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Retire this knowledge item and deactivate its current retrieval representation? Version and audit history will be retained.
+            style: danger
+        }
+    )
+
+    button save-draft (
+        buttonName: SAVE_DRAFT
+        label: Save Draft
+        layout {
+            sequence: 10
+            region: @draft-editor
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process load-knowledge-workspace (
+        name: Load Knowledge Workspace
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_authorized boolean := false;
+                    l_edit_mode  xxme_ai_km_items.edit_mode%type;
+                    l_status     xxme_ai_km_items.lifecycle_status%type;
+                begin
+                    :P97_CAN_EDIT := 'N';
+                    :P97_CAN_RETIRE := 'N';
+                    if :P97_MODE = 'NEW' then
+                        :P97_EDIT_MODE := 'DIRECT';
+                        :P97_SOURCE_KEY := null;
+                        :P97_DOMAIN_NAME := 'MONTH_END';
+                        :P97_KNOWLEDGE_TYPE := 'POLICY';
+                        :P97_TITLE := null;
+                        :P97_CONTENT := null;
+                        :P97_METADATA_JSON := null;
+                        :P97_IS_MANDATORY := 'N';
+                        :P97_PRIORITY := 50;
+                        if l_authorized then :P97_CAN_EDIT := 'Y'; end if;
+                        return;
+                    end if;
+                    if :P97_ITEM_ID is null then
+                        raise_application_error(-20120,'Knowledge item is required.');
+                    end if;
+                    select i.source_key, i.source_locator, i.domain_name, i.knowledge_type, i.lock_version,
+                           i.edit_mode, i.lifecycle_status
+                      into :P97_SOURCE_KEY, :P97_RULE_CODE, :P97_DOMAIN_NAME, :P97_KNOWLEDGE_TYPE, :P97_ITEM_LOCK_VERSION,
+                           l_edit_mode, l_status
+                      from xxme_ai_km_items i
+                     where i.item_id = :P97_ITEM_ID;
+                    begin
+                        select revision_id, lock_version, title, content, metadata_json, is_mandatory, priority
+                          into :P97_REVISION_ID, :P97_REVISION_LOCK_VERSION, :P97_TITLE, :P97_CONTENT,
+                               :P97_METADATA_JSON, :P97_IS_MANDATORY, :P97_PRIORITY
+                          from (
+                              select r.*
+                                from xxme_ai_km_revisions r
+                               where r.item_id = :P97_ITEM_ID
+                                 and r.revision_state in ('DRAFT','FAILED')
+                               order by r.version_no desc
+                          )
+                         where rownum = 1;
+                    exception
+                        when no_data_found then
+                            :P97_REVISION_ID := null;
+                            :P97_REVISION_LOCK_VERSION := null;
+                            select title, content, metadata_json, is_mandatory, priority
+                              into :P97_TITLE, :P97_CONTENT, :P97_METADATA_JSON, :P97_IS_MANDATORY, :P97_PRIORITY
+                              from xxme_ai_km_effective_v
+                             where item_id = :P97_ITEM_ID;
+                    end;
+                    :P97_EDIT_MODE := l_edit_mode;
+                    if l_edit_mode = 'GOVERNED_SOURCE' then
+                        :P97_QUESTION_SCOPE := json_value(:P97_METADATA_JSON,'$.question_scope' returning varchar2(30) null on error);
+                        :P97_CONDITION_TYPE := json_value(:P97_METADATA_JSON,'$.condition_type' returning varchar2(60) null on error);
+                        :P97_CLOSE_IMPACT := json_value(:P97_METADATA_JSON,'$.close_impact' returning varchar2(30) null on error);
+                        :P97_PRIORITY_ELIGIBLE := json_value(:P97_METADATA_JSON,'$.priority_eligible' returning varchar2(1) null on error);
+                        :P97_DISPLAY_SEQUENCE := json_value(:P97_METADATA_JSON,'$.display_sequence' returning number null on error);
+                        :P97_ENABLED_FLAG := json_value(:P97_METADATA_JSON,'$.enabled_flag' returning varchar2(1) null on error);
+                    end if;
+                    if l_authorized and l_status = 'ACTIVE' and l_edit_mode in ('DIRECT','GOVERNED_SOURCE') then
+                        :P97_CAN_EDIT := 'Y';
+                        if l_edit_mode = 'DIRECT' then :P97_CAN_RETIRE := 'Y'; end if;
+                    end if;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 981170000000000740
+        }
+    )
+
+    process retire-knowledge-item (
+        name: Retire Knowledge Item
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    raise_application_error(-20123,'AI administration is disabled pending App 400 role integration.');
+                    xxme_ai_km_pkg.retire_item(
+                        p_item_id               => :P97_ITEM_ID,
+                        p_expected_lock_version => :P97_ITEM_LOCK_VERSION
+                    );
+                    commit;
+                    apex_application.g_print_success_message := 'Knowledge item retired; history is retained and active retrieval is disabled.';
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 30
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 981170000000000742
+        }
+        serverSideCondition {
+            whenButtonPressed: @retire-item
+        }
+    )
+
+    process save-knowledge-draft (
+        name: Save Knowledge Draft
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_item_id     number;
+                    l_revision_id number;
+                    l_request_id  number;
+                    l_request_count number;
+                    l_metadata    clob;
+                    l_edit_mode   xxme_ai_km_items.edit_mode%type;
+                    l_status      xxme_ai_km_items.lifecycle_status%type;
+                begin
+                    raise_application_error(-20121,'AI administration is disabled pending App 400 role integration.');
+                    if :P97_MODE = 'NEW' then
+                        l_metadata := :P97_METADATA_JSON;
+                        xxme_ai_km_pkg.create_curated_item(
+                            p_source_key        => :P97_SOURCE_KEY,
+                            p_domain_name       => :P97_DOMAIN_NAME,
+                            p_knowledge_type    => :P97_KNOWLEDGE_TYPE,
+                            p_title             => :P97_TITLE,
+                            p_content           => :P97_CONTENT,
+                            p_metadata_json     => l_metadata,
+                            p_is_mandatory      => :P97_IS_MANDATORY,
+                            p_priority          => :P97_PRIORITY,
+                            p_overrides_item_id => null,
+                            p_item_id           => l_item_id,
+                            p_revision_id       => l_revision_id
+                        );
+                        :P97_ITEM_ID := l_item_id;
+                        :P97_REVISION_ID := l_revision_id;
+                        :P97_MODE := null;
+                    else
+                        select edit_mode, lifecycle_status into l_edit_mode, l_status
+                          from xxme_ai_km_items where item_id = :P97_ITEM_ID;
+                        if l_status <> 'ACTIVE' or l_edit_mode not in ('DIRECT','GOVERNED_SOURCE') then
+                            raise_application_error(-20122,'This knowledge source is read-only in Knowledge Manager.');
+                        end if;
+                        if l_edit_mode = 'GOVERNED_SOURCE' then
+                            l_metadata := json_object(
+                                'rule_code' value :P97_RULE_CODE,
+                                'question_scope' value :P97_QUESTION_SCOPE,
+                                'condition_type' value :P97_CONDITION_TYPE,
+                                'close_impact' value :P97_CLOSE_IMPACT,
+                                'priority_eligible' value :P97_PRIORITY_ELIGIBLE,
+                                'display_sequence' value to_number(:P97_DISPLAY_SEQUENCE),
+                                'enabled_flag' value :P97_ENABLED_FLAG returning clob);
+                        else
+                            l_metadata := :P97_METADATA_JSON;
+                        end if;
+                        if :P97_REVISION_ID is null then
+                            xxme_ai_km_pkg.create_draft(
+                                p_item_id               => :P97_ITEM_ID,
+                                p_expected_lock_version => :P97_ITEM_LOCK_VERSION,
+                                p_title                 => :P97_TITLE,
+                                p_content               => :P97_CONTENT,
+                                p_metadata_json         => l_metadata,
+                                p_is_mandatory          => :P97_IS_MANDATORY,
+                                p_priority              => :P97_PRIORITY,
+                                p_revision_id           => l_revision_id
+                            );
+                            :P97_REVISION_ID := l_revision_id;
+                        else
+                            xxme_ai_km_pkg.update_draft(
+                                p_revision_id            => :P97_REVISION_ID,
+                                p_expected_revision_lock => :P97_REVISION_LOCK_VERSION,
+                                p_title                  => :P97_TITLE,
+                                p_content                => :P97_CONTENT,
+                                p_metadata_json          => l_metadata,
+                                p_is_mandatory           => :P97_IS_MANDATORY,
+                                p_priority               => :P97_PRIORITY
+                            );
+                        end if;
+                        l_revision_id := :P97_REVISION_ID;
+                        if l_edit_mode = 'GOVERNED_SOURCE' then
+                            select count(*) into l_request_count
+                              from xxme_ai_km_source_requests
+                             where candidate_revision_id = l_revision_id
+                               and request_state in ('SUBMITTED','APPROVED','APPLYING','SYNCED');
+                            if l_request_count = 0 then
+                                xxme_ai_km_pkg.create_source_request(
+                                    p_item_id => :P97_ITEM_ID,
+                                    p_candidate_revision_id => l_revision_id,
+                                    p_idempotency_key => lower(rawtohex(sys_guid())),
+                                    p_requested_change => to_clob('Structured Knowledge Manager update for Oracle rule '||:P97_RULE_CODE),
+                                    p_request_id => l_request_id);
+                            end if;
+                        end if;
+                    end if;
+                    commit;
+                    apex_application.g_print_success_message := 'Draft saved. Validate, test, and publish it through the governed activation workflow.';
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 981170000000000741
+        }
+        serverSideCondition {
+            whenButtonPressed: @save-draft
+        }
+    )
+
+)
+

@@ -99,62 +99,19 @@ page 1 (
             type: sqlQuery
             sqlQuery:
                 ```sql
-                with gl as (
-                 select 10 display_sequence,10 target_page,'P10_PERIOD_NAME' target_item,'General Ledger' card_title,'fa fa-book' card_icon,
-                        sum(g.unposted_due_headers+g.error_status_headers+g.unbalanced_due_batches+g.interface_row_count) open_count,
-                        sum(case when g.ledger_id=1003 then g.unposted_due_headers+g.error_status_headers+g.unbalanced_due_batches+g.interface_row_count else 0 end) us_count,
-                        sum(case when g.ledger_id=5001 then g.unposted_due_headers+g.error_status_headers+g.unbalanced_due_batches+g.interface_row_count else 0 end) uk_count,
-                        sum(case when g.ledger_id=10001 then g.unposted_due_headers+g.error_status_headers+g.unbalanced_due_batches+g.interface_row_count else 0 end) ch_count,
-                        case
-                          when nvl(sum(g.error_status_headers+g.unbalanced_due_batches),0) > 0 then 'kpi-bad'
-                          when nvl(sum(g.unposted_due_headers+g.error_status_headers+g.unbalanced_due_batches+g.interface_row_count),0) > 0 then 'kpi-warn'
-                          else 'kpi-good'
-                        end card_color_class
-                 from table(xxme_gl_summary_pkg.get_summary(:P1_PERIOD_NAME,:P1_DB_LINK)) g
-                ), exceptions as (
-                 select 200 application_id,x.* from table(xxme_ap_ar_detail_pkg.get_summary(200,:P1_PERIOD_NAME,:P1_DB_LINK)) x
-                 union all
-                 select 222 application_id,x.* from table(xxme_ap_ar_detail_pkg.get_summary(222,:P1_PERIOD_NAME,:P1_DB_LINK)) x
-                ), modules as (
-                 select 200 application_id from dual
-                 union all
-                 select 222 application_id from dual
-                ), arap as (
-                 select case m.application_id when 200 then 20 else 30 end display_sequence,
-                        case m.application_id when 200 then 20 else 30 end target_page,
-                        case m.application_id when 200 then 'P20_PERIOD_NAME' else 'P30_PERIOD_NAME' end target_item,
-                        case m.application_id when 200 then 'Payables SLA Exceptions' else 'Receivables SLA Exceptions' end card_title,
-                        case m.application_id when 200 then 'fa fa-file-text-o' else 'fa fa-money' end card_icon,
-                        nvl(sum(e.event_count),0) open_count,
-                        nvl(sum(case when e.ledger_id=1003 then e.event_count else 0 end),0) us_count,
-                        nvl(sum(case when e.ledger_id=5001 then e.event_count else 0 end),0) uk_count,
-                        nvl(sum(case when e.ledger_id=10001 then e.event_count else 0 end),0) ch_count,
-                        case
-                          when nvl(sum(case when e.severity='RED' then e.event_count else 0 end),0) > 0 then 'kpi-bad'
-                          when nvl(sum(e.event_count),0) > 0 then 'kpi-warn'
-                          else 'kpi-good'
-                        end card_color_class
-                 from modules m
-                 left join exceptions e
-                   on e.application_id=m.application_id and
-                      e.exception_type in ('PROCESSING/ACCOUNTING ERROR','ACCOUNTING NOT FINAL','NOT TRANSFERRED TO GL','UNPROCESSED EVENT')
-                 group by m.application_id
-                ), all_cards as (
-                 select display_sequence,target_page,target_item,card_title,card_icon,card_color_class,nvl(open_count,0) open_count,nvl(us_count,0) us_count,nvl(uk_count,0) uk_count,nvl(ch_count,0) ch_count,
-                        nvl(open_count,0)||' Open GL items<br>US: '||nvl(us_count,0)||' | UK: '||nvl(uk_count,0)||' | CH: '||nvl(ch_count,0) card_text from gl
-                 union all
-                 select display_sequence,target_page,target_item,card_title,card_icon,card_color_class,open_count,us_count,uk_count,ch_count,
-                        open_count||' Open accounting exceptions<br>US: '||us_count||' | UK: '||uk_count||' | CH: '||ch_count from arap
-                 union all select 40,41,'P41_PERIOD_NAME','Inventory/Cost Management SLA','fa fa-database','kpi-neutral',null,null,null,null,'Open dedicated Inventory/Cost Management SLA analysis' from dual
-                 union all select 50,50,'P50_PERIOD_NAME','AI Month-End Analyst','fa fa-comments','kpi-neutral',null,null,null,null,'Ask month-end questions in plain language' from dual
-                 where apex_application_admin.get_build_option_status(p_application_id=>:APP_ID,p_build_option_name=>'FEATURE_AI') = 'INCLUDE'
-                 union all select 50,null,null,'AI Analyst','fa fa-comments','kpi-neutral',null,null,null,null,'Reserved for future AI Analyst capability.' from dual
-                 where apex_application_admin.get_build_option_status(p_application_id=>:APP_ID,p_build_option_name=>'FEATURE_AI') = 'EXCLUDE'
-                )
-                select display_sequence,card_title,card_text,card_icon,card_color_class,open_count,us_count,uk_count,ch_count,
-                 case when target_page is null then 'N' else 'Y' end is_clickable,
-                 case when target_page is null then null else apex_page.get_url(p_page=>target_page,p_clear_cache=>to_char(target_page),p_items=>target_item||',P'||target_page||'_DB_LINK',p_values=>:P1_PERIOD_NAME||','||:P1_DB_LINK) end card_link
-                from all_cards order by display_sequence
+                select display_sequence,
+                       card_title,
+                       card_text,
+                       card_icon,
+                       card_color_class,
+                       open_count,
+                       us_count,
+                       uk_count,
+                       ch_count,
+                       is_clickable,
+                       card_link
+                  from table(xxme_dashboard_pkg.get_overview_cards(:P1_PERIOD_NAME, :P1_DB_LINK, to_number(:APP_ID)))
+                 order by display_sequence
                 ```
             pageItemsToSubmit: [
                 P1_PERIOD_NAME
@@ -283,7 +240,7 @@ page 1 (
     pageItem P1_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10

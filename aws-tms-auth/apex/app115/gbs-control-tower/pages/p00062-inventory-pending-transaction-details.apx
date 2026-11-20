@@ -1,0 +1,402 @@
+page 62 (
+    name: Inventory Pending Transaction Details
+    alias: INVENTORY-PENDING-TRANSACTION-DETAILS
+    title: Inventory Pending Transaction Details
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1200
+        height: 750
+        chained: false
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Pending Transaction Details
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: dialogHeader
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region inventory-detail-context (
+        name: Selected Inventory Organization
+        title: Selected Inventory Organization
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon"><span class="t-Icon fa fa-info-circle" aria-hidden="true"></span></div>
+                    <div class="t-Alert-content">
+                      Required pending transactions captured for inventory organization &P62_ORG_NAME!HTML. in &P62_PERIOD_NAME!HTML..
+                      Reopen this detail window to refresh the operational results.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region inventory-pending-detail-report (
+        name: Required Pending Transaction Details
+        title: Required Pending Transaction Details
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select c001 period_name,
+                       d001 schedule_close_date,
+                       c002 organization_name,
+                       c003 transaction_type,
+                       d002 transaction_date,
+                       c004 resolution,
+                       c005 transaction_ref,
+                       c006 transaction_ref_id,
+                       c007 transaction_type_name,
+                       c008 item
+                  from apex_collections
+                 where collection_name = 'P62DTL_' || :P62_SNAPSHOT_ID
+                 order by seq_id
+                ```
+            pageItemsToSubmit: P62_SNAPSHOT_ID
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            displayPosition: topAndBottomRight
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No required pending transactions remain for this inventory organization.
+        }
+
+        column ITEM (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Item
+                alignment: center
+            }
+            layout {
+                sequence: 100
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ORGANIZATION_NAME (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Inventory Organization
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PERIOD_NAME (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Inventory Period
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column RESOLUTION (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Resolution
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column SCHEDULE_CLOSE_DATE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Scheduled Close Date
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TRANSACTION_DATE (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Transaction Date
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TRANSACTION_REF (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Reference Type
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TRANSACTION_REF_ID (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Transaction Reference
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TRANSACTION_TYPE (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Pending Transaction Category
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TRANSACTION_TYPE_NAME (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Transaction Type
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    pageItem P62_LEDGER_ID (
+        type: hidden
+        layout {
+            sequence: 40
+            slot: contentBody
+        }
+    )
+
+    pageItem P62_MONTH_OFFSET (
+        type: hidden
+        layout {
+            sequence: 30
+            slot: contentBody
+        }
+    )
+
+    pageItem P62_ORG_ID (
+        type: hidden
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+    )
+
+    pageItem P62_ORG_NAME (
+        type: hidden
+        layout {
+            sequence: 25
+            slot: contentBody
+        }
+    )
+
+    pageItem P62_PERIOD_NAME (
+        type: hidden
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+    )
+
+    pageItem P62_SNAPSHOT_ID (
+        type: hidden
+        layout {
+            sequence: 50
+            slot: contentBody
+        }
+    )
+
+    button back-to-period-status (
+        buttonName: BACK_TO_PERIOD_STATUS
+        label: Back to Period Status
+        layout {
+            sequence: 10
+            region: @inventory-detail-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction back-to-period-status (
+        name: Back to Period Status
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-period-status
+        }
+
+        action restore-period-status-state (
+            name: Restore Period Status State
+            action: executeJsCode
+            settings {
+                jsCode: apex.navigation.dialog.close(true);
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process capture-pending-transaction-snapshot (
+        name: Capture Pending Transaction Snapshot
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                xxme_inv_pending_ui_pkg.capture_p62_snapshot;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 462000000000000656
+        }
+    )
+
+)
+

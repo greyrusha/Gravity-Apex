@@ -1,0 +1,1240 @@
+page 71 (
+    name: Fixed Assets Month-End Close
+    alias: FIXED-ASSETS
+    title: Fixed Assets Month-End Close
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            (function(){const $=apex.jQuery;
+             function decorate(){const r=$('#fa71-report');r.find('.fa71-status').each(function(){const s=this.textContent.trim();this.className='fa71-status fa71-badge '+(s==='COMPLETE'||s==='COMPLETE (NO GL POSTING)'?'fa71-good':['GL NOT POSTED','NOT TRANSFERRED TO GL','ANNUAL CALENDAR - CONFIRM SCOPE'].includes(s)?'fa71-warn':'fa71-bad');});
+             r.find('.fa71-activity').each(function(){if(this.textContent.trim())this.className='fa71-activity fa71-badge fa71-note';});
+             r.find('.fa71-reconciliation').each(function(){const s=this.textContent.trim();this.className='fa71-reconciliation fa71-badge '+(s==='MATCHED'?'fa71-good':s==='DIFFERENCE'?'fa71-bad':'fa71-warn');});
+             r.find('.fa71-indicator').each(function(){this.classList.toggle('fa71-warn',/[1-9]/.test(this.textContent));this.classList.toggle('fa71-badge',/[1-9]/.test(this.textContent));});}
+             $('#fa71-report').on('apexafterrefresh',decorate);
+             $(document).on('click','.fa71-refresh',function(){apex.region('fa71-report').refresh();});decorate();})();
+            ```
+    }
+    css {
+        inline:
+            ```css
+            #fa71-filters .apex-item-group--popup-lov,#fa71-filters .apex-item-multi,#fa71-filters .apex-item-select{min-height:76px}
+            #fa71-filters .apex-item-multi{padding-top:26px!important;padding-bottom:6px!important;align-content:flex-start}
+            #fa71-filters .apex-item-multi:has([data-value])>.apex-item-multi-item:last-child{flex:0 0 1px;min-width:1px;width:1px}
+            #fa71-filters .apex-item-multi:has([data-value])>.apex-item-multi-item:last-child input{width:1px!important;min-width:1px!important;padding:0}
+            #fa71-filters .a-Button--popupLOV{min-height:76px}
+            .fa71-intro h1{margin:0 0 8px}.fa71-intro p{margin:6px 0;color:var(--ut-body-text-color,#333)}
+            .fa71-muted{font-size:12px;opacity:.8}
+            .fa71-badge{display:inline-block;padding:4px 8px;border-radius:4px;font-weight:600;white-space:nowrap}
+            .fa71-good{background:#e6f4eb;color:#185c37}.fa71-warn{background:#fff1d6;color:#704500}.fa71-bad{background:#fde5e7;color:#9d1521}.fa71-note{background:var(--ut-component-background-color,#eef0f3);color:var(--ut-body-text-color,#333);font-size:11px}
+            #fa71-report .a-IRR-tableContainer{max-height:560px;overflow:auto;isolation:isolate}
+            #fa71-report .a-IRR-header:not(.a-IRR-header--group){position:sticky;top:0;z-index:2;background:var(--ut-region-header-background-color,#edf2f6);font-weight:700;text-align:center;border-bottom:2px solid var(--ut-component-border-color,#a5b5c1)}
+            #fa71-report .a-IRR-headerLink{color:inherit;font-weight:700}
+            
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region filters (
+        name: Filters
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+                t-Region--hideHeader
+            ]
+        }
+        advanced {
+            htmlDomId: fa71-filters
+        }
+    )
+
+    region fixed-assets (
+        name: Fixed Assets
+        type: staticContent
+        source {
+            htmlCode: <div class="fa71-intro"><h1>Fixed Assets Month-End Close</h1><p>Compare net FA depreciation with final SLA expense and posted GL expense, using expense debits minus credits.</p><p class="fa71-muted">Select a book or difference to open the accounting bridge and asset details. Unresolved GL mappings require review. Books with GL posting disabled are exempt from the SLA and GL checks.</p></div>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+                t-Region--hideHeader
+            ]
+        }
+        advanced {
+            htmlDomId: fa71-intro
+        }
+    )
+
+    region fixed-assets-close-status (
+        name: Fixed Assets Close Status
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery: select q.*,apex_page.get_url(p_page=>72,p_clear_cache=>'72',p_items=>'P72_LEDGER_ID,P72_BOOK_TYPE_CODE,P72_PERIOD_NAME',p_values=>to_char(q.ledger_id)||','||q.book_type_code||','||q.period_name) bridge_url from table(xxme_fa_close_pkg.get_close_status(:P71_PERIOD_NAME,:P71_LEDGER_IDS,:P71_BOOK_CLASS)) q
+            pageItemsToSubmit: [
+                P71_PERIOD_NAME
+                P71_LEDGER_IDS
+                P71_BOOK_CLASS
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: fa71-report
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No books match the selected filters.
+        }
+        actionsMenu {
+            subscription: false
+        }
+        download {
+            formats: [
+                csv
+                excel
+            ]
+            sendAsEmail: false
+        }
+        heading {
+            fixedTo: region
+            maxReportHeight: 560
+        }
+        advanced {
+            savedReportMappingIdentifier: 15409416763381769
+        }
+
+        column ACTIVITY_NOTE (
+            type: plainText
+            heading {
+                heading: Activity Note
+                alignment: center
+            }
+            layout {
+                sequence: 270
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa71-activity">#ACTIVITY_NOTE#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AA
+            }
+        )
+
+        column BOOK_CLASS (
+            type: plainText
+            heading {
+                heading: Book Class
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column BOOK_TYPE_CODE (
+            type: link
+            heading {
+                heading: FA Book
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            link {
+                target: {
+                    type: url
+                    url: #BRIDGE_URL#
+                }
+                linkText: #BOOK_TYPE_CODE#
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column BRIDGE_URL (
+            type: plainText
+            heading {
+                heading: Bridge Url
+                alignment: center
+            }
+            layout {
+                sequence: 420
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AP
+            }
+        )
+
+        column CLOSE_STATUS (
+            type: plainText
+            heading {
+                heading: Close Status
+                alignment: center
+            }
+            layout {
+                sequence: 280
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa71-status">#CLOSE_STATUS#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AB
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Currency
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column DEPRN_CALENDAR (
+            type: plainText
+            heading {
+                heading: Calendar
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column DEPRN_EVENTS (
+            type: plainText
+            heading {
+                heading: Deprn Events
+                alignment: center
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column DEPRN_RUN (
+            type: plainText
+            heading {
+                heading: Depreciation Run
+                alignment: center
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column ENTRIES_NOT_FINAL (
+            type: plainText
+            heading {
+                heading: Entries Not Final
+                alignment: center
+            }
+            layout {
+                sequence: 170
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column ENTRIES_NOT_TRANSFERRED (
+            type: plainText
+            heading {
+                heading: Entries Not Transferred
+                alignment: center
+            }
+            layout {
+                sequence: 180
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column FA_CATCHUP_AMOUNT (
+            type: plainText
+            heading {
+                heading: FA Catch-up
+                alignment: center
+            }
+            layout {
+                sequence: 140
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column FA_DEPRN_AMOUNT (
+            type: plainText
+            heading {
+                heading: FA Net Depreciation
+                alignment: center
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column FA_NEGATIVE_DEPRN (
+            type: plainText
+            heading {
+                heading: Fa Negative Deprn
+                alignment: center
+            }
+            layout {
+                sequence: 440
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AR
+            }
+        )
+
+        column FA_NONZERO_ROWS (
+            type: plainText
+            heading {
+                heading: Fa Nonzero Rows
+                alignment: center
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column FA_POSITIVE_DEPRN (
+            type: plainText
+            heading {
+                heading: Fa Positive Deprn
+                alignment: center
+            }
+            layout {
+                sequence: 430
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AQ
+            }
+        )
+
+        column FA_SUMMARY_ROWS (
+            type: plainText
+            heading {
+                heading: Fa Summary Rows
+                alignment: center
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column FA_VS_GL_DR_DIFF (
+            type: plainText
+            heading {
+                heading: Net FA vs Gross Debits (Legacy)
+                alignment: center
+            }
+            layout {
+                sequence: 250
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Y
+            }
+        )
+
+        column FA_VS_GL_EXPENSE_DIFF (
+            type: link
+            heading {
+                heading: FA vs GL Difference
+                alignment: center
+            }
+            layout {
+                sequence: 400
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: #BRIDGE_URL#
+                }
+                linkText: #FA_VS_GL_EXPENSE_DIFF#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AN
+            }
+        )
+
+        column GL_BATCH_NAMES (
+            type: plainText
+            heading {
+                heading: GL Batches
+                alignment: center
+            }
+            layout {
+                sequence: 260
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Z
+            }
+        )
+
+        column GL_GROUPS_EXPECTED (
+            type: plainText
+            heading {
+                heading: Gl Groups Expected
+                alignment: center
+            }
+            layout {
+                sequence: 190
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column GL_GROUPS_MISSING (
+            type: plainText
+            heading {
+                heading: Gl Groups Missing
+                alignment: center
+            }
+            layout {
+                sequence: 200
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column GL_JOURNALS (
+            type: plainText
+            heading {
+                heading: Gl Journals
+                alignment: center
+            }
+            layout {
+                sequence: 220
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column GL_JOURNAL_DR_TOTAL (
+            type: plainText
+            heading {
+                heading: Whole Journal Debit Total
+                alignment: center
+            }
+            layout {
+                sequence: 240
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: X
+            }
+        )
+
+        column GL_LINE_COUNT (
+            type: plainText
+            heading {
+                heading: Gl Line Count
+                alignment: center
+            }
+            layout {
+                sequence: 370
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AK
+            }
+        )
+
+        column GL_MAPPING_ISSUES (
+            type: plainText
+            heading {
+                heading: GL Mapping Issues
+                alignment: center
+            }
+            layout {
+                sequence: 380
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AL
+            }
+        )
+
+        column GL_POSTED_EXPENSE_CR (
+            type: plainText
+            heading {
+                heading: Gl Posted Expense Cr
+                alignment: center
+            }
+            layout {
+                sequence: 350
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AI
+            }
+        )
+
+        column GL_POSTED_EXPENSE_DR (
+            type: plainText
+            heading {
+                heading: Gl Posted Expense Dr
+                alignment: center
+            }
+            layout {
+                sequence: 340
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AH
+            }
+        )
+
+        column GL_POSTED_EXPENSE_LINES (
+            type: plainText
+            heading {
+                heading: Gl Posted Expense Lines
+                alignment: center
+            }
+            layout {
+                sequence: 390
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AM
+            }
+        )
+
+        column GL_POSTED_EXPENSE_NET (
+            type: plainText
+            heading {
+                heading: Posted GL Net Expense
+                alignment: center
+            }
+            layout {
+                sequence: 360
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AJ
+            }
+        )
+
+        column GL_SHARED_GROUPS (
+            type: plainText
+            heading {
+                heading: Shared GL Groups
+                alignment: center
+            }
+            layout {
+                sequence: 210
+                columnAlignment: end
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa71-indicator">#GL_SHARED_GROUPS#</span>
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: U
+            }
+        )
+
+        column GL_UNPOSTED (
+            type: plainText
+            heading {
+                heading: Gl Unposted
+                alignment: center
+            }
+            layout {
+                sequence: 230
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: W
+            }
+        )
+
+        column LEDGER_ID (
+            type: plainText
+            heading {
+                heading: Ledger Id
+                alignment: center
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column ORPHAN_ASSET_LINES (
+            type: plainText
+            heading {
+                heading: Orphan Asset Lines
+                alignment: center
+            }
+            layout {
+                sequence: 330
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AG
+            }
+        )
+
+        column PERIOD_CLOSE_DATE (
+            type: plainText
+            heading {
+                heading: Period Close Date
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column PERIOD_NAME (
+            type: plainText
+            heading {
+                heading: Period
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column PERIOD_STATUS (
+            type: plainText
+            heading {
+                heading: Period Status
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column RECONCILIATION_STATUS (
+            type: plainText
+            heading {
+                heading: Reconciliation
+                alignment: center
+            }
+            layout {
+                sequence: 410
+            }
+            columnFormatting {
+                htmlExpression: <span class="fa71-reconciliation">#RECONCILIATION_STATUS#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AO
+            }
+        )
+
+        column SLA_EXPENSE_CR (
+            type: plainText
+            heading {
+                heading: Sla Expense Cr
+                alignment: center
+            }
+            layout {
+                sequence: 300
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AD
+            }
+        )
+
+        column SLA_EXPENSE_DR (
+            type: plainText
+            heading {
+                heading: Sla Expense Dr
+                alignment: center
+            }
+            layout {
+                sequence: 290
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AC
+            }
+        )
+
+        column SLA_EXPENSE_LINES (
+            type: plainText
+            heading {
+                heading: Sla Expense Lines
+                alignment: center
+            }
+            layout {
+                sequence: 320
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AF
+            }
+        )
+
+        column SLA_EXPENSE_NET (
+            type: plainText
+            heading {
+                heading: SLA Net Expense
+                alignment: center
+            }
+            layout {
+                sequence: 310
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AE
+            }
+        )
+
+        column SLA_PERIOD_MISMATCH_LINES (
+            type: plainText
+            heading {
+                heading: Sla Period Mismatch Lines
+                alignment: center
+            }
+            layout {
+                sequence: 450
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AS
+            }
+        )
+
+        column SLA_UNLINKED_LINES (
+            type: plainText
+            heading {
+                heading: Sla Unlinked Lines
+                alignment: center
+            }
+            layout {
+                sequence: 460
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AT
+            }
+        )
+
+        column UNACCOUNTED_EVENTS (
+            type: plainText
+            heading {
+                heading: Unaccounted Events
+                alignment: center
+            }
+            layout {
+                sequence: 160
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport fa-close-primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 25
+            }
+
+            displayColumn BOOK_TYPE_CODE (
+                sequence: 2
+            )
+
+            displayColumn CLOSE_STATUS (
+                sequence: 5
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 4
+            )
+
+            displayColumn FA_DEPRN_AMOUNT (
+                sequence: 6
+            )
+
+            displayColumn FA_VS_GL_EXPENSE_DIFF (
+                sequence: 9
+            )
+
+            displayColumn GL_POSTED_EXPENSE_NET (
+                sequence: 8
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 1
+            )
+
+            displayColumn PERIOD_NAME (
+                sequence: 3
+            )
+
+            displayColumn RECONCILIATION_STATUS (
+                sequence: 10
+            )
+
+            displayColumn SLA_EXPENSE_NET (
+                sequence: 7
+            )
+
+            sort (
+                column: LEDGER_NAME
+                sort {
+                    sequence: 1
+                }
+            )
+
+            sort (
+                column: BOOK_CLASS
+                sort {
+                    sequence: 2
+                }
+            )
+
+            sort (
+                column: BOOK_TYPE_CODE
+                sort {
+                    sequence: 3
+                }
+            )
+
+            controlBreak (
+                column: LEDGER_NAME
+                layout {
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    pageItem P71_BOOK_CLASS (
+        type: selectList
+        label {
+            label: Book class
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Corporate;CORPORATE,Tax;TAX
+            nullDisplayValue: All book classes
+        }
+        layout {
+            sequence: 30
+            region: @filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: CORPORATE
+        }
+    )
+
+    pageItem P71_LEDGER_IDS (
+        type: popupLov
+        label {
+            label: Ledgers
+            alignment: left
+        }
+        settings {
+            displayAs: inlinePopup
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        multipleValues {
+            type: delimitedList
+        }
+        layout {
+            sequence: 20
+            region: @filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: All in-scope ledgers
+        }
+        default {
+            type: static
+            staticValue: 1003:5001:10001
+        }
+    )
+
+    pageItem P71_PERIOD_NAME (
+        type: selectList
+        label {
+            label: Period
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue: select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English')) from dual
+        }
+    )
+
+    button refresh (
+        buttonName: REFRESH
+        label: Refresh
+        layout {
+            sequence: 40
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            cssClasses: fa71-refresh
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    process normalize-fixed-assets-filters (
+        name: Normalize Fixed Assets filters
+        type: executeCode
+        source {
+            plsqlCode: xxme_fa_close_pkg.normalize_p71_filters;
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 15414654583381780
+        }
+    )
+
+)
+

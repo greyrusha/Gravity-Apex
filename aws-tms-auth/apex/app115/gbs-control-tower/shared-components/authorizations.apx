@@ -1,0 +1,16 @@
+authorization tms-application-access (
+    name: TMS Application Access
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody:
+            ```plsql
+            begin
+                return xx_tms_security_pkg.can_access(:APP_USER, :APP_ID);
+            end;
+            ```
+    }
+    error {
+        errorMessage: You are not authorized to access this application.
+    }
+)
+

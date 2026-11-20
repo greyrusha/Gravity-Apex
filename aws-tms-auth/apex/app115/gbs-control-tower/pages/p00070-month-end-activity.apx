@@ -1,0 +1,2040 @@
+page 70 (
+    name: Month-End Process Monitor
+    alias: MONTH-END-ACTIVITY
+    title: Month-End Process Monitor
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            (function(){
+             const $=apex.jQuery; const keys=['CA','RV','RS']; const pending=new Set(); const opened=new Set();
+             function summary(k){if(pending.has(k))return;pending.add(k);const items=k==='CA'?'#P70_CA_LEDGERS,#P70_CA_APPS,#P70_CA_VIEW':'#P70_'+k+'_LEDGERS';
+              apex.server.process('P70_SUMMARY',{x01:k,pageItems:items},{dataType:'json',success:function(d){$('#p70-summary-'+k).text(d.latest||'No matching runs');$('#p70-context-'+k).text(d.context);},error:function(){$('#p70-summary-'+k).text('Summary unavailable');},complete:function(){pending.delete(k);}});
+             }
+             function badges(el){$(el).find('.p70-status-label').each(function(){const s=this.textContent;this.classList.add('p70-badge',s==='Normal'||s==='Posted'||s==='Reversed'?'p70-good':s==='Error'?'p70-bad':'p70-warn');});
+              if(el.id!=='p70-report-CA'){const panel=$(el).find('.a-IRR-controlsContainer');const other=panel.find('.a-IRR-controls-item:not(.a-IRR-controls-item--controlBreak)');panel.toggle(other.length>0);}
+             }
+             keys.forEach(k=>{$('#p70-report-'+k).on('apexafterrefresh',function(){badges(this);summary(k);});});
+             function show(k,focus){
+              if(!keys.includes(k))k='CA';
+              keys.forEach(x=>{const el=document.getElementById('p70-'+x);el.hidden=x!==k;el.setAttribute('role','tabpanel');el.setAttribute('aria-labelledby','p70-tab-'+x);});
+              document.querySelectorAll('[data-p70-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.p70Tab===k?'true':'false'));
+              apex.item('P70_ACTIVE_TAB').setValue(k);
+              sessionStorage.setItem('p70-tab-&APP_ID.',k);
+              if(focus)document.querySelector('[data-p70-tab="'+k+'"]').focus();
+              $(window).trigger('apexwindowresized');
+              if(!opened.has(k)){opened.add(k);apex.region('p70-report-'+k).refresh();}
+             }
+             $(document).on('click','[data-p70-tab]',function(){show(this.dataset.p70Tab,false);});
+             $(document).on('keydown','[data-p70-tab]',function(e){if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=keys.indexOf(this.dataset.p70Tab);i=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;show(keys[i],true);});
+             keys.forEach(k=>{$(document).on('click','.p70-refresh-'+k,function(){
+               const val=apex.item('P70_'+k+'_LEDGERS').getValue();
+               if(k!=='CA'&&(!val||val.length===0)){apex.message.clearErrors();apex.message.showErrors([{type:'error',location:['page','inline'],pageItem:'P70_'+k+'_LEDGERS',message:'Select at least one ledger.',unsafe:false}]);return;}
+               apex.message.clearErrors();apex.region('p70-report-'+k).refresh();
+             });});
+             show(sessionStorage.getItem('p70-tab-&APP_ID.')||apex.item('P70_ACTIVE_TAB').getValue()||'CA',false);
+             keys.forEach(summary);
+            })();
+            ```
+    }
+    css {
+        inline:
+            ```css
+            .p70-panels [hidden],.p70-panel[hidden]{display:none!important}
+            .p70-processes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:4px 0 20px}
+            .p70-process{background:var(--ut-region-background-color,#fff);color:var(--ut-body-text-color,#222);border:1px solid var(--ut-component-border-color,#ddd);border-top:3px solid transparent;border-radius:4px;padding:18px;text-align:left;cursor:pointer}
+            .p70-process[aria-selected=true]{border-top-color:var(--ut-palette-primary,#bb2834)}
+            .p70-process strong,.p70-process span{display:block}.p70-process strong{font-size:17px;margin-bottom:8px}.p70-process span{font-size:13px}
+            .p70-filter{border-bottom:1px solid var(--ut-component-border-color,#ddd);padding-bottom:12px}
+            .p70-filter .apex-item-group--popup-lov{height:88px;align-items:stretch}
+            .p70-filter .apex-item-multi{height:88px;min-height:88px;max-height:88px;padding-top:28px!important;padding-bottom:8px!important;box-sizing:border-box;align-content:flex-start;overflow-y:auto}
+            .p70-filter .apex-item-multi:has([data-value])>.apex-item-multi-item:last-child{flex:0 0 1px;min-width:1px;width:1px}
+            .p70-filter .apex-item-multi:has([data-value])>.apex-item-multi-item:last-child input{width:1px!important;min-width:1px!important;max-width:1px!important;padding-left:0;padding-right:0}
+            .p70-filter .a-Button--popupLOV{height:88px;align-self:stretch}
+            .p70-filter .apex-item-select{height:88px;min-height:88px}
+            .p70-panel .a-IRR-header:not(.a-IRR-header--group){background:#edf2f6;color:#243746;border-bottom:2px solid #a5b5c1;font-weight:700}
+            .p70-panel .a-IRR-headerLink{color:inherit;font-weight:700}
+            .p70-panel .a-IRR-header:not(.a-IRR-header--group){text-align:center}
+            .p70-panel .t-fht-thead{box-shadow:0 2px 4px rgba(36,55,70,.12)}
+            #p70-report-RV .a-IRR-tableContainer,#p70-report-RS .a-IRR-tableContainer{max-height:560px;overflow:auto;isolation:isolate}
+            #p70-report-RV .a-IRR-header:not(.a-IRR-header--group),#p70-report-RS .a-IRR-header:not(.a-IRR-header--group){position:sticky;top:0;z-index:2}
+            #p70-report-RV .a-IRR-controls-item--controlBreak,#p70-report-RS .a-IRR-controls-item--controlBreak{display:none!important}
+            .p70-badge{display:inline-block;border-radius:4px;padding:3px 8px;font-weight:500}
+            .p70-good{background:#e6f4eb;color:#185c37}.p70-warn{background:#fff1d6;color:#704500}.p70-bad{background:#fde5e7;color:#9d1521}
+            @media(max-width:640px){.p70-processes{grid-template-columns:1fr}.p70-process{padding:12px}}
+            
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region p70-CA (
+        name: Create Accounting
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+            cssClasses: p70-panel
+        }
+        advanced {
+            htmlDomId: p70-CA
+        }
+    )
+
+    region p70-RS (
+        name: Reversals
+        type: staticContent
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+            cssClasses: p70-panel
+        }
+        advanced {
+            htmlDomId: p70-RS
+        }
+    )
+
+    region p70-RV (
+        name: Revaluations
+        type: staticContent
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+            cssClasses: p70-panel
+        }
+        advanced {
+            htmlDomId: p70-RV
+        }
+    )
+
+    region p70-filters-CA (
+        name: Create Accounting Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @p70-CA
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+                t-Region--hideHeader
+            ]
+            cssClasses: p70-filter
+        }
+        advanced {
+            htmlDomId: p70-filters-CA
+        }
+    )
+
+    region p70-filters-RS (
+        name: Reversals Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @p70-RS
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+                t-Region--hideHeader
+            ]
+            cssClasses: p70-filter
+        }
+        advanced {
+            htmlDomId: p70-filters-RS
+        }
+    )
+
+    region p70-filters-RV (
+        name: Revaluations Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @p70-RV
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+                t-Region--hideHeader
+            ]
+            cssClasses: p70-filter
+        }
+        advanced {
+            htmlDomId: p70-filters-RV
+        }
+    )
+
+    region p70-process-selector (
+        name: Month-End Activity
+        type: staticContent
+        source {
+            htmlCode: <h1>Month-End Process Monitor</h1><div class="p70-processes" role="tablist" aria-label="Month-end processes"><button type="button" class="p70-process" role="tab" id="p70-tab-CA" aria-controls="p70-CA" aria-selected="true" data-p70-tab="CA"><strong>Create Accounting</strong><span id="p70-summary-CA">Loading summary...</span><span id="p70-context-CA">AP, AR and Cost Management execution history</span></button><button type="button" class="p70-process" role="tab" id="p70-tab-RV" aria-controls="p70-RV" aria-selected="false" data-p70-tab="RV"><strong>Revaluations</strong><span id="p70-summary-RV">Loading summary...</span><span id="p70-context-RV">Last 3 revaluation runs per ledger</span></button><button type="button" class="p70-process" role="tab" id="p70-tab-RS" aria-controls="p70-RS" aria-selected="false" data-p70-tab="RS"><strong>Reversals</strong><span id="p70-summary-RS">Loading summary...</span><span id="p70-context-RS">Last 3 journal reversal runs per ledger</span></button></div>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+                t-Region--noPadding
+                t-Region--hideHeader
+            ]
+        }
+        advanced {
+            htmlDomId: p70-process-selector
+        }
+    )
+
+    region p70-report-CA (
+        name: Create Accounting Executions
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery: select * from table(xxme_process_monitor_pkg.get_ca_executions(:P70_CA_LEDGERS,:P70_CA_APPS,:P70_CA_VIEW))
+            pageItemsToSubmit: [
+                P70_CA_LEDGERS
+                P70_CA_APPS
+                P70_CA_VIEW
+            ]
+        }
+        layout {
+            sequence: 20
+            parentRegion: @p70-CA
+            slot: subRegions
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: p70-report-CA
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No completed executions match the selected filters.
+        }
+        actionsMenu {
+            subscription: false
+        }
+        download {
+            formats: [
+                csv
+                excel
+            ]
+            sendAsEmail: false
+        }
+        heading {
+            fixedTo: region
+            maxReportHeight: 560
+        }
+        advanced {
+            savedReportMappingIdentifier: 15227210588931637
+        }
+
+        column ACCOUNTING_END_DATE (
+            type: plainText
+            heading {
+                heading: Accounting End Date
+                alignment: center
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column ACCOUNTING_MODE (
+            type: plainText
+            heading {
+                heading: Accounting Mode
+                alignment: center
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column ACTUAL_COMPLETION_DATE (
+            type: plainText
+            heading {
+                heading: Actual End Date (UTC)
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column ACTUAL_START_DATE (
+            type: plainText
+            heading {
+                heading: Actual Start Date (UTC)
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column ERRORS_ONLY (
+            type: plainText
+            heading {
+                heading: Errors Only
+                alignment: center
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column GL_BATCH_NAME (
+            type: plainText
+            heading {
+                heading: GL Batch Name
+                alignment: center
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column HOURS_SINCE_RUN (
+            type: plainText
+            heading {
+                heading: Hours Since Run
+                alignment: center
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column IS_LATEST (
+            type: plainText
+            heading {
+                heading: Latest Successful
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column LEDGER_ID (
+            type: plainText
+            heading {
+                heading: Ledger Id
+                alignment: center
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column MODULE (
+            type: plainText
+            heading {
+                heading: SubLedger
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column POST_IN_GL (
+            type: plainText
+            heading {
+                heading: Post in GL
+                alignment: center
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column PROCESS_CATEGORY (
+            type: plainText
+            heading {
+                heading: Process Category
+                alignment: center
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column REPORT_STYLE (
+            type: plainText
+            heading {
+                heading: Report Style
+                alignment: center
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column REQUESTED_BY (
+            type: plainText
+            heading {
+                heading: Requested By
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column REQUEST_ID (
+            type: plainText
+            heading {
+                heading: Request Id
+                alignment: center
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column RUN_MINUTES (
+            type: plainText
+            heading {
+                heading: Run Minutes
+                alignment: center
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            columnFormatting {
+                htmlExpression: <span class="p70-status-label">#STATUS#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column TRANSFER_TO_GL (
+            type: plainText
+            heading {
+                heading: Transfer to GL
+                alignment: center
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport ca-primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 25
+            }
+
+            displayColumn ACCOUNTING_END_DATE (
+                sequence: 11
+            )
+
+            displayColumn ACCOUNTING_MODE (
+                sequence: 12
+            )
+
+            displayColumn ACTUAL_COMPLETION_DATE (
+                sequence: 8
+            )
+
+            displayColumn ACTUAL_START_DATE (
+                sequence: 7
+            )
+
+            displayColumn HOURS_SINCE_RUN (
+                sequence: 10
+            )
+
+            displayColumn IS_LATEST (
+                sequence: 5
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 2
+            )
+
+            displayColumn MODULE (
+                sequence: 1
+            )
+
+            displayColumn POST_IN_GL (
+                sequence: 14
+            )
+
+            displayColumn REQUESTED_BY (
+                sequence: 6
+            )
+
+            displayColumn REQUEST_ID (
+                sequence: 3
+            )
+
+            displayColumn RUN_MINUTES (
+                sequence: 9
+            )
+
+            displayColumn STATUS (
+                sequence: 4
+            )
+
+            displayColumn TRANSFER_TO_GL (
+                sequence: 13
+            )
+
+            sort (
+                column: REQUEST_ID
+                sort {
+                    direction: desc
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region p70-report-RS (
+        name: Most Recent Reversals
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery: select * from table(xxme_process_monitor_pkg.get_reversals(:P70_RS_LEDGERS))
+            pageItemsToSubmit: P70_RS_LEDGERS
+        }
+        layout {
+            sequence: 20
+            parentRegion: @p70-RS
+            slot: subRegions
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: p70-report-RS
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No matching runs. Select at least one ledger, then Refresh.
+        }
+        actionsMenu {
+            subscription: false
+        }
+        download {
+            formats: [
+                csv
+                excel
+            ]
+            sendAsEmail: false
+        }
+        heading {
+            fixedTo: region
+            maxReportHeight: 560
+        }
+        advanced {
+            savedReportMappingIdentifier: 15229474211931637
+        }
+
+        column ACCOUNTED_CR (
+            type: plainText
+            heading {
+                heading: Accounted Cr
+                alignment: center
+            }
+            layout {
+                sequence: 190
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column ACCOUNTED_DR (
+            type: plainText
+            heading {
+                heading: Accounted Dr
+                alignment: center
+            }
+            layout {
+                sequence: 180
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column BATCH_NAME (
+            type: plainText
+            heading {
+                heading: Batch Name
+                alignment: center
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column BATCH_STATUS (
+            type: plainText
+            heading {
+                heading: Batch Status
+                alignment: center
+            }
+            layout {
+                sequence: 120
+            }
+            columnFormatting {
+                htmlExpression: <span class="p70-status-label">#BATCH_STATUS#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Currency Code
+                alignment: center
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column JE_BATCH_ID (
+            type: plainText
+            heading {
+                heading: Je Batch Id
+                alignment: center
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column JE_CATEGORY (
+            type: plainText
+            heading {
+                heading: Category
+                alignment: center
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column JE_HEADER_ID (
+            type: plainText
+            heading {
+                heading: Je Header Id
+                alignment: center
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column JE_SOURCE (
+            type: plainText
+            heading {
+                heading: Source
+                alignment: center
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column JOURNAL_NAME (
+            type: plainText
+            heading {
+                heading: Journal Name
+                alignment: center
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column LEDGER_CURRENCY (
+            type: plainText
+            heading {
+                heading: Ledger Currency
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column LEDGER_ID (
+            type: plainText
+            heading {
+                heading: Ledger Id
+                alignment: center
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column ORIG_BATCH_NAME (
+            type: plainText
+            heading {
+                heading: Original Batch
+                alignment: center
+            }
+            layout {
+                sequence: 230
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: W
+            }
+        )
+
+        column ORIG_JE_HEADER_ID (
+            type: plainText
+            heading {
+                heading: Orig Je Header Id
+                alignment: center
+            }
+            layout {
+                sequence: 200
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column ORIG_JOURNAL_NAME (
+            type: plainText
+            heading {
+                heading: Original Journal
+                alignment: center
+            }
+            layout {
+                sequence: 210
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: U
+            }
+        )
+
+        column ORIG_PERIOD (
+            type: plainText
+            heading {
+                heading: Original Period
+                alignment: center
+            }
+            layout {
+                sequence: 220
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column REVERSAL_PERIOD (
+            type: plainText
+            heading {
+                heading: Reversal Period
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column RUN_BATCHES (
+            type: plainText
+            heading {
+                heading: Batches in Run
+                alignment: center
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column RUN_BY (
+            type: plainText
+            heading {
+                heading: Run By
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column RUN_END (
+            type: plainText
+            heading {
+                heading: Run End (UTC)
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column RUN_RANK (
+            type: plainText
+            heading {
+                heading: Execution Group
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column RUN_START (
+            type: plainText
+            heading {
+                heading: Run Start (UTC)
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport rs-primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 25
+            }
+
+            displayColumn ACCOUNTED_CR (
+                sequence: 15
+            )
+
+            displayColumn ACCOUNTED_DR (
+                sequence: 14
+            )
+
+            displayColumn BATCH_NAME (
+                sequence: 8
+            )
+
+            displayColumn BATCH_STATUS (
+                sequence: 9
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 13
+            )
+
+            displayColumn JE_CATEGORY (
+                sequence: 12
+            )
+
+            displayColumn JE_SOURCE (
+                sequence: 11
+            )
+
+            displayColumn JOURNAL_NAME (
+                sequence: 10
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 1
+            )
+
+            displayColumn ORIG_BATCH_NAME (
+                sequence: 18
+            )
+
+            displayColumn ORIG_JOURNAL_NAME (
+                sequence: 16
+            )
+
+            displayColumn ORIG_PERIOD (
+                sequence: 17
+            )
+
+            displayColumn REVERSAL_PERIOD (
+                sequence: 7
+            )
+
+            displayColumn RUN_BATCHES (
+                sequence: 5
+            )
+
+            displayColumn RUN_BY (
+                sequence: 6
+            )
+
+            displayColumn RUN_END (
+                sequence: 4
+            )
+
+            displayColumn RUN_RANK (
+                sequence: 2
+            )
+
+            displayColumn RUN_START (
+                sequence: 3
+            )
+
+            sort (
+                column: LEDGER_NAME
+                sort {
+                    sequence: 1
+                }
+            )
+
+            sort (
+                column: RUN_RANK
+                sort {
+                    sequence: 2
+                }
+            )
+
+            sort (
+                column: RUN_START
+                sort {
+                    direction: desc
+                    sequence: 3
+                }
+            )
+
+            controlBreak (
+                column: LEDGER_NAME
+                layout {
+                    sequence: 1
+                }
+            )
+
+            controlBreak (
+                column: RUN_RANK
+                layout {
+                    sequence: 2
+                }
+            )
+
+        )
+
+    )
+
+    region p70-report-RV (
+        name: Most Recent Revaluations
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery: select * from table(xxme_process_monitor_pkg.get_revaluations(:P70_RV_LEDGERS))
+            pageItemsToSubmit: P70_RV_LEDGERS
+        }
+        layout {
+            sequence: 20
+            parentRegion: @p70-RV
+            slot: subRegions
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: p70-report-RV
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No matching runs. Select at least one ledger, then Refresh.
+        }
+        actionsMenu {
+            subscription: false
+        }
+        download {
+            formats: [
+                csv
+                excel
+            ]
+            sendAsEmail: false
+        }
+        heading {
+            fixedTo: region
+            maxReportHeight: 560
+        }
+        advanced {
+            savedReportMappingIdentifier: 15232018582931737
+        }
+
+        column ACCOUNTED_CR (
+            type: plainText
+            heading {
+                heading: Accounted Cr
+                alignment: center
+            }
+            layout {
+                sequence: 160
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column ACCOUNTED_DR (
+            type: plainText
+            heading {
+                heading: Accounted Dr
+                alignment: center
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column BATCH_NAME (
+            type: plainText
+            heading {
+                heading: Batch Name
+                alignment: center
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column BATCH_STATUS (
+            type: plainText
+            heading {
+                heading: Batch Status
+                alignment: center
+            }
+            layout {
+                sequence: 110
+            }
+            columnFormatting {
+                htmlExpression: <span class="p70-status-label">#BATCH_STATUS#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column JE_BATCH_ID (
+            type: plainText
+            heading {
+                heading: Je Batch Id
+                alignment: center
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column JE_HEADER_ID (
+            type: plainText
+            heading {
+                heading: Je Header Id
+                alignment: center
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column JOURNAL_NAME (
+            type: plainText
+            heading {
+                heading: Journal Name
+                alignment: center
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column LEDGER_CURRENCY (
+            type: plainText
+            heading {
+                heading: Ledger Currency
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column LEDGER_ID (
+            type: plainText
+            heading {
+                heading: Ledger Id
+                alignment: center
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column PERIOD_NAME (
+            type: plainText
+            heading {
+                heading: Period Name
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column REVALUED_CURRENCY (
+            type: plainText
+            heading {
+                heading: Revalued Currency
+                alignment: center
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column REVERSAL_PERIOD (
+            type: plainText
+            heading {
+                heading: Reversal Period
+                alignment: center
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column REVERSAL_STATUS (
+            type: plainText
+            heading {
+                heading: Reversal Status
+                alignment: center
+            }
+            layout {
+                sequence: 180
+            }
+            columnFormatting {
+                htmlExpression: <span class="p70-status-label">#REVERSAL_STATUS#</span>
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column RUN_BY (
+            type: plainText
+            heading {
+                heading: Run By
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column RUN_END (
+            type: plainText
+            heading {
+                heading: Run End (UTC)
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column RUN_RANK (
+            type: plainText
+            heading {
+                heading: Execution Group
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column RUN_START (
+            type: plainText
+            heading {
+                heading: Run Start (UTC)
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport rv-primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 25
+            }
+
+            displayColumn ACCOUNTED_CR (
+                sequence: 12
+            )
+
+            displayColumn ACCOUNTED_DR (
+                sequence: 11
+            )
+
+            displayColumn BATCH_NAME (
+                sequence: 7
+            )
+
+            displayColumn BATCH_STATUS (
+                sequence: 8
+            )
+
+            displayColumn JOURNAL_NAME (
+                sequence: 9
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 1
+            )
+
+            displayColumn PERIOD_NAME (
+                sequence: 3
+            )
+
+            displayColumn REVALUED_CURRENCY (
+                sequence: 10
+            )
+
+            displayColumn REVERSAL_PERIOD (
+                sequence: 13
+            )
+
+            displayColumn REVERSAL_STATUS (
+                sequence: 14
+            )
+
+            displayColumn RUN_BY (
+                sequence: 6
+            )
+
+            displayColumn RUN_END (
+                sequence: 5
+            )
+
+            displayColumn RUN_RANK (
+                sequence: 2
+            )
+
+            displayColumn RUN_START (
+                sequence: 4
+            )
+
+            sort (
+                column: LEDGER_NAME
+                sort {
+                    sequence: 1
+                }
+            )
+
+            sort (
+                column: RUN_RANK
+                sort {
+                    sequence: 2
+                }
+            )
+
+            sort (
+                column: RUN_START
+                sort {
+                    direction: desc
+                    sequence: 3
+                }
+            )
+
+            controlBreak (
+                column: LEDGER_NAME
+                layout {
+                    sequence: 1
+                }
+            )
+
+            controlBreak (
+                column: RUN_RANK
+                layout {
+                    sequence: 2
+                }
+            )
+
+        )
+
+    )
+
+    pageItem P70_ACTIVE_TAB (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 1
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: CA
+        }
+    )
+
+    pageItem P70_CA_APPS (
+        type: popupLov
+        label {
+            label: Applications
+            alignment: left
+        }
+        settings {
+            displayAs: inlinePopup
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:AP - Payables;AP,AR - Receivables;AR,Cost Management;COST
+            displayNullValue: false
+        }
+        multipleValues {
+            type: delimitedList
+        }
+        layout {
+            sequence: 20
+            region: @p70-filters-CA
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: All applications
+        }
+    )
+
+    pageItem P70_CA_LEDGERS (
+        type: popupLov
+        label {
+            label: Ledgers
+            alignment: left
+        }
+        settings {
+            displayAs: inlinePopup
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        multipleValues {
+            type: delimitedList
+        }
+        layout {
+            sequence: 10
+            region: @p70-filters-CA
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: All in-scope ledgers
+        }
+        default {
+            type: static
+            staticValue: 1003:5001:10001
+        }
+    )
+
+    pageItem P70_CA_VIEW (
+        type: selectList
+        label {
+            label: View
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Recent history;ALL,Latest successful only;LATEST
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @p70-filters-CA
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: ALL
+        }
+    )
+
+    pageItem P70_RS_LEDGERS (
+        type: popupLov
+        label {
+            label: Ledgers *
+            alignment: left
+        }
+        settings {
+            displayAs: inlinePopup
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        multipleValues {
+            type: delimitedList
+        }
+        layout {
+            sequence: 10
+            region: @p70-filters-RS
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: Select ledgers
+        }
+        default {
+            type: static
+            staticValue: 1003:5001:10001
+        }
+    )
+
+    pageItem P70_RV_LEDGERS (
+        type: popupLov
+        label {
+            label: Ledgers *
+            alignment: left
+        }
+        settings {
+            displayAs: inlinePopup
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        multipleValues {
+            type: delimitedList
+        }
+        layout {
+            sequence: 10
+            region: @p70-filters-RV
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+            labelColumnSpan: 0
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: Select ledgers
+        }
+        default {
+            type: static
+            staticValue: 1003:5001:10001
+        }
+    )
+
+    button p70-refresh-CA (
+        buttonName: REFRESH_CA
+        label: Refresh
+        layout {
+            sequence: 40
+            region: @p70-filters-CA
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            cssClasses: p70-refresh-CA
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button p70-refresh-RS (
+        buttonName: REFRESH_RS
+        label: Refresh
+        layout {
+            sequence: 40
+            region: @p70-filters-RS
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            cssClasses: p70-refresh-RS
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button p70-refresh-RV (
+        buttonName: REFRESH_RV
+        label: Refresh
+        layout {
+            sequence: 40
+            region: @p70-filters-RV
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            cssClasses: p70-refresh-RV
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    process normalize-page-filters (
+        name: Normalize page filters
+        type: executeCode
+        source {
+            plsqlCode: xxme_process_monitor_pkg.normalize_filters;
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 15235173202931754
+        }
+    )
+
+    process p70-summary (
+        name: P70_SUMMARY
+        type: executeCode
+        source {
+            plsqlCode: xxme_process_monitor_pkg.emit_summary_json;
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 15235204448931754
+        }
+    )
+
+)
+

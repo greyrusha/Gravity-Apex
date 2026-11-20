@@ -1788,7 +1788,7 @@ page 70 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
             type: staticValues
@@ -1821,11 +1821,12 @@ page 70 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
-            type: sqlQuery
-            sqlQuery: select name d, to_char(ledger_id) r from apps.gl_ledgers@ADG where object_type_code = 'L' and ledger_id in (1003,5001,10001) order by name
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
             displayNullValue: false
         }
         multipleValues {
@@ -1887,11 +1888,12 @@ page 70 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
-            type: sqlQuery
-            sqlQuery: select name d, to_char(ledger_id) r from apps.gl_ledgers@ADG where object_type_code = 'L' and ledger_id in (1003,5001,10001) order by name
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
             displayNullValue: false
         }
         multipleValues {
@@ -1913,38 +1915,6 @@ page 70 (
         default {
             type: static
             staticValue: 1003:5001:10001
-        }
-    )
-
-    pageItem P70_RS_PERIOD (
-        type: popupLov
-        label {
-            label: Reversal period (optional)
-            alignment: left
-        }
-        settings {
-            displayAs: NOT_ENTERABLE
-        }
-        lov {
-            type: sqlQuery
-            sqlQuery: select period_name d,period_name r from apps.gl_periods@ADG where adjustment_period_flag='N' group by period_name order by max(start_date) desc
-            nullDisplayValue: All periods
-        }
-        layout {
-            sequence: 20
-            region: @p70-filters-RS
-            slot: regionBody
-            alignment: left
-            startNewRow: false
-            columnSpan: 4
-            labelColumnSpan: 0
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        serverSideCondition {
-            type: never
         }
     )
 
@@ -1955,11 +1925,12 @@ page 70 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
-            type: sqlQuery
-            sqlQuery: select name d, to_char(ledger_id) r from apps.gl_ledgers@ADG where object_type_code = 'L' and ledger_id in (1003,5001,10001) order by name
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
             displayNullValue: false
         }
         multipleValues {
@@ -1981,38 +1952,6 @@ page 70 (
         default {
             type: static
             staticValue: 1003:5001:10001
-        }
-    )
-
-    pageItem P70_RV_PERIOD (
-        type: popupLov
-        label {
-            label: Period (optional)
-            alignment: left
-        }
-        settings {
-            displayAs: NOT_ENTERABLE
-        }
-        lov {
-            type: sqlQuery
-            sqlQuery: select period_name d,period_name r from apps.gl_periods@ADG where adjustment_period_flag='N' group by period_name order by max(start_date) desc
-            nullDisplayValue: All periods
-        }
-        layout {
-            sequence: 20
-            region: @p70-filters-RV
-            slot: regionBody
-            alignment: left
-            startNewRow: false
-            columnSpan: 4
-            labelColumnSpan: 0
-        }
-        appearance {
-            template: @/optional-floating
-            templateOptions: #DEFAULT#
-        }
-        serverSideCondition {
-            type: never
         }
     )
 

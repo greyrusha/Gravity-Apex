@@ -1,0 +1,706 @@
+page 21 (
+    name: AP Active Holds - Current
+    alias: AP-ACTIVE-HOLDS
+    title: AP Active Holds - Current
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region ap-holds (
+        name: AP Active Holds
+        title: AP Holds
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                SELECT h.ledger_id,
+                       h.ledger_name,
+                       h.org_id,
+                       h.operating_unit,
+                       h.invoice_id,
+                       h.invoice_num,
+                       h.supplier_number,
+                       h.supplier_name,
+                       h.supplier_site,
+                       h.invoice_date,
+                       h.gl_date,
+                       h.currency_code,
+                       h.invoice_amount,
+                       h.amount_paid,
+                       h.outstanding_amount,
+                       h.payment_status_flag,
+                       h.hold_code,
+                       h.hold_reason,
+                       h.hold_date,
+                       h.hold_age_days,
+                       h.refresh_timestamp
+                FROM TABLE(xxme_ap_holds_pkg.get_holds(:P21_DB_LINK)) h
+                ```
+            pageItemsToSubmit: P21_DB_LINK
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+            displayPosition: topAndBottomRight
+            maxRowsToDisplay: 1000
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound:
+                ```
+                <div class="t-Alert t-Alert--success t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-check-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">No active AP holds found</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        No active holds were found on unpaid, non-cancelled invoices within
+                        the approved ledger scope.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        advanced {
+            savedReportMappingIdentifier: 16480636946961733
+        }
+
+        column AMOUNT_PAID (
+            type: plainText
+            heading {
+                heading: Amount Paid
+                alignment: end
+            }
+            layout {
+                sequence: 140
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Currency Code
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column GL_DATE (
+            type: plainText
+            heading {
+                heading: GL Date
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column HOLD_AGE_DAYS (
+            type: plainText
+            heading {
+                heading: Hold Age Days
+                alignment: end
+            }
+            layout {
+                sequence: 200
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column HOLD_CODE (
+            type: plainText
+            heading {
+                heading: Hold Code
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column HOLD_DATE (
+            type: plainText
+            heading {
+                heading: Hold Date
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column HOLD_REASON (
+            type: plainText
+            heading {
+                heading: Hold Reason
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column INVOICE_AMOUNT (
+            type: plainText
+            heading {
+                heading: Invoice Amount
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column INVOICE_DATE (
+            type: plainText
+            heading {
+                heading: Invoice Date
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column INVOICE_ID (
+            type: hidden
+            heading {
+                heading: Invoice Id
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column INVOICE_NUM (
+            type: plainText
+            heading {
+                heading: Invoice Num
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column LEDGER_ID (
+            type: hidden
+            heading {
+                heading: Ledger Id
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column OPERATING_UNIT (
+            type: plainText
+            heading {
+                heading: Operating Unit
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Org Id
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column OUTSTANDING_AMOUNT (
+            type: plainText
+            heading {
+                heading: Outstanding Amount
+                alignment: end
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column PAYMENT_STATUS_FLAG (
+            type: hidden
+            heading {
+                heading: Payment Status Flag
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column REFRESH_TIMESTAMP (
+            type: hidden
+            heading {
+                heading: Refresh Timestamp
+            }
+            layout {
+                sequence: 220
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column SUPPLIER_NAME (
+            type: plainText
+            heading {
+                heading: Supplier Name
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column SUPPLIER_NUMBER (
+            type: plainText
+            heading {
+                heading: Supplier Number
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column SUPPLIER_SITE (
+            type: hidden
+            heading {
+                heading: Supplier Site
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: AP Holds
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 1000
+            }
+
+            displayColumn AMOUNT_PAID (
+                sequence: 14
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 12
+            )
+
+            displayColumn GL_DATE (
+                sequence: 11
+            )
+
+            displayColumn HOLD_AGE_DAYS (
+                sequence: 20
+            )
+
+            displayColumn HOLD_CODE (
+                sequence: 17
+            )
+
+            displayColumn HOLD_DATE (
+                sequence: 19
+            )
+
+            displayColumn HOLD_REASON (
+                sequence: 18
+            )
+
+            displayColumn INVOICE_AMOUNT (
+                sequence: 13
+            )
+
+            displayColumn INVOICE_DATE (
+                sequence: 10
+            )
+
+            displayColumn INVOICE_ID (
+                sequence: 5
+            )
+
+            displayColumn INVOICE_NUM (
+                sequence: 6
+            )
+
+            displayColumn LEDGER_ID (
+                sequence: 1
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 2
+            )
+
+            displayColumn OPERATING_UNIT (
+                sequence: 4
+            )
+
+            displayColumn ORG_ID (
+                sequence: 3
+            )
+
+            displayColumn OUTSTANDING_AMOUNT (
+                sequence: 15
+            )
+
+            displayColumn PAYMENT_STATUS_FLAG (
+                sequence: 16
+            )
+
+            displayColumn REFRESH_TIMESTAMP (
+                sequence: 21
+            )
+
+            displayColumn SUPPLIER_NAME (
+                sequence: 8
+            )
+
+            displayColumn SUPPLIER_NUMBER (
+                sequence: 7
+            )
+
+            displayColumn SUPPLIER_SITE (
+                sequence: 9
+            )
+
+        )
+
+    )
+
+    region breadcrumb (
+        name: AP Active Holds - Current
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region filters (
+        name: Filters
+        title: Current State
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      This report shows current active holds on unpaid, non-cancelled AP
+                      invoices. It is not a historical period-end snapshot.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P21_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button refresh-gl (
+        buttonName: REFRESH_HOLDS
+        label: Refresh
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction refresh (
+        name: Refresh
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @refresh-gl
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @ap-holds
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction return-to-dashboard (
+        name: Return to Dashboard
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: window.close();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)
+

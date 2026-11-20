@@ -1,0 +1,830 @@
+page 11 (
+    name: GL Unposted Journals
+    alias: GL-UNPOSTED-JOURNALS
+    title: GL Unposted Journals
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    css {
+        inline:
+            ```css
+            .xxme-status {
+                display: inline-block;
+                min-width: 105px;
+                padding: 4px 10px;
+                border-radius: 12px;
+                color: #fff;
+                font-size: 0.75rem;
+                font-weight: 700;
+                line-height: 1.2;
+                text-align: center;
+                white-space: nowrap;
+                letter-spacing: 0.02em;
+            }
+            
+            .xxme-status-RED {
+                background-color: #c62828;
+            }
+            
+            .xxme-status-AMBER {
+                background-color: #d98200;
+            }
+            
+            .xxme-status-GREEN {
+                background-color: #2e7d32;
+            }
+            
+            .xxme-status-INFORMATIONAL {
+                background-color: #287c96;
+            }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region filters (
+        name: Filters
+        title: Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    region unposted-journals (
+        name: Unposted Journals
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                SELECT ledger_id,
+                       ledger_name,
+                       period_name,
+                       je_header_id,
+                       je_batch_id,
+                       batch_name,
+                       journal_name,
+                       journal_source,
+                       journal_category,
+                       effective_date,
+                       currency_code,
+                       journal_entered_dr,
+                       journal_entered_cr,
+                       ledger_currency_code,
+                       journal_accounted_dr,
+                       journal_accounted_cr,
+                       ABS(NVL(journal_accounted_dr, 0)
+                         - NVL(journal_accounted_cr, 0)) AS accounted_difference,
+                       balance_type,
+                       journal_description,
+                       batch_description,
+                       batch_balance_status,
+                       severity,
+                       refresh_timestamp
+                FROM   TABLE(
+                           xxme_gl_unposted_pkg.get_journals(:P11_PERIOD_NAME, :P11_DB_LINK)
+                       )
+                ORDER BY ledger_id,
+                         effective_date,
+                         batch_name,
+                         journal_name
+                ```
+            pageItemsToSubmit: [
+                P11_PERIOD_NAME
+                P11_DB_LINK
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound:
+                ```
+                <div class="t-Alert t-Alert--success t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-title">No unposted journals found</div>
+                      <div class="t-Alert-body">
+                        No unposted GL journals were found for the selected period and approved ledger scope.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        advanced {
+            savedReportMappingIdentifier: 17490962108304104
+        }
+
+        column ACCOUNTED_DIFFERENCE (
+            type: plainText
+            heading {
+                heading: Accounted Difference
+                alignment: end
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: W
+            }
+        )
+
+        column BALANCE_TYPE (
+            type: hidden
+            heading {
+                heading: Balance Type
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column BATCH_BALANCE_STATUS (
+            type: hidden
+            heading {
+                heading: Batch Balance Status
+            }
+            layout {
+                sequence: 200
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column BATCH_DESCRIPTION (
+            type: hidden
+            heading {
+                heading: Batch Description
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column BATCH_NAME (
+            type: plainText
+            heading {
+                heading: Batch Name
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Currency Code
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column EFFECTIVE_DATE (
+            type: plainText
+            heading {
+                heading: Effective Date
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column JE_BATCH_ID (
+            type: hidden
+            heading {
+                heading: Je Batch Id
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column JE_HEADER_ID (
+            type: hidden
+            heading {
+                heading: Je Header Id
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column JOURNAL_ACCOUNTED_CR (
+            type: hidden
+            heading {
+                heading: Journal Accounted Cr
+            }
+            layout {
+                sequence: 230
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column JOURNAL_ACCOUNTED_DR (
+            type: hidden
+            heading {
+                heading: Journal Accounted Dr
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: U
+            }
+        )
+
+        column JOURNAL_CATEGORY (
+            type: plainText
+            heading {
+                heading: Journal Category
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column JOURNAL_DESCRIPTION (
+            type: hidden
+            heading {
+                heading: Journal Description
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column JOURNAL_ENTERED_CR (
+            type: plainText
+            heading {
+                heading: Entered CR
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column JOURNAL_ENTERED_DR (
+            type: plainText
+            heading {
+                heading: " Entered DR"
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column JOURNAL_NAME (
+            type: plainText
+            heading {
+                heading: Journal Name
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column JOURNAL_SOURCE (
+            type: plainText
+            heading {
+                heading: Journal Source
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column LEDGER_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Ledger Currency
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column LEDGER_ID (
+            type: hidden
+            heading {
+                heading: Ledger Id
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column PERIOD_NAME (
+            type: hidden
+            heading {
+                heading: Period Name
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column REFRESH_TIMESTAMP (
+            type: hidden
+            heading {
+                heading: Refresh Timestamp
+            }
+            layout {
+                sequence: 220
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column SEVERITY (
+            type: hidden
+            heading {
+                heading: Severity
+            }
+            layout {
+                sequence: 210
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 1000
+            }
+
+            displayColumn ACCOUNTED_DIFFERENCE (
+                sequence: 15
+            )
+
+            displayColumn BALANCE_TYPE (
+                sequence: 17
+            )
+
+            displayColumn BATCH_BALANCE_STATUS (
+                sequence: 20
+            )
+
+            displayColumn BATCH_DESCRIPTION (
+                sequence: 19
+            )
+
+            displayColumn BATCH_NAME (
+                sequence: 6
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 11
+            )
+
+            displayColumn EFFECTIVE_DATE (
+                sequence: 10
+            )
+
+            displayColumn JE_BATCH_ID (
+                sequence: 5
+            )
+
+            displayColumn JE_HEADER_ID (
+                sequence: 4
+            )
+
+            displayColumn JOURNAL_ACCOUNTED_CR (
+                sequence: 23
+            )
+
+            displayColumn JOURNAL_ACCOUNTED_DR (
+                sequence: 16
+            )
+
+            displayColumn JOURNAL_CATEGORY (
+                sequence: 9
+            )
+
+            displayColumn JOURNAL_DESCRIPTION (
+                sequence: 18
+            )
+
+            displayColumn JOURNAL_ENTERED_CR (
+                sequence: 13
+            )
+
+            displayColumn JOURNAL_ENTERED_DR (
+                sequence: 12
+            )
+
+            displayColumn JOURNAL_NAME (
+                sequence: 7
+            )
+
+            displayColumn JOURNAL_SOURCE (
+                sequence: 8
+            )
+
+            displayColumn LEDGER_CURRENCY_CODE (
+                sequence: 14
+            )
+
+            displayColumn LEDGER_ID (
+                sequence: 1
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 2
+            )
+
+            displayColumn PERIOD_NAME (
+                sequence: 3
+            )
+
+            displayColumn REFRESH_TIMESTAMP (
+                sequence: 22
+            )
+
+            displayColumn SEVERITY (
+                sequence: 21
+            )
+
+        )
+
+    )
+
+    pageItem P11_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 20
+            region: @filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P11_PERIOD_NAME (
+        type: selectList
+        label {
+            label: Accounting Period
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button refresh-gl (
+        buttonName: REFRESH_GL
+        label: Refresh
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction close (
+        name: Close
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: window.close();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction new (
+        name: New
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @refresh-gl
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @unposted-journals
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)
+

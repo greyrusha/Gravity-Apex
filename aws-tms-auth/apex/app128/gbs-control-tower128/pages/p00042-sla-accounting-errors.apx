@@ -853,7 +853,7 @@ page 42 (
     pageItem P42_APPLICATION_ID (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 80
@@ -864,7 +864,7 @@ page 42 (
     pageItem P42_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 120
@@ -879,7 +879,7 @@ page 42 (
     pageItem P42_ENTITY_CODE (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 110
@@ -890,7 +890,7 @@ page 42 (
     pageItem P42_EXCEPTION_TYPE (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 120
@@ -901,7 +901,7 @@ page 42 (
     pageItem P42_LEDGER_ID (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 90
@@ -912,7 +912,7 @@ page 42 (
     pageItem P42_ORG_ID (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 100
@@ -923,7 +923,7 @@ page 42 (
     pageItem P42_ORG_NAME (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 105
@@ -968,7 +968,7 @@ page 42 (
     pageItem P42_RUN_PERIOD (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 40
@@ -979,7 +979,7 @@ page 42 (
     pageItem P42_RUN_SLA (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 50
@@ -994,7 +994,7 @@ page 42 (
     pageItem P42_SOURCE_PAGE (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 130
@@ -1085,41 +1085,11 @@ page 42 (
         source {
             plsqlCode:
                 ```plsql
-                DECLARE
-                    l_db_link VARCHAR2(30);
-                    l_sql     VARCHAR2(1000);
-                BEGIN
-                    :P42_ORG_NAME := NULL;
-                
-                    IF :P42_ORG_ID IS NOT NULL
-                       AND :P42_DB_LINK IS NOT NULL
-                       AND :P42_APPLICATION_ID IS NOT NULL
-                    THEN
-                        l_db_link := xxme_db_source_pkg.normalize_db_link(:P42_DB_LINK);
-                
-                        IF TO_NUMBER(:P42_APPLICATION_ID) IN (200, 222) THEN
-                            l_sql :=
-                                'SELECT MAX(TRIM(name)) ' ||
-                                'FROM apps.hr_operating_units@' || l_db_link ||
-                                ' WHERE organization_id = :1';
-                        ELSIF TO_NUMBER(:P42_APPLICATION_ID) = 707 THEN
-                            l_sql :=
-                                'SELECT MAX(TRIM(organization_name)) ' ||
-                                'FROM apps.org_organization_definitions@' || l_db_link ||
-                                ' WHERE organization_id = :1';
-                        END IF;
-                
-                        IF l_sql IS NOT NULL THEN
-                            EXECUTE IMMEDIATE l_sql
-                                INTO :P42_ORG_NAME
-                                USING TO_NUMBER(:P42_ORG_ID);
-                        END IF;
-                    END IF;
-                
-                    IF :P42_ORG_ID IS NOT NULL AND :P42_ORG_NAME IS NULL THEN
-                        :P42_ORG_NAME := 'Unknown organization';
-                    END IF;
-                END;
+                :P42_ORG_NAME := xxme_db_source_pkg.resolve_org_name(
+                    p_org_id         => to_number(:P42_ORG_ID default null on conversion error),
+                    p_application_id => to_number(:P42_APPLICATION_ID default null on conversion error),
+                    p_db_link        => :P42_DB_LINK
+                );
                 ```
         }
         execution {

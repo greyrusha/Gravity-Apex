@@ -1,0 +1,738 @@
+page 41 (
+    name: Cost Management SLA
+    alias: SUBLEDGER-ACCOUNTING-ON-DEMAND
+    title: Cost Management SLA
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    css {
+        inline:
+            ```css
+            body.sla-processing::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(255, 255, 255, 0.78);
+                z-index: 9998;
+            }
+            
+            body.sla-processing .u-Processing {
+                z-index: 10000 !important;
+            }
+            
+            #sla-processing-message {
+                position: fixed;
+                top: calc(50% + 45px);
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 10001;
+                min-width: 360px;
+                max-width: 520px;
+                padding: 18px 24px;
+                border-radius: 8px;
+                background: #ffffff;
+                box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+                text-align: center;
+                color: #202020;
+            }
+            
+            #sla-processing-message strong {
+                display: block;
+                margin-bottom: 8px;
+                font-size: 1.15rem;
+            }
+            
+            #sla-processing-message div {
+                margin-top: 4px;
+            }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Cost Management SLA
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region filters (
+        name: Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    region sla-instructions (
+        name: Warning
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--horizontal t-Alert--defaultIcons t-Alert--info">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">Cost Management SLA Analysis runs on demand</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        Select an accounting period and click
+                        <strong>Run Analysis</strong>.
+                        The analysis may take approximately 30–60 seconds.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region subledger-accounting (
+        name: Subledger Accounting
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                SELECT CASE
+                           WHEN s.exception_type = 'PROCESSING/ACCOUNTING ERROR'
+                           THEN 'View Details'
+                       END AS detail_action,
+                       s.ledger_id,
+                       s.ledger_name,
+                       s.org_id,
+                       s.operating_unit,
+                       s.application_id,
+                       s.sla_source,
+                       s.entity_code,
+                       s.exception_type,
+                       s.event_count,
+                       s.transaction_count,
+                       s.earliest_exception_date,
+                       s.latest_exception_date,
+                       s.oldest_exception_age_days,
+                       s.refresh_timestamp
+                FROM TABLE(
+                    xxme_sla_summary_pkg.get_summary(:P41_PERIOD_NAME, :P41_DB_LINK)
+                ) s
+                ORDER BY ledger_id,
+                         application_id,
+                         org_id,
+                         entity_code,
+                         exception_type
+                ```
+            pageItemsToSubmit: [
+                P41_PERIOD_NAME
+                P41_DB_LINK
+                P41_RUN_SLA
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        serverSideCondition {
+            type: item=value
+            item: P41_RUN_SLA
+            value: Y
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound:
+                ```
+                <div class="t-Alert t-Alert--success t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-check-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">No Cost Management SLA exceptions found</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        No Cost Management Subledger Accounting exceptions were found for
+                        the selected period and ledger scope.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        advanced {
+            savedReportMappingIdentifier: 16462837348610502
+        }
+
+        column APPLICATION_ID (
+            type: hidden
+            heading {
+                heading: Application Id
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column DETAIL_ACTION (
+            type: link
+            heading {
+                heading: Details
+            }
+            layout {
+                sequence: 15
+            }
+            link {
+                target: {
+                    page: 42
+                    items: {
+                        P42_PERIOD_NAME: &P41_PERIOD_NAME.
+                        P42_APPLICATION_ID: #APPLICATION_ID#
+                        P42_LEDGER_ID: #LEDGER_ID#
+                        P42_ORG_ID: #ORG_ID#
+                        P42_ENTITY_CODE: #ENTITY_CODE#
+                        P42_EXCEPTION_TYPE: #EXCEPTION_TYPE#
+                        P42_RUN_SLA: Y
+                        P42_RUN_PERIOD: &P41_PERIOD_NAME.
+                        P42_SOURCE_PAGE: 41
+                        P42_DB_LINK: &P41_DB_LINK.
+                    }
+                    clearCache: 42
+                }
+                linkText: #DETAIL_ACTION#
+                linkAttributes: class="t-Button t-Button--small t-Button--noUI" aria-label="View accounting error details"
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column EARLIEST_EXCEPTION_DATE (
+            type: plainText
+            heading {
+                heading: Earliest Exception Date
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column ENTITY_CODE (
+            type: plainText
+            heading {
+                heading: Entity Code
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column EVENT_COUNT (
+            type: plainText
+            heading {
+                heading: Event Count
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column EXCEPTION_TYPE (
+            type: plainText
+            heading {
+                heading: Exception Type
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column LATEST_EXCEPTION_DATE (
+            type: plainText
+            heading {
+                heading: Latest Exception Date
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column LEDGER_ID (
+            type: hidden
+            heading {
+                heading: Ledger Id
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column OLDEST_EXCEPTION_AGE_DAYS (
+            type: plainText
+            heading {
+                heading: Oldest Exception Age Days
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column OPERATING_UNIT (
+            type: plainText
+            heading {
+                heading: Inventory Organization
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Inv Org ID
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column REFRESH_TIMESTAMP (
+            type: hidden
+            heading {
+                heading: Refresh Timestamp
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column SLA_SOURCE (
+            type: hidden
+            heading {
+                heading: Sla Source
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column TRANSACTION_COUNT (
+            type: plainText
+            heading {
+                heading: Transaction Count
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 1000
+            }
+
+            displayColumn APPLICATION_ID (
+                sequence: 6
+            )
+
+            displayColumn DETAIL_ACTION (
+                sequence: 1
+            )
+
+            displayColumn EARLIEST_EXCEPTION_DATE (
+                sequence: 12
+            )
+
+            displayColumn ENTITY_CODE (
+                sequence: 8
+            )
+
+            displayColumn EVENT_COUNT (
+                sequence: 10
+            )
+
+            displayColumn EXCEPTION_TYPE (
+                sequence: 9
+            )
+
+            displayColumn LATEST_EXCEPTION_DATE (
+                sequence: 13
+            )
+
+            displayColumn LEDGER_ID (
+                sequence: 2
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 3
+            )
+
+            displayColumn OLDEST_EXCEPTION_AGE_DAYS (
+                sequence: 14
+            )
+
+            displayColumn OPERATING_UNIT (
+                sequence: 5
+            )
+
+            displayColumn ORG_ID (
+                sequence: 4
+            )
+
+            displayColumn REFRESH_TIMESTAMP (
+                sequence: 15
+            )
+
+            displayColumn SLA_SOURCE (
+                sequence: 7
+            )
+
+            displayColumn TRANSACTION_COUNT (
+                sequence: 11
+            )
+
+        )
+
+    )
+
+    pageItem P41_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 20
+            region: @filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P41_PERIOD_NAME (
+        type: selectList
+        label {
+            label: Period Name
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
+        }
+    )
+
+    pageItem P41_RUN_SLA (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close
+        layout {
+            sequence: 30
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button run-sla (
+        buttonName: RUN_SLA
+        label: Run Analysis
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            executeValidations: false
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction close (
+        name: Close
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: window.close();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process enable-sla-report (
+        name: Enable SLA Report
+        type: executeCode
+        source {
+            plsqlCode: :P41_RUN_SLA := 'Y';
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 16464590222610519
+        }
+        serverSideCondition {
+            whenButtonPressed: @run-sla
+        }
+    )
+
+)
+

@@ -373,7 +373,7 @@ page 10 (
     pageItem P10_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 20

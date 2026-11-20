@@ -1142,7 +1142,7 @@ page 23 (
     pageItem P23_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10
@@ -1260,7 +1260,7 @@ page 23 (
     pageItem P23_SNAPSHOT_READY (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 100

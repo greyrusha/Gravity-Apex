@@ -1,0 +1,24 @@
+lov tms-approved-ledgers (
+    name: TMS_APPROVED_LEDGERS
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select display_value,
+                   return_value,
+                   sort_seq
+              from (
+                select 'TEREX US' as display_value, '1003' as return_value, 1 as sort_seq from dual
+                union all
+                select 'TEREX UK 120' as display_value, '5001' as return_value, 2 as sort_seq from dual
+                union all
+                select 'TEREX CH' as display_value, '10001' as return_value, 3 as sort_seq from dual
+              )
+            ```
+    }
+    columnMapping {
+        return: RETURN_VALUE
+        display: DISPLAY_VALUE
+        defaultSort: SORT_SEQ
+    }
+)

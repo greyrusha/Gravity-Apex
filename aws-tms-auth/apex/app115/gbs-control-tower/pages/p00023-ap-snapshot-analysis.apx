@@ -1,0 +1,1515 @@
+page 23 (
+    name: AP Snapshot Analysis
+    alias: AP-SNAPSHOT-ANALYSIS
+    title: AP Snapshot Analysis
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    javaScript {
+        functionAndGlobalVariableDeclaration:
+            ```javascript-browser
+            var p23Controller = (function ($) {
+              'use strict';
+              function byId(id) { return $('#' + id); }
+              function region(id) { try { return apex.region(id); } catch (ignore) { return null; } }
+              function drill(vendorId, supplierName, supplierNumber, bucket) {
+                apex.item('P23_SELECTED_VENDOR_ID').setValue(vendorId ? String(vendorId) : '', null, true);
+                apex.item('P23_SELECTED_BUCKET').setValue(bucket || '', null, true);
+                var supplierLabel = vendorId ? ((supplierName || 'Supplier') + (supplierNumber ? ' (' + supplierNumber + ')' : '')) : 'All suppliers';
+                byId('p23-detail-selection').text(supplierLabel + (bucket && bucket !== 'All' ? ' • ' + bucket : ' • All aging buckets'));
+                byId('supplier-detail-context').show();
+                byId('supplier-aging-detail').show();
+                var r = region('supplier-aging-detail');
+                if (r && typeof r.refresh === 'function') { r.refresh(); } else { byId('supplier-aging-detail').trigger('apexrefresh'); }
+                $('html, body').animate({scrollTop: byId('supplier-detail-context').offset().top - 12}, 200);
+              }
+              function drillBucket(bucket) { drill(null, '', '', bucket); }
+              function closeDetail() {
+                apex.item('P23_SELECTED_VENDOR_ID').setValue('', null, true);
+                apex.item('P23_SELECTED_BUCKET').setValue('', null, true);
+                byId('supplier-detail-context').hide();
+                byId('supplier-aging-detail').hide();
+              }
+              function openAi() {
+                if (apex.item('P23_SNAPSHOT_READY').getValue() !== 'Y') { return; }
+                var target = 'ap_aging_ai_' + Date.now(), child = window.open('', target);
+                if (!child) { apex.message.showErrors([{type:'error',location:'page',message:'Allow pop-ups to open the AI Analyst in a new tab.',unsafe:false}]); return; }
+                child.document.write('<title>Opening AI Analyst</title><p style="font-family:sans-serif;padding:1rem">Opening AI Analyst…</p>');
+                apex.server.process('P23_GET_AI_URL', {pageItems:'#P23_DB_LINK,#P23_AS_OF_DATE,#P23_LEDGER_ID,#P23_COMPANY,#P23_SNAPSHOT_READY'}, {dataType:'json'}).then(function(result){
+                  if (!result || result.ok !== true || !result.url) { child.close(); apex.message.showErrors([{type:'error',location:'page',message:(result&&result.message)||'Unable to open the AI Analyst.',unsafe:false}]); return; }
+                  child.location.replace(result.url);
+                }, function(error){ child.close(); apex.message.showErrors([{type:'error',location:'page',message:(error&&error.message)||'Unable to open the AI Analyst.',unsafe:false}]); });
+              }
+              function closePage() {
+                window.close();
+                setTimeout(function () { if (!window.closed) { apex.navigation.redirect(apex.item('P23_BACK_URL').getValue()); } }, 250);
+              }
+              $(function () {
+                closeDetail();
+                $(document).on('click.p23', '.p23-aging-drill', function () { drillBucket($(this).attr('data-bucket')); });
+              });
+              return {drill:drill, drillBucket:drillBucket, openAi:openAi, closeDetail:closeDetail, closePage:closePage};
+            })(apex.jQuery);
+            ```
+    }
+    css {
+        inline:
+            ```css
+            #supplier-detail-context,#supplier-aging-detail{display:none;}
+            .p23-context-note{margin:.25rem 0 0;color:var(--ut-component-text-muted-color,#5f6368);}
+            .p23-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;padding:.25rem;}
+            .p23-kpi{border:1px solid var(--ut-component-border-color,#d9dce1);border-radius:.5rem;padding:1rem;background:var(--ut-component-background-color,#fff);}
+            .p23-kpi-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:#5f6368;}
+            .p23-kpi-value{font-size:1.55rem;font-weight:700;font-variant-numeric:tabular-nums;margin-top:.3rem;}
+            .p23-aging-row{display:grid;grid-template-columns:7rem 1fr 10rem;gap:.75rem;align-items:center;min-width:32rem;}
+            .p23-aging-track{height:1.1rem;background:#eef0f3;border-radius:.25rem;overflow:hidden;}
+            .p23-aging-bar{display:block;height:100%;min-width:2px;background:#2563eb;border-radius:.25rem;}
+            .p23-aging-amount{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+            .p23-aging-drill{display:block;width:100%;border:0;background:transparent;padding:.45rem .25rem;cursor:pointer;text-align:inherit;border-radius:.3rem;}
+            .p23-aging-drill:hover,.p23-aging-drill:focus{background:#eff6ff;outline:2px solid transparent;}
+            .p23-detail-banner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.35rem 0;}
+            #p23-detail-selection{font-weight:600;}
+            @media(max-width:800px){.p23-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region aging-distribution (
+        name: Aging Distribution
+        title: Aging Distribution
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                with a as (
+                  select aging_bucket, aging_bucket_sort, sum(nvl(open_accounted_amount,0)) amount
+                    from table(xx_ap_trial_balance_pkg.get_ap_aging_by_year(
+                      to_number(:P23_LEDGER_ID), to_date(:P23_AS_OF_DATE,'YYYY-MM-DD'),
+                      :P23_COMPANY, :P23_DB_LINK, to_date(:P23_AS_OF_DATE,'YYYY-MM-DD')))
+                   where :P23_SNAPSHOT_READY = 'Y'
+                   group by aging_bucket, aging_bucket_sort
+                ), b as (
+                  select a.*, max(abs(amount)) over () max_amount from a
+                )
+                select '<button type="button" class="p23-aging-drill" data-bucket="' || apex_escape.html_attribute(aging_bucket) || '"><span class="p23-aging-row"><span>' || apex_escape.html(aging_bucket) || '</span>' ||
+                       '<span class="p23-aging-track"><span class="p23-aging-bar" style="width:' ||
+                       to_char(case when max_amount = 0 then 0 else round(abs(amount) / max_amount * 100,2) end,'FM990D00','NLS_NUMERIC_CHARACTERS=''.,''') || '%"></span></span>' ||
+                       '<span class="p23-aging-amount">' || to_char(amount,'FM999G999G999G990D00') || '</span></span></button>' aging_bar
+                  from b
+                 order by aging_bucket_sort
+                ```
+            pageItemsToSubmit: [
+                P23_DB_LINK
+                P23_AS_OF_DATE
+                P23_LEDGER_ID
+                P23_COMPANY
+                P23_SNAPSHOT_READY
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: aging-distribution
+        }
+        serverSideCondition {
+            type: item=value
+            item: P23_SNAPSHOT_READY
+            value: Y
+        }
+        reportLayout {
+            numberOfRows: 10
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--noBorders
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+
+        column AGING_BAR (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    region snapshot-analysis-context (
+        name: Snapshot Context
+        title: Snapshot Context
+        type: staticContent
+        source {
+            htmlCode: <p class="p23-context-note">All amounts and aging buckets are calculated from the selected local AP snapshot. The snapshot date is also used as the aging date.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: snapshot-analysis-context
+        }
+    )
+
+    region snapshot-kpis (
+        name: Snapshot KPIs
+        title: Snapshot Summary
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                with s as (
+                  select *
+                    from table(xx_ap_trial_balance_pkg.get_ap_aging_by_supplier(
+                      to_number(:P23_LEDGER_ID), to_date(:P23_AS_OF_DATE,'YYYY-MM-DD'),
+                      :P23_COMPANY, :P23_DB_LINK, to_date(:P23_AS_OF_DATE,'YYYY-MM-DD')))
+                   where :P23_SNAPSHOT_READY = 'Y'
+                ), k as (
+                  select count(*) supplier_count, nvl(sum(invoice_count),0) invoice_count,
+                         nvl(sum(total_amount),0) total_amount,
+                         nvl(sum(year1_amount + year2_amount + year3plus_amount),0) overdue_amount
+                    from s
+                )
+                select '<div class="p23-kpis">' ||
+                       '<div class="p23-kpi"><div class="p23-kpi-label">Suppliers</div><div class="p23-kpi-value">' || to_char(supplier_count,'FM999G999G990') || '</div></div>' ||
+                       '<div class="p23-kpi"><div class="p23-kpi-label">Invoices</div><div class="p23-kpi-value">' || to_char(invoice_count,'FM999G999G990') || '</div></div>' ||
+                       '<div class="p23-kpi"><div class="p23-kpi-label">Accounted Amount</div><div class="p23-kpi-value">' || to_char(total_amount,'FM999G999G999G990D00') || '</div></div>' ||
+                       '<div class="p23-kpi"><div class="p23-kpi-label">Prior-Year Aging</div><div class="p23-kpi-value">' || to_char(overdue_amount,'FM999G999G999G990D00') || '</div></div>' ||
+                       '</div>' kpi_html
+                  from k
+                ```
+            pageItemsToSubmit: [
+                P23_DB_LINK
+                P23_AS_OF_DATE
+                P23_LEDGER_ID
+                P23_COMPANY
+                P23_SNAPSHOT_READY
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: snapshot-kpis
+        }
+        serverSideCondition {
+            type: item=value
+            item: P23_SNAPSHOT_READY
+            value: Y
+        }
+        reportLayout {
+            numberOfRows: 1
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--noBorders
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+
+        column KPI_HTML (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+    )
+
+    region supplier-aging-detail (
+        name: Invoice Aging Detail
+        title: Invoice Aging Detail
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select invoice_num, invoice_date, min_due_date, max_due_date, aging_bucket, days_overdue,
+                       gl_liability_code, invoice_amount, acct_invoice_amount, open_accounted_amount,
+                       supplier_name, supplier_number, invoice_id, vendor_id
+                  from table(xx_ap_trial_balance_pkg.get_ap_aging_by_year(
+                    to_number(:P23_LEDGER_ID), to_date(:P23_AS_OF_DATE,'YYYY-MM-DD'),
+                    :P23_COMPANY, :P23_DB_LINK, to_date(:P23_AS_OF_DATE,'YYYY-MM-DD')))
+                 where :P23_SNAPSHOT_READY = 'Y'
+                   and (:P23_SELECTED_VENDOR_ID is null or vendor_id = to_number(:P23_SELECTED_VENDOR_ID))
+                   and (:P23_SELECTED_BUCKET in ('All','') or aging_bucket = :P23_SELECTED_BUCKET)
+                ```
+            pageItemsToSubmit: [
+                P23_DB_LINK
+                P23_AS_OF_DATE
+                P23_LEDGER_ID
+                P23_COMPANY
+                P23_SNAPSHOT_READY
+                P23_SELECTED_VENDOR_ID
+                P23_SELECTED_BUCKET
+            ]
+        }
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: supplier-aging-detail
+        }
+        serverSideCondition {
+            type: item=value
+            item: P23_SNAPSHOT_READY
+            value: Y
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No invoices match the selected supplier and aging bucket.
+        }
+        advanced {
+            savedReportMappingIdentifier: 896156623912685650
+        }
+
+        column ACCT_INVOICE_AMOUNT (
+            type: plainText
+            heading {
+                heading: Accounted Invoice Amount
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column AGING_BUCKET (
+            type: plainText
+            heading {
+                heading: Aging Bucket
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column DAYS_OVERDUE (
+            type: plainText
+            heading {
+                heading: Days Overdue
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column GL_LIABILITY_CODE (
+            type: plainText
+            heading {
+                heading: GL Liability Account
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column INVOICE_AMOUNT (
+            type: plainText
+            heading {
+                heading: Original Invoice Amount
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column INVOICE_DATE (
+            type: plainText
+            heading {
+                heading: Invoice Date
+            }
+            layout {
+                sequence: 20
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column INVOICE_ID (
+            type: hidden
+            heading {
+                heading: Invoice ID
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column INVOICE_NUM (
+            type: plainText
+            heading {
+                heading: Invoice Number
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column MAX_DUE_DATE (
+            type: plainText
+            heading {
+                heading: Latest Due Date
+            }
+            layout {
+                sequence: 40
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column MIN_DUE_DATE (
+            type: plainText
+            heading {
+                heading: Earliest Due Date
+            }
+            layout {
+                sequence: 30
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column OPEN_ACCOUNTED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Open Accounted Amount
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column SUPPLIER_NAME (
+            type: hidden
+            heading {
+                heading: Supplier Name
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column SUPPLIER_NUMBER (
+            type: hidden
+            heading {
+                heading: Supplier Number
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column VENDOR_ID (
+            type: hidden
+            heading {
+                heading: Vendor ID
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Invoice Aging Detail
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCT_INVOICE_AMOUNT (
+                sequence: 9
+            )
+
+            displayColumn AGING_BUCKET (
+                sequence: 5
+            )
+
+            displayColumn DAYS_OVERDUE (
+                sequence: 6
+            )
+
+            displayColumn GL_LIABILITY_CODE (
+                sequence: 7
+            )
+
+            displayColumn INVOICE_AMOUNT (
+                sequence: 8
+            )
+
+            displayColumn INVOICE_DATE (
+                sequence: 2
+            )
+
+            displayColumn INVOICE_NUM (
+                sequence: 1
+            )
+
+            displayColumn MAX_DUE_DATE (
+                sequence: 4
+            )
+
+            displayColumn MIN_DUE_DATE (
+                sequence: 3
+            )
+
+            displayColumn OPEN_ACCOUNTED_AMOUNT (
+                sequence: 10
+            )
+
+            sort (
+                column: MAX_DUE_DATE
+                sort {
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region supplier-aging-summary (
+        name: Supplier Aging Summary
+        title: Supplier Aging Summary
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select vendor_id, supplier_name, supplier_number, current_amount, year1_amount,
+                       year2_amount, year3plus_amount, unknown_amount, total_amount, invoice_count
+                  from table(xx_ap_trial_balance_pkg.get_ap_aging_by_supplier(
+                    to_number(:P23_LEDGER_ID), to_date(:P23_AS_OF_DATE,'YYYY-MM-DD'),
+                    :P23_COMPANY, :P23_DB_LINK, to_date(:P23_AS_OF_DATE,'YYYY-MM-DD')))
+                 where :P23_SNAPSHOT_READY = 'Y'
+                ```
+            pageItemsToSubmit: [
+                P23_DB_LINK
+                P23_AS_OF_DATE
+                P23_LEDGER_ID
+                P23_COMPANY
+                P23_SNAPSHOT_READY
+            ]
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: supplier-aging-summary
+        }
+        serverSideCondition {
+            type: item=value
+            item: P23_SNAPSHOT_READY
+            value: Y
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No supplier aging rows are available for this snapshot.
+        }
+        advanced {
+            savedReportMappingIdentifier: 896156623912685640
+        }
+
+        column CURRENT_AMOUNT (
+            type: link
+            heading {
+                heading: Current
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','Current');
+                }
+                linkText: #CURRENT_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column INVOICE_COUNT (
+            type: plainText
+            heading {
+                heading: Invoices
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column SUPPLIER_NAME (
+            type: link
+            heading {
+                heading: Supplier Name
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','All');
+                }
+                linkText: #SUPPLIER_NAME#
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column SUPPLIER_NUMBER (
+            type: plainText
+            heading {
+                heading: Supplier Number
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column TOTAL_AMOUNT (
+            type: link
+            heading {
+                heading: Total
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','All');
+                }
+                linkText: #TOTAL_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column UNKNOWN_AMOUNT (
+            type: link
+            heading {
+                heading: Unknown
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','Unknown');
+                }
+                linkText: #UNKNOWN_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column VENDOR_ID (
+            type: hidden
+            heading {
+                heading: Vendor ID
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column YEAR1_AMOUNT (
+            type: link
+            heading {
+                heading: 1 Year
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','1 Year');
+                }
+                linkText: #YEAR1_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column YEAR2_AMOUNT (
+            type: link
+            heading {
+                heading: 2 Years
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','2 Years');
+                }
+                linkText: #YEAR2_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column YEAR3PLUS_AMOUNT (
+            type: link
+            heading {
+                heading: 3+ Years
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p23Controller.drill(#VENDOR_ID#,'#SUPPLIER_NAME!JS#','#SUPPLIER_NUMBER!JS#','3+ Years');
+                }
+                linkText: #YEAR3PLUS_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Supplier Aging Summary
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn CURRENT_AMOUNT (
+                sequence: 3
+            )
+
+            displayColumn INVOICE_COUNT (
+                sequence: 9
+            )
+
+            displayColumn SUPPLIER_NAME (
+                sequence: 1
+            )
+
+            displayColumn SUPPLIER_NUMBER (
+                sequence: 2
+            )
+
+            displayColumn TOTAL_AMOUNT (
+                sequence: 8
+            )
+
+            displayColumn UNKNOWN_AMOUNT (
+                sequence: 7
+            )
+
+            displayColumn YEAR1_AMOUNT (
+                sequence: 4
+            )
+
+            displayColumn YEAR2_AMOUNT (
+                sequence: 5
+            )
+
+            displayColumn YEAR3PLUS_AMOUNT (
+                sequence: 6
+            )
+
+            sort (
+                column: TOTAL_AMOUNT
+                sort {
+                    direction: desc
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region supplier-detail-context (
+        name: Supplier Detail Context
+        title: Selected Supplier
+        type: staticContent
+        source {
+            htmlCode: <div class="p23-detail-banner"><span id="p23-detail-selection"></span></div>
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: supplier-detail-context
+        }
+        serverSideCondition {
+            type: item=value
+            item: P23_SNAPSHOT_READY
+            value: Y
+        }
+    )
+
+    pageItem P23_AS_OF_DATE (
+        type: displayOnly
+        label {
+            label: As-of Date
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @snapshot-analysis-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P23_BACK_URL (
+        type: hidden
+        layout {
+            sequence: 130
+            slot: body
+        }
+    )
+
+    pageItem P23_COMPANY (
+        type: displayOnly
+        label {
+            label: Company Code
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @snapshot-analysis-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P23_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 10
+            region: @snapshot-analysis-context
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P23_GENERATED_BY (
+        type: displayOnly
+        label {
+            label: Generated By
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @snapshot-analysis-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 1
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P23_GENERATED_ON (
+        type: displayOnly
+        label {
+            label: Generated On
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @snapshot-analysis-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P23_LEDGER_ID (
+        type: displayOnly
+        label {
+            label: Ledger ID
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @snapshot-analysis-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P23_ROW_COUNT (
+        type: displayOnly
+        label {
+            label: Rows
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @snapshot-analysis-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 1
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P23_SELECTED_BUCKET (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 120
+            slot: body
+        }
+    )
+
+    pageItem P23_SELECTED_VENDOR_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 110
+            slot: body
+        }
+    )
+
+    pageItem P23_SNAPSHOT_READY (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 100
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    button analyze-aging-with-ai (
+        buttonName: ANALYZE_AGING_WITH_AI
+        label: Analyze Aging with AI
+        layout {
+            sequence: 10
+            region: @snapshot-analysis-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-sparkles
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: analyze-aging-with-ai
+        }
+        serverSideCondition {
+            type: item=value
+            item: P23_SNAPSHOT_READY
+            value: Y
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    button close-detail (
+        buttonName: CLOSE_DETAIL
+        label: Close Detail
+        layout {
+            sequence: 10
+            region: @supplier-detail-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-times
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: close-detail
+        }
+    )
+
+    button close-page (
+        buttonName: CLOSE_PAGE
+        label: Close
+        layout {
+            sequence: 20
+            region: @snapshot-analysis-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-times
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: close-page
+        }
+    )
+
+    dynamicAction analyze-aging-with-ai (
+        name: Analyze Aging with AI
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @analyze-aging-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p23Controller.openAi();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+            config {
+                buildOption: @feature-ai
+            }
+        )
+
+    )
+
+    dynamicAction close-detail (
+        name: Close Detail
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-detail
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p23Controller.closeDetail();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction close-page (
+        name: Close Page
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-page
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p23Controller.closePage();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process p23-get-ai-url (
+        name: P23_GET_AI_URL
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_date date; l_url varchar2(32767);
+                begin
+                  if :P23_SNAPSHOT_READY <> 'Y' or :P23_DB_LINK not in ('ADG')
+                     or not regexp_like(:P23_AS_OF_DATE,'^[0-9]{4}-[0-9]{2}-[0-9]{2}$','c')
+                     or not regexp_like(:P23_LEDGER_ID,'^[0-9]{1,18}$','c')
+                     or not regexp_like(:P23_COMPANY,'^[A-Z0-9_.-]{1,25}$','c') then raise_application_error(-20241,'Invalid aging-analysis context.'); end if;
+                  l_date:=to_date(:P23_AS_OF_DATE,'FXYYYY-MM-DD');
+                  l_url:=apex_page.get_url(p_page=>50,p_clear_cache=>'50',
+                    p_items=>'P50_DB_LINK,P50_PERIOD_NAME,P50_AP_SCOPE_AS_OF_DATE,P50_AP_LEDGER_ID,P50_AP_COMPANY,P50_AP_SOURCE_PAGE,P50_AP_RECON_READY',
+                    p_values=>:P23_DB_LINK||','||upper(to_char(l_date,'MON-YYYY','NLS_DATE_LANGUAGE=English'))||','||:P23_AS_OF_DATE||','||:P23_LEDGER_ID||','||:P23_COMPANY||',23,N');
+                  apex_json.open_object; apex_json.write('ok',true); apex_json.write('url',l_url); apex_json.close_object;
+                exception when others then apex_json.open_object; apex_json.write('ok',false); apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12) else 'Unable to prepare the AI Analyst URL.' end); apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 896156623912686001
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    process validate-snapshot-context (
+        name: Validate Snapshot Context
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_db_link varchar2(128) := upper(trim(:P23_DB_LINK));
+                  l_date_text varchar2(30) := trim(:P23_AS_OF_DATE);
+                  l_ledger_text varchar2(30) := trim(:P23_LEDGER_ID);
+                  l_company varchar2(25) := upper(trim(:P23_COMPANY));
+                  l_as_of_date date;
+                  l_count number;
+                  l_loaded_by varchar2(100);
+                  l_loaded_on timestamp;
+                begin
+                  :P23_BACK_URL := apex_page.get_url(p_page=>22,p_clear_cache=>'22');
+                  :P23_SNAPSHOT_READY := 'N';
+                  :P23_GENERATED_ON := null; :P23_GENERATED_BY := null; :P23_ROW_COUNT := null;
+                  if l_db_link not in ('ADG')
+                     or not regexp_like(l_date_text,'^[0-9]{4}-[0-9]{2}-[0-9]{2}$','c')
+                     or not regexp_like(l_ledger_text,'^[0-9]{1,18}$','c')
+                     or l_company is null or not regexp_like(l_company,'^[A-Z0-9_.-]{1,25}$','c') then
+                    apex_error.add_error(p_message=>'Select a valid snapshot on Page 22 before opening analysis.',p_display_location=>apex_error.c_inline_in_notification);
+                    return;
+                  end if;
+                  begin l_as_of_date := to_date(l_date_text,'FXYYYY-MM-DD');
+                  exception when others then
+                    apex_error.add_error(p_message=>'Select a valid snapshot date on Page 22 before opening analysis.',p_display_location=>apex_error.c_inline_in_notification);
+                    return;
+                  end;
+                  :P23_DB_LINK := l_db_link; :P23_COMPANY := l_company;
+                  select count(*), max(loaded_by), max(loaded_on)
+                    into l_count, l_loaded_by, l_loaded_on
+                    from xx_ap_trial_balance_snap
+                   where db_link = l_db_link and as_of_date = l_as_of_date
+                     and ledger_id = to_number(l_ledger_text) and company_segment = l_company;
+                  :P23_ROW_COUNT := to_char(l_count,'FM999G999G999G990');
+                  if l_count > 0 then
+                    :P23_SNAPSHOT_READY := 'Y';
+                    :P23_GENERATED_BY := l_loaded_by;
+                    :P23_GENERATED_ON := to_char(l_loaded_on,'DD-MON-YYYY HH24:MI:SS');
+                  else
+                    apex_error.add_error(p_message=>'No snapshot is available for this database source, date, ledger and company. Return to Page 22 to generate it.',p_display_location=>apex_error.c_inline_in_notification);
+                  end if;
+                exception when others then
+                  :P23_SNAPSHOT_READY := 'N';
+                  apex_error.add_error(p_message=>'Unable to validate the selected snapshot. Check the APEX debug log.',p_display_location=>apex_error.c_inline_in_notification);
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 896156623912686000
+        }
+    )
+
+)
+

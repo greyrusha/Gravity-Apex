@@ -605,7 +605,7 @@ page 21 (
     pageItem P21_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10

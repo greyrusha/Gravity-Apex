@@ -1,0 +1,46 @@
+appProcess tms-set-appearance (
+    name: TMS_SET_APPEARANCE
+    source {
+        plsqlCode:
+            ```plsql
+            declare
+              l_app_id   number := to_number(:APP_ID default null on conversion error);
+              l_mode     varchar2(10) := lower(trim(apex_application.g_x01));
+              l_style_id number;
+            begin
+              if l_app_id is null or not apex_authentication.is_authenticated then
+                raise_application_error(-20001, 'Authentication required');
+              end if;
+              if l_mode not in ('light', 'dark') or l_mode is null then
+                raise_application_error(-20002, 'Invalid appearance');
+              end if;
+              select min(s.theme_style_id)
+                into l_style_id
+                from apex_application_theme_styles s
+               where s.application_id=l_app_id
+                 and s.theme_number=42
+                 and lower(s.name)=case l_mode when 'dark' then 'dark mode' else 'light mode' end;
+              if l_style_id is null then
+                raise_application_error(-20003, 'Theme style not found for application ' || l_app_id);
+              end if;
+              apex_theme.set_user_style(
+                p_application_id => l_app_id,
+                p_user           => :APP_USER,
+                p_theme_number   => 42,
+                p_id             => l_style_id
+              );
+              apex_json.open_object;
+              apex_json.write('ok', true);
+              apex_json.close_object;
+            end;
+            ```
+    }
+    execution {
+        sequence: 10
+        point: ajaxCallback
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+)
+

@@ -1,0 +1,286 @@
+page 95 (
+    name: Purge AI Conversation History
+    alias: PURGE-AI-CONVERSATION-HISTORY
+    title: Purge AI Conversation History
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 900
+        height: 620
+        chained: false
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region deletion-preview (
+        name: Deletion Preview
+        title: Deletion Preview
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                
+                declare
+                    l_total number; l_success number; l_error number; l_first timestamp with time zone; l_last timestamp with time zone;
+                    l_from_date date; l_to_date date;
+                    procedure outp(p_text varchar2) is begin sys.htp.prn(p_text); end;
+                begin
+                    if :P95_APPLICATION_ID is null or :P95_DATE_FROM is null or :P95_DATE_TO is null then
+                        outp('<p>Select an application and both dates, then choose Preview.</p>'); return;
+                    end if;
+                    l_from_date:=coalesce(
+                        to_date(:P95_DATE_FROM default null on conversion error,'DD-MON-YYYY','NLS_DATE_LANGUAGE=English'),
+                        to_date(:P95_DATE_FROM default null on conversion error,'MM/DD/YYYY'),
+                        to_date(:P95_DATE_FROM default null on conversion error,'YYYY-MM-DD'));
+                    l_to_date:=coalesce(
+                        to_date(:P95_DATE_TO default null on conversion error,'DD-MON-YYYY','NLS_DATE_LANGUAGE=English'),
+                        to_date(:P95_DATE_TO default null on conversion error,'MM/DD/YYYY'),
+                        to_date(:P95_DATE_TO default null on conversion error,'YYYY-MM-DD'));
+                    if l_from_date is null or l_to_date is null then raise_application_error(-20045,'Enter valid From and Through dates.'); end if;
+                    select count(*),sum(case when status='SUCCESS' then 1 else 0 end),sum(case when status='ERROR' then 1 else 0 end),min(created_on),max(created_on)
+                      into l_total,l_success,l_error,l_first,l_last
+                      from xxme_ai_p50_bench_log
+                     where application_id=:P95_APPLICATION_ID
+                       and created_on>=from_tz(cast(l_from_date as timestamp),'America/New_York')
+                       and created_on<from_tz(cast(l_to_date+1 as timestamp),'America/New_York');
+                    outp('<dl class="t-AVPList t-AVPList--leftAligned"><dt>Application</dt><dd>'||apex_escape.html(:P95_APPLICATION_ID)||'</dd><dt>Inclusive date range</dt><dd>'||apex_escape.html(:P95_DATE_FROM)||' through '||apex_escape.html(:P95_DATE_TO)||'</dd><dt>Matching conversations</dt><dd><strong>'||l_total||'</strong></dd><dt>Successful / Failed</dt><dd>'||nvl(l_success,0)||' / '||nvl(l_error,0)||'</dd><dt>First / Last recorded</dt><dd>'||nvl(to_char(l_first,'YYYY-MM-DD HH24:MI:SS'),'-')||' / '||nvl(to_char(l_last,'YYYY-MM-DD HH24:MI:SS'),'-')||'</dd></dl>');
+                exception when others then outp('<div class="t-Alert t-Alert--danger"><div class="t-Alert-body">'||apex_escape.html(sqlerrm)||'</div></div>');
+                end;
+                
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region purge-selection (
+        name: Purge Selection
+        title: Purge Selection
+        type: staticContent
+        source {
+            htmlCode: <div class="t-Alert t-Alert--warning"><div class="t-Alert-body"><strong>Permanent deletion.</strong> Select exactly one application and an inclusive date range. Deleted questions and answers cannot be recovered from the application.</div></div>
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P95_APPLICATION_ID (
+        type: selectList
+        label {
+            label: Application
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select 'Application '||l.application_id||' - '||nvl(a.application_name,'Unknown') d, l.application_id r
+                  from (select distinct application_id from xxme_ai_p50_bench_log) l
+                  left join apex_applications a on a.application_id=l.application_id
+                 order by l.application_id
+                ```
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @purge-selection
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: 117
+        }
+    )
+
+    pageItem P95_DATE_FROM (
+        type: datePickerJquery
+        label {
+            label: From Date
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @purge-selection
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: DD-MON-YYYY
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue: select trunc(sysdate)-30 from dual
+        }
+    )
+
+    pageItem P95_DATE_TO (
+        type: datePickerJquery
+        label {
+            label: Through Date
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @purge-selection
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: DD-MON-YYYY
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue: select trunc(sysdate) from dual
+        }
+    )
+
+    button delete-history (
+        buttonName: DELETE_HISTORY
+        label: Delete Matching Conversations
+        layout {
+            sequence: 20
+            region: @purge-selection
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--danger
+            ]
+            icon: fa-trash
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Permanently delete every recorded Page 50 conversation for the selected application and inclusive date range? This cannot be undone.
+            style: danger
+        }
+    )
+
+    button preview-purge (
+        buttonName: PREVIEW_PURGE
+        label: Preview Matching Conversations
+        layout {
+            sequence: 10
+            region: @purge-selection
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-search
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process purge-selected-conversation-history (
+        name: Purge Selected Conversation History
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                    l_from date; l_to date; l_deleted number;
+                begin
+                    raise_application_error(-20041,'AI administration is disabled pending App 400 role integration.');
+                    if :P95_APPLICATION_ID is null or :P95_DATE_FROM is null or :P95_DATE_TO is null then raise_application_error(-20042,'Application, From Date, and Through Date are required.'); end if;
+                    l_from:=coalesce(
+                        to_date(:P95_DATE_FROM default null on conversion error,'DD-MON-YYYY','NLS_DATE_LANGUAGE=English'),
+                        to_date(:P95_DATE_FROM default null on conversion error,'MM/DD/YYYY'),
+                        to_date(:P95_DATE_FROM default null on conversion error,'YYYY-MM-DD'));
+                    l_to:=coalesce(
+                        to_date(:P95_DATE_TO default null on conversion error,'DD-MON-YYYY','NLS_DATE_LANGUAGE=English'),
+                        to_date(:P95_DATE_TO default null on conversion error,'MM/DD/YYYY'),
+                        to_date(:P95_DATE_TO default null on conversion error,'YYYY-MM-DD'));
+                    if l_from is null or l_to is null then raise_application_error(-20045,'Enter valid From and Through dates.'); end if;
+                    if l_to<l_from then raise_application_error(-20043,'Through Date cannot be earlier than From Date.'); end if;
+                    delete from xxme_ai_p50_bench_log
+                     where application_id=to_number(:P95_APPLICATION_ID)
+                       and created_on>=from_tz(cast(l_from as timestamp),'America/New_York')
+                       and created_on<from_tz(cast(l_to+1 as timestamp),'America/New_York');
+                    l_deleted:=sql%rowcount;
+                    if l_deleted=0 then raise_application_error(-20044,'No matching conversations were found. Nothing was deleted.'); end if;
+                    insert into xxme_ai_p50_purge_audit(application_id,date_from,date_through,deleted_count,deleted_by,apex_session_id)
+                    values(to_number(:P95_APPLICATION_ID),l_from,l_to,l_deleted,v('APP_USER'),v('APP_SESSION'));
+                    commit;
+                    apex_application.g_print_success_message:=l_deleted||' recorded conversation(s) deleted. The purge action was audited.';
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 981170000000000530
+        }
+        serverSideCondition {
+            whenButtonPressed: @delete-history
+        }
+    )
+
+)
+

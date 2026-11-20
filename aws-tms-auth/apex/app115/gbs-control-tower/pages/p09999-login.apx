@@ -1,0 +1,300 @@
+page 9999 (
+    name: Login Page
+    alias: LOGIN
+    title: TMS GBS Control Tower - Log In
+    appearance {
+        pageTemplate: @/login
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: firstItemOnPage
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authentication: public
+    }
+
+    region tms-month-end-control-tower (
+        name: TMS GBS Control Tower
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Sign in with your <strong>TMS (Windows)</strong> username (<strong>FIRST.LAST</strong>) and password.</p>
+                <p>Application access is governed centrally in the TMS Administration Console.</p>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/login
+            templateOptions: #DEFAULT#
+        }
+        image {
+            fileUrl: #APP_FILES#icons/app-icon-512.png
+        }
+    )
+
+    pageItem P9999_PASSWORD (
+        type: password
+        label {
+            label: TMS (Windows) Password
+            alignment: right
+        }
+        layout {
+            sequence: 20
+            region: @tms-month-end-control-tower
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+            icon: fa-key
+            width: 40
+            valuePlaceholder: TMS (Windows) Password
+        }
+        validation {
+            maxLength: 256
+        }
+        advanced {
+            customAttributes: autocomplete="current-password"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P9999_REMEMBER (
+        type: checkbox
+        label {
+            label: Remember username
+            alignment: right
+        }
+        layout {
+            sequence: 30
+            region: @tms-month-end-control-tower
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: apex_authentication.persistent_cookies_enabled
+        }
+    )
+
+    pageItem P9999_USERNAME (
+        type: textField
+        label {
+            label: TMS (Windows) Username
+            alignment: right
+        }
+        layout {
+            sequence: 10
+            region: @tms-month-end-control-tower
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+            icon: fa-user
+            width: 40
+            valuePlaceholder: FIRST.LAST
+        }
+        validation {
+            maxLength: 100
+        }
+        advanced {
+            customAttributes: autocomplete="username"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    button login (
+        buttonName: LOGIN
+        label: Sign In
+        layout {
+            sequence: 40
+            region: @tms-month-end-control-tower
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    validation reject-email-username (
+        name: Reject Email Username
+        execution {
+            sequence: 10
+        }
+        validation {
+            plsqlExpression: instr(nvl(:P9999_USERNAME, '-'), '@') = 0
+        }
+        error {
+            errorMessage: Enter your TMS (Windows) username (FIRST.LAST), not your @terex.com email address.
+            associatedItem: @P9999_USERNAME
+        }
+    )
+
+    process clear-page-s-cache (
+        name: Clear Page(s) Cache
+        type: clearSessionState
+        execution {
+            sequence: 30
+        }
+        advanced {
+            executionMappingIdentifier: 13072123167427735
+        }
+    )
+
+    process get-username-cookie (
+        name: Get Username Cookie
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_cookie_user varchar2(255) := trim(apex_authentication.get_login_username_cookie);
+                begin
+                  if l_cookie_user is not null and instr(l_cookie_user, '@') > 0 then
+                    select max(ebs_user_name)
+                      into l_cookie_user
+                      from xx_tms_users
+                     where local_user_email = lower(l_cookie_user)
+                       and enabled_yn = 'Y';
+                  elsif l_cookie_user is not null then
+                    l_cookie_user := upper(l_cookie_user);
+                  end if;
+                  :P9999_USERNAME := l_cookie_user;
+                  :P9999_REMEMBER := case when :P9999_USERNAME is not null then 'Y' end;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 13071706995427734
+        }
+    )
+
+    process login (
+        name: Login
+        type: invokeApi
+        invoke {
+            package: APEX_AUTHENTICATION
+            procedureOrFunction: LOGIN
+        }
+        execution {
+            sequence: 20
+        }
+        advanced {
+            executionMappingIdentifier: 13068477153427720
+        }
+
+        parameter p_password (
+            value {
+                type: item
+                item: P9999_PASSWORD
+            }
+            advanced {
+                displaySequence: 2
+            }
+        )
+
+        parameter p_set_persistent_auth (
+            parameter {
+                dataType: boolean
+                hasDefault: true
+            }
+            value {
+                type: apiDefault
+            }
+            advanced {
+                displaySequence: 3
+            }
+        )
+
+        parameter p_username (
+            value {
+                type: item
+                item: P9999_USERNAME
+            }
+            advanced {
+                displaySequence: 1
+            }
+        )
+
+    )
+
+    process normalize-ebs-username (
+        name: Normalize EBS Username
+        type: executeCode
+        source {
+            plsqlCode: :P9999_USERNAME := upper(trim(:P9999_USERNAME));
+        }
+        execution {
+            sequence: 5
+        }
+        advanced {
+            executionMappingIdentifier: 190117999900000015
+        }
+    )
+
+    process set-username-cookie (
+        name: Set Username Cookie
+        type: invokeApi
+        invoke {
+            package: APEX_AUTHENTICATION
+            procedureOrFunction: SEND_LOGIN_USERNAME_COOKIE
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 13070377832427732
+        }
+
+        parameter p_consent (
+            parameter {
+                dataType: boolean
+            }
+            value {
+                type: item
+                item: P9999_REMEMBER
+            }
+            advanced {
+                displaySequence: 2
+            }
+        )
+
+        parameter p_username (
+            value {
+                type: expression
+                plsqlExpression: upper( trim( :P9999_USERNAME ) )
+            }
+            advanced {
+                displaySequence: 1
+            }
+        )
+
+    )
+
+)
+

@@ -189,3 +189,52 @@ select application_id,
 select application_id, application_name, pages, to_char(last_updated_on, 'YYYY-MM-DD HH24:MI:SS') as last_updated_on
   from apex_applications
  where application_id = 127;
+
+prompt === Step 14: Deploy Wave 3 DB Performance, Package Consolidation & Legacy Package Retirement ===
+set define off
+@../Gravity-Apex/aws-tms-auth/db/25_xxme_wave3_inline_sql_pkgs.sql
+@../Gravity-Apex/aws-tms-auth/db/23_xxme_ar_recon_v2_pkg.sql
+@../Gravity-Apex/aws-tms-auth/db/13_xx_ap_trial_balance_pkg.pkb
+@../Gravity-Apex/aws-tms-auth/db/24_xxme_dashboard_pkg.sql
+@../Gravity-Apex/aws-tms-auth/db/26_xxme_retire_unused_pkgs.sql
+
+prompt === Step 15: Validate & Import Wave 3 APEX Updates (App 128 + Page 73 Patch + App 115) ===
+-- Note: Run with connection-level AUTOCOMMIT OFF to avoid trailing ORA-17273 on apex import commit;
+set autocommit off
+
+apex validate -input ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128 -workspaceid 100789
+apex import -id 128 -workspaceid 100789 -input ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128 -files ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/shared-components/lovs/tms-approved-ledgers.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/shared-components/app-processes.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00001-home.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00010-general-ledger.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00011-gl-unposted-journals.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00020-payables.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00021-ap-active-holds.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00022-ap-trial-balance-snapshot.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00023-ap-snapshot-analysis.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00024-gl-ap-reconciliation.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00030-receivables.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00031-ar-unapplied-receipts-current.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00032-ar-open-balance-snapshot.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00033-ar-aging-analysis.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00034-gl-ar-reconciliation.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00041-subledger-accounting-on-demand.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00042-sla-accounting-errors.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00060-period-status.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00061-inventory-pending-transactions.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00062-inventory-pending-transaction-details.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00070-month-end-activity.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00071-fixed-assets.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00098-knowledge-test-publish.apx ../Gravity-Apex/aws-tms-auth/apex/app128/gbs-control-tower128/pages/p00099-knowledge-history-source-requests.apx
+@../Gravity-Apex/aws-tms-auth/db/27_app128_p73_wave3_patch.sql
+
+apex validate -input ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower -workspaceid 100789
+apex import -id 115 -workspaceid 100789 -input ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower -files ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/shared-components/lovs/tms-approved-ledgers.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/shared-components/app-processes.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00001-home.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00010-general-ledger.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00011-gl-unposted-journals.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00020-payables.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00021-ap-active-holds.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00022-ap-trial-balance-snapshot.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00023-ap-snapshot-analysis.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00024-gl-ap-reconciliation.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00030-receivables.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00031-ar-unapplied-receipts-current.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00032-ar-open-balance-snapshot.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00033-ar-aging-analysis.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00034-gl-ar-reconciliation.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00041-subledger-accounting-on-demand.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00042-sla-accounting-errors.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00060-period-status.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00061-inventory-pending-transactions.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00062-inventory-pending-transaction-details.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00070-month-end-activity.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00071-fixed-assets.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00098-knowledge-test-publish.apx ../Gravity-Apex/aws-tms-auth/apex/app115/gbs-control-tower/pages/p00099-knowledge-history-source-requests.apx
+
+prompt === Step 16: Post-deploy verification (Wave 3) ===
+select name, type, line, position, text
+  from user_errors
+ where name like 'XX%'
+ order by name, type, sequence;
+
+select object_name, object_type, status
+  from user_objects
+ where object_name like 'XX%'
+   and status <> 'VALID'
+ order by object_type, object_name;
+
+select application_id, application_name, is_working_copy, pages, compatibility_mode,
+       to_char(last_updated_on, 'YYYY-MM-DD HH24:MI:SS') as last_updated_on
+  from apex_applications
+ where application_id in (115, 127, 128)
+ order by application_id;
+
+select application_id,
+       (select count(*) from apex_application_page_regions r where r.application_id = a.application_id and dbms_lob.instr(upper(r.region_source), '@ADG') > 0)
+     + (select count(*) from apex_application_page_proc p where p.application_id = a.application_id and dbms_lob.instr(upper(p.process_source), '@ADG') > 0)
+     + (select count(*) from apex_application_page_items i where i.application_id = a.application_id and (instr(upper(i.lov_definition), '@ADG') > 0 or instr(upper(i.item_source), '@ADG') > 0 or instr(upper(i.item_default), '@ADG') > 0))
+     + (select count(*) from apex_application_lovs l where l.application_id = a.application_id and instr(upper(l.list_of_values_query), '@ADG') > 0) as adg_refs_total,
+       (select count(*) from apex_application_page_items i where i.application_id = a.application_id and i.item_name like 'P%\_DB\_LINK' escape '\' and i.display_as_code = 'NATIVE_HIDDEN' and dbms_lob.instr(i.attributes, '"value_protected":"Y"') > 0) as dblink_protected_cnt,
+       (select count(*) from apex_application_page_items i where i.application_id = a.application_id and i.lov_named_lov = 'TMS_APPROVED_LEDGERS') as tms_approved_ledgers_items,
+       (select count(*) from apex_application_processes pr where pr.application_id = a.application_id and pr.process_name = 'TMS_SET_APPEARANCE' and dbms_lob.instr(lower(pr.process), 'apex_application_theme_styles') > 0) as portable_theme_proc
+  from apex_applications a
+ where a.application_id in (115, 128)
+ order by a.application_id;

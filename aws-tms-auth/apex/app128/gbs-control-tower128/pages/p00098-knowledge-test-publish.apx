@@ -799,7 +799,7 @@ page 98 (
             alignment: left
         }
         appearance {
-            template: 1672985690212569356
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             width: 80
             height: 4
@@ -830,7 +830,7 @@ page 98 (
             columnSpan: 3
         }
         appearance {
-            template: 1672985690212569356
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             height: 1
         }
@@ -871,7 +871,7 @@ page 98 (
             alignment: left
         }
         appearance {
-            template: 1672985690212569356
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             width: 80
             height: 4
@@ -915,7 +915,7 @@ page 98 (
             columnSpan: 3
         }
         appearance {
-            template: 1672985690212569356
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             width: 5
         }

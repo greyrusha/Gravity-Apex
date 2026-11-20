@@ -1,0 +1,1094 @@
+page 98 (
+    name: Knowledge Test and Publish
+    alias: KNOWLEDGE-TEST-PUBLISH
+    title: Knowledge Test and Publish
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region km-candidate-readiness (
+        name: Candidate Readiness
+        title: Candidate Readiness
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal"><div class="t-Alert-wrap">
+                <div class="t-Alert-icon"><span class="t-Icon fa fa-flask" aria-hidden="true"></span></div>
+                <div class="t-Alert-content">Prepare and test the human-readable candidate before publication. Vectors are never displayed. The currently published revision remains active until publication succeeds.</div>
+                </div></div>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region km-candidate-summary (
+        name: Candidate Summary
+        title: Candidate Summary
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select r.version_no, r.title, r.revision_state, r.validation_status,
+                       r.validation_message, r.is_mandatory, r.priority,
+                       s.source_name, i.edit_mode,
+                       (select count(*) from xxme_ai_km_chunks c where c.revision_id=r.revision_id) chunk_count,
+                       (select count(*) from xxme_ai_km_tests t where t.revision_id=r.revision_id and t.is_required='Y' and t.test_status='PASSED') required_passed,
+                       (select count(*) from xxme_ai_km_tests t where t.revision_id=r.revision_id and t.is_required='Y' and t.test_status='FAILED') required_failed
+                  from xxme_ai_km_revisions r
+                  join xxme_ai_km_items i on i.item_id=r.item_id
+                  join xxme_ai_km_sources s on s.source_id=i.source_id
+                 where r.revision_id=:P98_REVISION_ID
+                   and r.item_id=:P98_ITEM_ID
+                ```
+            pageItemsToSubmit: [
+                P98_ITEM_ID
+                P98_REVISION_ID
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 5
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+
+        column CHUNK_COUNT (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Chunks
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column EDIT_MODE (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Edit Mode
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column IS_MANDATORY (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Mandatory
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column PRIORITY (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Priority
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column REQUIRED_FAILED (
+            reportColumnQueryId: 12
+            derivedColumn: N
+            heading {
+                heading: Required Failed
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column REQUIRED_PASSED (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Required Passed
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column REVISION_STATE (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: State
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column SOURCE_NAME (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Source
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TITLE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Title
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column VALIDATION_MESSAGE (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Validation Message
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column VALIDATION_STATUS (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Validation
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column VERSION_NO (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Version
+                alignment: end
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+    )
+
+    region km-persisted-test-evidence (
+        name: Persisted Test Evidence
+        title: Persisted Test Evidence
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select test_id, dbms_lob.substr(question,1000,1) question,
+                       expected_text, is_required, test_status, top_k,
+                       json_value(result_json,'$[0].title' returning varchar2(500) null on error) top_result_title,
+                       json_value(result_json,'$[0].content' returning varchar2(1000) null on error) top_result_content,
+                       json_value(result_json,'$[0].similarity' returning number null on error) top_similarity,
+                       error_message, run_by, run_on
+                  from xxme_ai_km_tests
+                 where revision_id=:P98_REVISION_ID
+                 order by run_on desc, test_id desc
+                ```
+            pageItemsToSubmit: P98_REVISION_ID
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+
+        column ERROR_MESSAGE (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Error
+                alignment: center
+            }
+            layout {
+                sequence: 100
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column EXPECTED_TEXT (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Expected Outcome
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column IS_REQUIRED (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Required
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column QUESTION (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Question
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column RUN_BY (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Run By
+                alignment: center
+            }
+            layout {
+                sequence: 110
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column RUN_ON (
+            reportColumnQueryId: 12
+            derivedColumn: N
+            heading {
+                heading: Run On
+                alignment: center
+            }
+            layout {
+                sequence: 120
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TEST_ID (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Test
+                alignment: end
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TEST_STATUS (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Result
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TOP_K (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Top K
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TOP_RESULT_CONTENT (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Top Result Content
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TOP_RESULT_TITLE (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Top Result
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column TOP_SIMILARITY (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Similarity
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+    )
+
+    region km-readable-candidate-chunks (
+        name: Readable Candidate Chunks
+        title: Readable Candidate Chunks
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select chunk_no, chunk_title, dbms_lob.substr(chunk_content,3200,1) chunk_content,
+                       activation_status, embedding_model, embedded_on, validation_message
+                  from xxme_ai_km_chunks
+                 where revision_id=:P98_REVISION_ID
+                 order by chunk_no
+                ```
+            pageItemsToSubmit: P98_REVISION_ID
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 50
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+
+        column ACTIVATION_STATUS (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Status
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column CHUNK_CONTENT (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Human-readable Content
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column CHUNK_NO (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Chunk
+                alignment: end
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column CHUNK_TITLE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Title
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column EMBEDDED_ON (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Embedded On
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column EMBEDDING_MODEL (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Embedding Model
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+        column VALIDATION_MESSAGE (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Message
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+        )
+
+    )
+
+    region km-run-representative-test (
+        name: Run Representative Test
+        title: Run Representative Test
+        type: staticContent
+        source {
+            htmlCode: <p>Ask a representative question and record the expected human-readable outcome. Required tests gate publication.</p>
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P98_EXPECTED_TEXT (
+        type: textarea
+        label {
+            label: Expected Human-readable Outcome
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @km-run-representative-test
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 80
+            height: 4
+        }
+        validation {
+            valueRequired: true
+            maxLength: 1000
+        }
+    )
+
+    pageItem P98_IS_REQUIRED (
+        type: selectList
+        label {
+            label: Publication Gate
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Required;Y,Informational;N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @km-run-representative-test
+            slot: regionBody
+            alignment: left
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    pageItem P98_ITEM_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 10
+            region: @km-candidate-readiness
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P98_QUESTION (
+        type: textarea
+        label {
+            label: Representative Question
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @km-run-representative-test
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 80
+            height: 4
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P98_REVISION_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 20
+            region: @km-candidate-readiness
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P98_TOP_K (
+        type: numberField
+        label {
+            label: Top Results
+            alignment: left
+        }
+        settings {
+            numberAlignment: end
+            virtualKeyboard: numeric
+        }
+        layout {
+            sequence: 40
+            region: @km-run-representative-test
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 5
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: 5
+        }
+    )
+
+    button prepare-km-candidate (
+        buttonName: PREPARE_CANDIDATE
+        label: Prepare Candidate
+        layout {
+            sequence: 10
+            region: @km-candidate-readiness
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-cogs
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button publish-km-revision (
+        buttonName: PUBLISH_REVISION
+        label: Publish Revision
+        layout {
+            sequence: 30
+            region: @km-candidate-readiness
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--success
+            ]
+            icon: fa-check
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+            requiresConfirmation: true
+        }
+        confirmation {
+            message: Publish this tested revision and atomically replace the active retrieval representation?
+            style: warning
+        }
+    )
+
+    button run-km-test (
+        buttonName: RUN_TEST
+        label: Run and Save Test
+        layout {
+            sequence: 20
+            region: @km-run-representative-test
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-play
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process prepare-knowledge-candidate (
+        name: Prepare Knowledge Candidate
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_count number;
+                begin
+                  raise_application_error(-20200,'AI administration is disabled pending App 400 role integration.');
+                  select count(*) into l_count from xxme_ai_km_revisions where revision_id=:P98_REVISION_ID and item_id=:P98_ITEM_ID;
+                  if l_count<>1 then raise_application_error(-20205,'The selected revision does not belong to this knowledge item.'); end if;
+                  xxme_ai_km_pkg.prepare_revision(:P98_REVISION_ID);
+                  commit;
+                  apex_application.g_print_success_message:='Candidate validated, chunked, and embedded.';
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 1014353499250103268
+        }
+        serverSideCondition {
+            whenButtonPressed: @prepare-km-candidate
+        }
+    )
+
+    process publish-tested-knowledge-revision (
+        name: Publish Tested Knowledge Revision
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_count number;
+                begin
+                  raise_application_error(-20204,'AI administration is disabled pending App 400 role integration.');
+                  select count(*) into l_count from xxme_ai_km_revisions where revision_id=:P98_REVISION_ID and item_id=:P98_ITEM_ID;
+                  if l_count<>1 then raise_application_error(-20205,'The selected revision does not belong to this knowledge item.'); end if;
+                  xxme_ai_km_pkg.publish_revision(:P98_REVISION_ID);
+                  commit;
+                  apex_application.g_print_success_message:='Knowledge revision published and activated.';
+                end;
+                ```
+        }
+        execution {
+            sequence: 30
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 1014353499250103270
+        }
+        serverSideCondition {
+            whenButtonPressed: @publish-km-revision
+        }
+    )
+
+    process run-persisted-knowledge-test (
+        name: Run Persisted Knowledge Test
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_test_id number; l_count number;
+                begin
+                  raise_application_error(-20201,'AI administration is disabled pending App 400 role integration.');
+                  select count(*) into l_count from xxme_ai_km_revisions where revision_id=:P98_REVISION_ID and item_id=:P98_ITEM_ID;
+                  if l_count<>1 then raise_application_error(-20205,'The selected revision does not belong to this knowledge item.'); end if;
+                  if :P98_QUESTION is null or :P98_EXPECTED_TEXT is null then raise_application_error(-20202,'Question and expected outcome are required.'); end if;
+                  if to_number(:P98_TOP_K default null on conversion error) not between 1 and 12 then raise_application_error(-20203,'Top Results must be from 1 through 12.'); end if;
+                  xxme_ai_km_pkg.run_revision_test(
+                    p_revision_id=>:P98_REVISION_ID, p_question=>:P98_QUESTION,
+                    p_expected_text=>:P98_EXPECTED_TEXT, p_is_required=>:P98_IS_REQUIRED,
+                    p_top_k=>to_number(:P98_TOP_K), p_test_id=>l_test_id);
+                  commit;
+                  apex_application.g_print_success_message:='Test '||l_test_id||' completed and saved.';
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 1014353499250103269
+        }
+        serverSideCondition {
+            whenButtonPressed: @run-km-test
+        }
+    )
+
+)
+

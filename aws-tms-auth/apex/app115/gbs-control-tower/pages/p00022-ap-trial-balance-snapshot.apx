@@ -1,0 +1,1588 @@
+page 22 (
+    name: AP Trial Balance Snapshot
+    alias: AP-TRIAL-BALANCE-SNAPSHOT
+    title: AP Trial Balance Snapshot
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    javaScript {
+        functionAndGlobalVariableDeclaration:
+            ```javascript-browser
+            /* Page 22 snapshot workflow and AI analysis launch. */
+            var p22Controller = (function ($) {
+              'use strict';
+              var busy = false, spinner = null, timerId = null, startedAt = null, known = null;
+              var itemNames = ['P22_DB_LINK','P22_AS_OF_DATE','P22_LEDGER_ID','P22_COMPANY_SEGMENT'];
+            
+              function byId(id) { return $('#' + id); }
+              function reportElement() { return byId('ap-trial-balance-ir'); }
+              function reportRegion() {
+                try { return apex.region('ap-trial-balance-ir'); } catch (ignore) { return null; }
+              }
+              function canonicalDate(value) {
+                var text = $.trim(value), match, month,
+                  months = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+                if (/^\d{4}-\d{2}-\d{2}$/.test(text)) { return text; }
+                match = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(text);
+                if (!match) { return text; }
+                month = months[match[2].toUpperCase()];
+                return month ? match[3] + '-' + month + '-' + ('0' + match[1]).slice(-2) : text;
+              }
+              function filters$() { return $('#P22_DB_LINK,#P22_AS_OF_DATE,#P22_LEDGER_ID,#P22_COMPANY_SEGMENT'); }
+              function actionButtons(show) {
+                byId('use-existing-snapshot').toggle(show);
+                byId('reload-snapshot').toggle(show);
+              }
+              function runButton(show) { byId('run-ap-trial-balance').toggle(show); }
+              function analysisButton(show) { byId('analyze-snapshot').toggle(show); byId('reconcile-gl-ap').toggle(show); byId('analyze-with-ai').toggle(show); }
+              function setBusy(on) {
+                busy = on;
+                filters$().prop('disabled', on);
+                byId('run-ap-trial-balance').prop('disabled', on);
+                byId('use-existing-snapshot').prop('disabled', on);
+                byId('reload-snapshot').prop('disabled', on);
+                byId('analyze-snapshot').prop('disabled', on);
+                byId('reconcile-gl-ap').prop('disabled', on);
+                byId('analyze-with-ai').prop('disabled', on);
+              }
+              function stopActivity() {
+                if (timerId) { clearInterval(timerId); timerId = null; }
+                if (spinner) { spinner.remove(); spinner = null; }
+              }
+              function seconds() { return ((performance.now() - startedAt) / 1000).toFixed(1) + ' s'; }
+              function startActivity() {
+                stopActivity();
+                startedAt = performance.now();
+                byId('p22-status-timing').text('Elapsed: 0.0 s');
+                timerId = setInterval(function () { byId('p22-status-timing').text('Elapsed: ' + seconds()); }, 250);
+                try { spinner = apex.util.showSpinner(byId('snapshot-status')); } catch (ignore) { spinner = null; }
+              }
+              function showStatus(kind, title, body, timing) {
+                byId('snapshot-status').show();
+                var panel$ = byId('p22-status-panel');
+                panel$.removeAttr('hidden').removeClass('p22-status--info p22-status--warning p22-status--success p22-status--error')
+                  .addClass('p22-status--' + kind);
+                byId('p22-status-title').text(title);
+                byId('p22-status-body').text(body || '');
+                byId('p22-status-timing').text(timing || '');
+              }
+              function hideReport() {
+                apex.item('P22_REPORT_READY').setValue('N', null, true);
+                analysisButton(false);
+                reportElement().hide();
+              }
+              function setRunContext(meta) {
+                apex.item('P22_RUN_DB_LINK').setValue(meta.db_link, null, true);
+                apex.item('P22_RUN_AS_OF_DATE').setValue(meta.as_of_date, null, true);
+                apex.item('P22_RUN_LEDGER_ID').setValue(meta.ledger_id, null, true);
+                apex.item('P22_RUN_COMPANY').setValue(meta.company, null, true);
+                apex.item('P22_REPORT_READY').setValue('Y', null, true);
+              }
+              function showReport(meta) {
+                if (Number(meta.row_count) < 1) { actionButtons(false); runButton(false); hideReport(); return; }
+                setRunContext(meta);
+                actionButtons(false); runButton(false);
+                var region$ = reportElement(), r;
+                if (!region$.length) { throw new Error('The AP Trial Balance report region is unavailable.'); }
+                region$.show();
+                r = reportRegion();
+                if (r && typeof r.refresh === 'function') { r.refresh(); }
+                else { region$.trigger('apexrefresh'); }
+                analysisButton(true);
+              }
+              function metadataText(meta) {
+                return 'Generated ' + meta.loaded_on + ' by ' + meta.loaded_by + ' (' + meta.row_count + ' rows).';
+              }
+              function renderExisting(meta, changed) {
+                known = meta;
+                hideReport();
+                actionButtons(true); runButton(false);
+                showStatus(changed ? 'warning' : 'info', changed ? 'Snapshot changed' : 'Existing snapshot found',
+                  (changed ? 'Another user generated a newer snapshot. Review the updated information before choosing again. ' : '') + metadataText(meta));
+              }
+              function params() {
+                var result = {
+                  db_link: $.trim(apex.item('P22_DB_LINK').getValue()).toUpperCase(),
+                  as_of_date: canonicalDate(apex.item('P22_AS_OF_DATE').getValue()),
+                  ledger_id: $.trim(apex.item('P22_LEDGER_ID').getValue()),
+                  company: $.trim(apex.item('P22_COMPANY_SEGMENT').getValue()).toUpperCase()
+                }, missing = [];
+                if (!result.db_link) { missing.push('Database Source'); }
+                if (!result.as_of_date) { missing.push('As-of Date'); }
+                if (!result.ledger_id) { missing.push('Ledger'); }
+                if (!result.company) { missing.push('Company Code'); }
+                if (missing.length) {
+                  apex.message.showErrors([{type:'error', location:'page', message:'Select ' + missing.join(', ') + ' before running.', unsafe:false}]);
+                  return null;
+                }
+                apex.item('P22_COMPANY_SEGMENT').setValue(result.company, null, true);
+                apex.message.clearErrors();
+                return result;
+              }
+              function payload(p) { return {x01:p.db_link, x02:p.as_of_date, x03:p.ledger_id, x04:p.company}; }
+              function requestError(message, preserveExisting) {
+                stopActivity(); setBusy(false);
+                actionButtons(!!preserveExisting && !!known);
+                runButton(!(preserveExisting && known));
+                showStatus('error', preserveExisting ? 'Reload failed' : 'Request failed',
+                  message + (preserveExisting ? ' The previous snapshot remains available.' : ''));
+              }
+              function beginLoad(p, isReload) {
+                actionButtons(false); runButton(false); hideReport(); setBusy(true);
+                showStatus('warning', isReload ? 'Reloading snapshot' : 'Generating snapshot',
+                  (isReload ? 'The existing snapshot is being replaced.' : 'No existing snapshot was found.') +
+                  ' Generation normally takes approximately 30-40 seconds.');
+                startActivity();
+                var data = payload(p);
+                data.x05 = isReload && known ? known.token : '';
+                data.x06 = isReload ? 'Y' : 'N';
+                apex.server.process('P22_LOAD_SNAPSHOT', data, {dataType:'json'}).then(function (result) {
+                  stopActivity(); setBusy(false);
+                  if (!result || result.ok !== true) { requestError((result && result.message) || 'Unable to generate the snapshot.', isReload); return; }
+                  if (result.changed === true) { renderExisting(result.snapshot, true); return; }
+                  known = result.snapshot;
+                  if (Number(result.snapshot.row_count) < 1) {
+                    showStatus('warning', 'No AP trial balance data found',
+                      'No rows matched the selected database source, date, ledger and company code. Verify the ledger/company combination and try again.',
+                      'Total: ' + seconds());
+                    showReport(result.snapshot);
+                    return;
+                  }
+                  showStatus('success', 'Snapshot generated', metadataText(result.snapshot), 'Total: ' + seconds());
+                  try { showReport(result.snapshot); } catch (e) { requestError(e.message, false); }
+                }, function (error) { requestError((error && error.message) || 'Unable to generate the snapshot.', isReload); });
+              }
+              function check() {
+                if (busy) { return; }
+                var p = params(); if (!p) { return; }
+                known = null; actionButtons(false); hideReport(); setBusy(true);
+                showStatus('info', 'Checking snapshot availability', 'Checking the selected database source, date, ledger and company code.');
+                apex.server.process('P22_CHECK_SNAPSHOT', payload(p), {dataType:'json'}).then(function (result) {
+                  if (!result || result.ok !== true) { requestError((result && result.message) || 'Unable to check snapshot availability.', false); return; }
+                  if (result.exists === true) { setBusy(false); renderExisting(result.snapshot, false); }
+                  else { beginLoad(result.snapshot, false); }
+                }, function (error) { requestError((error && error.message) || 'Unable to check snapshot availability.', false); });
+              }
+              function useExisting() {
+                if (busy || !known) { return; }
+                showStatus('success', 'Using existing snapshot', metadataText(known));
+                try { showReport(known); } catch (e) { requestError(e.message, false); }
+              }
+              function recheckAndReload() {
+                var p = params(); if (!p) { return; }
+                setBusy(true); actionButtons(false); hideReport();
+                showStatus('info', 'Rechecking snapshot', 'Confirming that the snapshot has not changed since it was displayed.');
+                apex.server.process('P22_CHECK_SNAPSHOT', payload(p), {dataType:'json'}).then(function (result) {
+                  if (!result || result.ok !== true) { requestError((result && result.message) || 'Unable to recheck the snapshot.', true); return; }
+                  if (result.exists === true && known && result.snapshot.token !== known.token) {
+                    setBusy(false); renderExisting(result.snapshot, true); return;
+                  }
+                  beginLoad(result.snapshot, true);
+                }, function (error) { requestError((error && error.message) || 'Unable to recheck the snapshot.', true); });
+              }
+              function requestReload() {
+                if (busy || !known) { return; }
+                apex.message.confirm('Replace the snapshot ' + metadataText(known), function (ok) { if (ok) { recheckAndReload(); } });
+              }
+              function reset() {
+                if (busy) { return; }
+                known = null; stopActivity(); actionButtons(false); runButton(true); hideReport();
+                byId('p22-status-panel').attr('hidden', 'hidden'); byId('snapshot-status').hide();
+                apex.message.clearErrors();
+              }
+              function openAnalysis(pageId) {
+                if (busy || apex.item('P22_REPORT_READY').getValue() !== 'Y') { return; }
+                var target = 'ap_analysis_' + pageId + '_' + Date.now(), child = window.open('', target);
+                if (!child) { apex.message.showErrors([{type:'error',location:'page',message:'Allow pop-ups for this application to open analysis in a new tab.',unsafe:false}]); return; }
+                child.document.write('<title>Opening analysis</title><p style="font-family:sans-serif;padding:1rem">Opening analysis…</p>');
+                apex.server.process('P22_GET_ANALYSIS_URL', {
+                  x01:String(pageId), x02:apex.item('P22_RUN_DB_LINK').getValue(), x03:apex.item('P22_RUN_AS_OF_DATE').getValue(),
+                  x04:apex.item('P22_RUN_LEDGER_ID').getValue(), x05:apex.item('P22_RUN_COMPANY').getValue()
+                }, {dataType:'json'}).then(function(result){
+                  if (!result || result.ok !== true || !result.url) { child.close(); requestError((result && result.message) || 'Unable to open analysis.', true); return; }
+                  child.location.replace(result.url);
+                }, function(error){ child.close(); requestError((error && error.message) || 'Unable to open analysis.', true); });
+              }
+              $(function () {
+                actionButtons(false); analysisButton(false); runButton(true); hideReport(); byId('p22-status-panel').attr('hidden', 'hidden'); byId('snapshot-status').hide();
+                filters$().on('change.p22', reset);
+              });
+              return {check:check, useExisting:useExisting, requestReload:requestReload, reset:reset, openAnalysis:openAnalysis};
+            })(apex.jQuery);
+            ```
+    }
+    css {
+        inline:
+            ```css
+            #ap-trial-balance-ir {display:none;}
+            #use-existing-snapshot,#reload-snapshot,#analyze-snapshot,#reconcile-gl-ap,#analyze-with-ai {display:none;}
+            #snapshot-status {position:relative;min-height:4rem;}
+            .p22-status {border-left:4px solid #6b7280;border-radius:.25rem;padding:.8rem 1rem;background:#f6f7f8;}
+            .p22-status--info {border-left-color:#2563eb;background:#eff6ff;}
+            .p22-status--warning {border-left-color:#d97706;background:#fffbeb;}
+            .p22-status--success {border-left-color:#15803d;background:#f0fdf4;}
+            .p22-status--error {border-left-color:#b91c1c;background:#fef2f2;}
+            #p22-status-title {font-size:1rem;font-weight:700;margin:0 0 .25rem;}
+            #p22-status-body {margin:0;}
+            #p22-status-timing {font-variant-numeric:tabular-nums;font-weight:600;margin-top:.35rem;}
+            .p22-amount-help {margin-top:.65rem;max-width:80rem;}
+            .p22-amount-help summary {cursor:pointer;font-weight:600;color:#1f4f82;}
+            .p22-amount-help dl {display:grid;grid-template-columns:max-content 1fr;gap:.3rem .8rem;margin:.6rem 0 0;}
+            .p22-amount-help dt {font-weight:600;}
+            .p22-amount-help dd {margin:0;}
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region ap-trial-balance-ir (
+        name: AP Trial Balance
+        title: AP Trial Balance
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select org_id, entity_id, gl_liab_ccid, gl_liability_code,
+                       open_accounted_amount, open_entered_amount, invoice_num, invoice_id,
+                       invoice_date, invoice_currency_code, invoice_amount, acct_invoice_amount,
+                       supplier_name, supplier_number, vendor_id, vendor_site_id, vendor_site_code,
+                       min_due_date, max_due_date, placeholder_for_reval
+                  from xx_ap_trial_balance_snap
+                 where :P22_REPORT_READY = 'Y'
+                   and as_of_date = to_date(:P22_RUN_AS_OF_DATE,'YYYY-MM-DD')
+                   and ledger_id = to_number(:P22_RUN_LEDGER_ID)
+                   and company_segment = :P22_RUN_COMPANY
+                   and db_link = :P22_RUN_DB_LINK
+                ```
+            pageItemsToSubmit: [
+                P22_REPORT_READY
+                P22_RUN_DB_LINK
+                P22_RUN_AS_OF_DATE
+                P22_RUN_LEDGER_ID
+                P22_RUN_COMPANY
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: ap-trial-balance-ir
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: The selected snapshot contains no AP trial-balance rows.
+        }
+        advanced {
+            savedReportMappingIdentifier: 895156623912686645
+        }
+
+        column ACCT_INVOICE_AMOUNT (
+            type: plainText
+            heading {
+                heading: Accounted Invoice Amount
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: L
+            }
+            help {
+                helpText: Original invoice amount converted to the ledger functional currency, including any portion paid after the invoice was created. This is not the remaining open balance.
+            }
+        )
+
+        column ENTITY_ID (
+            type: hidden
+            heading {
+                heading: XLA Entity ID
+            }
+            layout {
+                sequence: 910
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column GL_LIABILITY_CODE (
+            type: plainText
+            heading {
+                heading: GL Liability Account
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column GL_LIAB_CCID (
+            type: hidden
+            heading {
+                heading: GL Liability CCID
+            }
+            layout {
+                sequence: 920
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column INVOICE_AMOUNT (
+            type: plainText
+            heading {
+                heading: Original Invoice Amount
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+            help {
+                helpText: Original invoice amount in the invoice currency, including any portion paid after the invoice was created. This is not the remaining open balance.
+            }
+        )
+
+        column INVOICE_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Invoice Currency
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column INVOICE_DATE (
+            type: plainText
+            heading {
+                heading: Invoice Date
+            }
+            layout {
+                sequence: 50
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column INVOICE_ID (
+            type: hidden
+            heading {
+                heading: Invoice ID
+            }
+            layout {
+                sequence: 930
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column INVOICE_NUM (
+            type: plainText
+            heading {
+                heading: Invoice Number
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column MAX_DUE_DATE (
+            type: plainText
+            heading {
+                heading: Latest Due Date
+            }
+            layout {
+                sequence: 70
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column MIN_DUE_DATE (
+            type: plainText
+            heading {
+                heading: Earliest Due Date
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column OPEN_ACCOUNTED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Open Balance - Ledger Currency
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+            help {
+                helpText: Remaining open balance as of the snapshot date in the ledger functional currency. It is derived from XLA Trial Balance at GL liability account, XLA entity and transaction-currency grain. The value can repeat when more than one report row represents the same grain, so de-duplicate that grain before aggregating.
+            }
+        )
+
+        column OPEN_ENTERED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Open Balance - Invoice Currency
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+            help {
+                helpText: Remaining open balance as of the snapshot date in the invoice or transaction currency. It is derived from XLA Trial Balance at GL liability account, XLA entity and transaction-currency grain. The value can repeat when more than one report row represents the same grain, so de-duplicate that grain before aggregating.
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Org ID
+            }
+            layout {
+                sequence: 900
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column PLACEHOLDER_FOR_REVAL (
+            type: hidden
+            heading {
+                heading: Revaluation Placeholder
+            }
+            layout {
+                sequence: 960
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column SUPPLIER_NAME (
+            type: plainText
+            heading {
+                heading: Supplier Name
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column SUPPLIER_NUMBER (
+            type: plainText
+            heading {
+                heading: Supplier Number
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column VENDOR_ID (
+            type: hidden
+            heading {
+                heading: Vendor ID
+            }
+            layout {
+                sequence: 940
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column VENDOR_SITE_CODE (
+            type: plainText
+            heading {
+                heading: Vendor Site Code
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column VENDOR_SITE_ID (
+            type: hidden
+            heading {
+                heading: Vendor Site ID
+            }
+            layout {
+                sequence: 950
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: AP Trial Balance
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 1000
+            }
+
+            displayColumn ACCT_INVOICE_AMOUNT (
+                sequence: 10
+            )
+
+            displayColumn GL_LIABILITY_CODE (
+                sequence: 13
+            )
+
+            displayColumn INVOICE_AMOUNT (
+                sequence: 9
+            )
+
+            displayColumn INVOICE_CURRENCY_CODE (
+                sequence: 8
+            )
+
+            displayColumn INVOICE_DATE (
+                sequence: 5
+            )
+
+            displayColumn INVOICE_NUM (
+                sequence: 4
+            )
+
+            displayColumn MAX_DUE_DATE (
+                sequence: 7
+            )
+
+            displayColumn MIN_DUE_DATE (
+                sequence: 6
+            )
+
+            displayColumn OPEN_ACCOUNTED_AMOUNT (
+                sequence: 12
+            )
+
+            displayColumn OPEN_ENTERED_AMOUNT (
+                sequence: 11
+            )
+
+            displayColumn SUPPLIER_NAME (
+                sequence: 1
+            )
+
+            displayColumn SUPPLIER_NUMBER (
+                sequence: 2
+            )
+
+            displayColumn VENDOR_SITE_CODE (
+                sequence: 3
+            )
+
+        )
+
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    region snapshot-parameters (
+        name: Snapshot Parameters
+        title: Snapshot Parameters
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Select the database source, as-of date, ledger and company code, then click <strong>Run AP Trial Balance</strong>.</p>
+                <p>If a snapshot already exists, review its generation details and choose whether to use it or replace it.</p>
+                <details class="p22-amount-help">
+                  <summary>Amount column definitions</summary>
+                  <dl>
+                    <dt>Original Invoice Amount</dt><dd>Original invoice value in invoice currency, including any portion subsequently paid.</dd>
+                    <dt>Accounted Invoice Amount</dt><dd>Original invoice value converted to the ledger functional currency.</dd>
+                    <dt>Open Balance - Invoice Currency</dt><dd>Balance remaining open at the snapshot date in invoice or transaction currency.</dd>
+                    <dt>Open Balance - Ledger Currency</dt><dd>Balance remaining open at the snapshot date in ledger functional currency.</dd>
+                  </dl>
+                  <p>The open balances come from XLA Trial Balance at liability account, XLA entity and transaction-currency grain. De-duplicate that grain before aggregating repeated detail rows. The same descriptions are available from each amount column's heading menu.</p>
+                </details>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: snapshot-parameters
+        }
+    )
+
+    region snapshot-status (
+        name: Snapshot Status
+        title: Snapshot Status
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div id="p22-status-panel" class="p22-status p22-status--info" role="status" aria-live="polite" hidden>
+                  <h3 id="p22-status-title"></h3>
+                  <p id="p22-status-body"></p>
+                  <div id="p22-status-timing"></div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: snapshot-status
+        }
+    )
+
+    pageItem P22_AS_OF_DATE (
+        type: datePickerJquery
+        label {
+            label: As-of Date
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @snapshot-parameters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            formatMask: DD-MON-YYYY
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue: select trunc(sysdate) from dual
+        }
+    )
+
+    pageItem P22_COMPANY_SEGMENT (
+        type: textField
+        label {
+            label: Company Code
+            alignment: left
+        }
+        settings {
+            textCase: upper
+        }
+        layout {
+            sequence: 40
+            region: @snapshot-parameters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 25
+        }
+        validation {
+            valueRequired: true
+            maxLength: 25
+        }
+    )
+
+    pageItem P22_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 10
+            region: @snapshot-parameters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P22_LEDGER_ID (
+        type: selectList
+        label {
+            label: Ledger
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @snapshot-parameters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+    )
+
+    pageItem P22_REPORT_READY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 100
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P22_RUN_AS_OF_DATE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 102
+            slot: body
+        }
+    )
+
+    pageItem P22_RUN_COMPANY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 104
+            slot: body
+        }
+    )
+
+    pageItem P22_RUN_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 101
+            slot: body
+        }
+    )
+
+    pageItem P22_RUN_LEDGER_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 103
+            slot: body
+        }
+    )
+
+    button analyze-snapshot (
+        buttonName: ANALYZE_SNAPSHOT
+        label: Aging Analysis
+        layout {
+            sequence: 15
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-chart-bar
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: analyze-snapshot
+        }
+    )
+
+    button analyze-with-ai (
+        buttonName: ANALYZE_WITH_AI
+        label: Analyze with AI
+        layout {
+            sequence: 17
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-sparkles
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: analyze-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    button reconcile-gl-ap (
+        buttonName: RECONCILE_GL_AP
+        label: GL/AP Reconciliation
+        layout {
+            sequence: 16
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-balance-scale
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: reconcile-gl-ap
+        }
+    )
+
+    button reload-snapshot (
+        buttonName: RELOAD_SNAPSHOT
+        label: Reload Snapshot
+        layout {
+            sequence: 30
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: reload-snapshot
+        }
+    )
+
+    button reset-page (
+        buttonName: RESET_PAGE
+        label: Reset
+        layout {
+            sequence: 40
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-undo
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: reset-page
+        }
+    )
+
+    button run-ap-trial-balance (
+        buttonName: RUN_AP_TRIAL_BALANCE
+        label: Run AP Trial Balance
+        layout {
+            sequence: 10
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-play
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: run-ap-trial-balance
+        }
+    )
+
+    button use-existing-snapshot (
+        buttonName: USE_EXISTING_SNAPSHOT
+        label: Use Existing Snapshot
+        layout {
+            sequence: 20
+            region: @snapshot-parameters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-database
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: use-existing-snapshot
+        }
+    )
+
+    dynamicAction open-aging-analysis (
+        name: Open Aging Analysis
+        execution {
+            sequence: 50
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @analyze-snapshot
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.openAnalysis(23);
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction open-ai-analysis (
+        name: Open AI Analysis
+        execution {
+            sequence: 70
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @analyze-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.openAnalysis(50);
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+            config {
+                buildOption: @feature-ai
+            }
+        )
+
+    )
+
+    dynamicAction open-gl-ap-reconciliation (
+        name: Open GL AP Reconciliation
+        execution {
+            sequence: 60
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @reconcile-gl-ap
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.openAnalysis(24);
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction reload-snapshot (
+        name: Reload Snapshot
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @reload-snapshot
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.requestReload();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction reset-page (
+        name: Reset Page
+        execution {
+            sequence: 40
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @reset-page
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.reset();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction run-ap-trial-balance (
+        name: Run AP Trial Balance
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @run-ap-trial-balance
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.check();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction use-existing-snapshot (
+        name: Use Existing Snapshot
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @use-existing-snapshot
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p22Controller.useExisting();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process initialize-page-22-state (
+        name: Initialize Page 22 State
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  apex_util.set_session_state('P22_REPORT_READY','N',p_commit=>false);
+                  apex_util.set_session_state('P22_RUN_DB_LINK',null,p_commit=>false);
+                  apex_util.set_session_state('P22_RUN_AS_OF_DATE',null,p_commit=>false);
+                  apex_util.set_session_state('P22_RUN_LEDGER_ID',null,p_commit=>false);
+                  apex_util.set_session_state('P22_RUN_COMPANY',null,p_commit=>false);
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 895156623912686005
+        }
+    )
+
+    process p22-check-snapshot (
+        name: P22_CHECK_SNAPSHOT
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_db_link     varchar2(128) := upper(trim(apex_application.g_x01));
+                  l_date_text   varchar2(30)  := trim(apex_application.g_x02);
+                  l_ledger_text varchar2(30)  := trim(apex_application.g_x03);
+                  l_company     varchar2(25)  := upper(trim(apex_application.g_x04));
+                  l_as_of_date  date;
+                  l_ledger_id   number;
+                  l_row_count   number;
+                  l_loaded_by   varchar2(100);
+                  l_loaded_on   timestamp;
+                  procedure validate_inputs is
+                  begin
+                    if l_db_link not in ('ADG') then
+                      raise_application_error(-20221,'Select an approved database source.');
+                    end if;
+                    begin
+                      if regexp_like(l_date_text,'^[0-9]{4}-[0-9]{2}-[0-9]{2}$','c') then
+                        l_as_of_date := to_date(l_date_text,'FXYYYY-MM-DD');
+                      elsif regexp_like(l_date_text,'^[0-9]{1,2}-[A-Za-z]{3}-[0-9]{4}$','c') then
+                        l_as_of_date := to_date(l_date_text,'FXDD-MON-YYYY','NLS_DATE_LANGUAGE=English');
+                      else
+                        raise value_error;
+                      end if;
+                    exception when others then
+                      raise_application_error(-20222,'Select a valid As-of Date.');
+                    end;
+                    if not regexp_like(l_ledger_text,'^[0-9]{1,18}$','c') then
+                      raise_application_error(-20223,'Select a valid Ledger.');
+                    end if;
+                    l_ledger_id := to_number(l_ledger_text);
+                    if l_company is null or not regexp_like(l_company,'^[A-Z0-9_.-]{1,25}$','c') then
+                      raise_application_error(-20224,'Enter a valid Company Code.');
+                    end if;
+                  end;
+                  procedure write_snapshot(p_exists boolean) is
+                  begin
+                    apex_json.open_object;
+                    apex_json.write('ok',true);
+                    apex_json.write('exists',p_exists);
+                    apex_json.open_object('snapshot');
+                    apex_json.write('db_link',l_db_link);
+                    apex_json.write('as_of_date',to_char(l_as_of_date,'YYYY-MM-DD'));
+                    apex_json.write('ledger_id',to_char(l_ledger_id,'FM99999999999999999990'));
+                    apex_json.write('company',l_company);
+                    apex_json.write('row_count',nvl(l_row_count,0));
+                    apex_json.write('loaded_by',l_loaded_by);
+                    apex_json.write('loaded_on',case when l_loaded_on is not null then to_char(l_loaded_on,'DD-MON-YYYY HH24:MI:SS') end);
+                    apex_json.write('token',case when l_loaded_on is not null then to_char(l_loaded_on,'YYYYMMDDHH24MISSFF6') end);
+                    apex_json.close_object;
+                    apex_json.close_object;
+                  end;
+                begin
+                  validate_inputs;
+                  select count(*), max(loaded_by), max(loaded_on)
+                    into l_row_count, l_loaded_by, l_loaded_on
+                    from xx_ap_trial_balance_snap
+                   where as_of_date = l_as_of_date
+                     and ledger_id = l_ledger_id
+                     and company_segment = l_company
+                     and db_link = l_db_link;
+                  write_snapshot(l_row_count > 0);
+                exception when others then
+                  apex_json.open_object; apex_json.write('ok',false);
+                  apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12)
+                    else 'Unable to check snapshot availability. Check the APEX debug log.' end);
+                  apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 895156623912686006
+        }
+    )
+
+    process p22-get-analysis-url (
+        name: P22_GET_ANALYSIS_URL
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_page number; l_db_link varchar2(128):=upper(trim(apex_application.g_x02));
+                  l_date varchar2(30):=trim(apex_application.g_x03); l_ledger varchar2(30):=trim(apex_application.g_x04);
+                  l_company varchar2(25):=upper(trim(apex_application.g_x05)); l_items varchar2(4000); l_url varchar2(32767);
+                begin
+                  if apex_application.g_x01 not in ('23','24','50') then raise_application_error(-20231,'Invalid analysis page.'); end if;
+                  l_page:=to_number(apex_application.g_x01);
+                  if l_page=50 and apex_application_admin.get_build_option_status(p_application_id=>:APP_ID,p_build_option_name=>'FEATURE_AI') <> 'INCLUDE' then
+                    raise_application_error(-20233,'AI analysis is disabled in this environment.');
+                  end if;
+                  if l_db_link not in ('ADG')
+                     or not regexp_like(l_date,'^[0-9]{4}-[0-9]{2}-[0-9]{2}$','c')
+                     or not regexp_like(l_ledger,'^[0-9]{1,18}$','c')
+                     or l_company is null or not regexp_like(l_company,'^[A-Z0-9_.-]{1,25}$','c') then
+                    raise_application_error(-20232,'The selected snapshot context is invalid.');
+                  end if;
+                  l_items:=case when l_page=23 then 'P23_DB_LINK,P23_AS_OF_DATE,P23_LEDGER_ID,P23_COMPANY'
+                                when l_page=24 then 'P24_DB_LINK,P24_AS_OF_DATE,P24_LEDGER_ID,P24_COMPANY'
+                                else 'P50_DB_LINK,P50_PERIOD_NAME,P50_AP_SCOPE_AS_OF_DATE,P50_AP_LEDGER_ID,P50_AP_COMPANY,P50_AP_SOURCE_PAGE,P50_AP_RECON_READY' end;
+                  l_url:=apex_page.get_url(p_page=>l_page,p_clear_cache=>to_char(l_page),p_items=>l_items,
+                    p_values=>case when l_page=50 then l_db_link||','||upper(to_char(to_date(l_date,'YYYY-MM-DD'),'MON-YYYY','NLS_DATE_LANGUAGE=English'))||','||l_date||','||l_ledger||','||l_company||',22,N'
+                                   else l_db_link||','||l_date||','||l_ledger||','||l_company end);
+                  apex_json.open_object; apex_json.write('ok',true); apex_json.write('url',l_url); apex_json.close_object;
+                exception when others then
+                  apex_json.open_object; apex_json.write('ok',false);
+                  apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12) else 'Unable to prepare the analysis URL. Check the APEX debug log.' end);
+                  apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 40
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 895156623912686008
+        }
+    )
+
+    process p22-load-snapshot (
+        name: P22_LOAD_SNAPSHOT
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_db_link     varchar2(128) := upper(trim(apex_application.g_x01));
+                  l_date_text   varchar2(30)  := trim(apex_application.g_x02);
+                  l_ledger_text varchar2(30)  := trim(apex_application.g_x03);
+                  l_company     varchar2(25)  := upper(trim(apex_application.g_x04));
+                  l_expected_token varchar2(30) := trim(apex_application.g_x05);
+                  l_is_reload   varchar2(1)   := upper(trim(apex_application.g_x06));
+                  l_as_of_date  date;
+                  l_ledger_id   number;
+                  l_row_count   number;
+                  l_actual_count number;
+                  l_loaded_by   varchar2(100);
+                  l_loaded_on   timestamp;
+                  l_current_token varchar2(30);
+                  l_dummy       number;
+                begin
+                  if l_db_link not in ('ADG') then
+                    raise_application_error(-20221,'Select an approved database source.');
+                  end if;
+                  begin
+                    if regexp_like(l_date_text,'^[0-9]{4}-[0-9]{2}-[0-9]{2}$','c') then
+                      l_as_of_date := to_date(l_date_text,'FXYYYY-MM-DD');
+                    elsif regexp_like(l_date_text,'^[0-9]{1,2}-[A-Za-z]{3}-[0-9]{4}$','c') then
+                      l_as_of_date := to_date(l_date_text,'FXDD-MON-YYYY','NLS_DATE_LANGUAGE=English');
+                    else
+                      raise value_error;
+                    end if;
+                  exception when others then
+                    raise_application_error(-20222,'Select a valid As-of Date.');
+                  end;
+                  if not regexp_like(l_ledger_text,'^[0-9]{1,18}$','c') then
+                    raise_application_error(-20223,'Select a valid Ledger.');
+                  end if;
+                  l_ledger_id := to_number(l_ledger_text);
+                  if l_company is null or not regexp_like(l_company,'^[A-Z0-9_.-]{1,25}$','c') then
+                    raise_application_error(-20224,'Enter a valid Company Code.');
+                  end if;
+                  if l_is_reload = 'Y' and l_expected_token is not null then
+                    xx_ap_trial_balance_pkg.acquire_snapshot_lock(
+                      p_ledger_id     => l_ledger_id,
+                      p_snapshot_date => l_as_of_date,
+                      p_company       => l_company,
+                      p_db_link       => l_db_link
+                    );
+                    select count(*), max(loaded_by), max(loaded_on)
+                      into l_actual_count, l_loaded_by, l_loaded_on
+                      from xx_ap_trial_balance_snap
+                     where as_of_date = l_as_of_date
+                       and ledger_id = l_ledger_id
+                       and company_segment = l_company
+                       and db_link = l_db_link;
+                    l_current_token := case when l_loaded_on is not null then to_char(l_loaded_on,'YYYYMMDDHH24MISSFF6') end;
+                    if l_actual_count > 0 and nvl(l_current_token,'-') <> l_expected_token then
+                      apex_json.open_object; apex_json.write('ok',true); apex_json.write('changed',true);
+                      apex_json.open_object('snapshot');
+                      apex_json.write('db_link',l_db_link); apex_json.write('as_of_date',to_char(l_as_of_date,'YYYY-MM-DD'));
+                      apex_json.write('ledger_id',to_char(l_ledger_id,'FM99999999999999999990')); apex_json.write('company',l_company);
+                      apex_json.write('row_count',l_actual_count); apex_json.write('loaded_by',l_loaded_by);
+                      apex_json.write('loaded_on',to_char(l_loaded_on,'DD-MON-YYYY HH24:MI:SS')); apex_json.write('token',l_current_token);
+                      apex_json.close_object; apex_json.close_object;
+                      commit;
+                      return;
+                    end if;
+                  end if;
+                  xx_ap_trial_balance_pkg.populate_snapshot(
+                    p_ledger_id => l_ledger_id, p_snapshot_date => l_as_of_date,
+                    p_company => l_company, p_db_link => l_db_link,
+                    p_loaded_by => nvl(v('APP_USER'),user), p_row_count => l_row_count);
+                  select count(*), max(loaded_by), max(loaded_on)
+                    into l_actual_count, l_loaded_by, l_loaded_on
+                    from xx_ap_trial_balance_snap
+                   where as_of_date = l_as_of_date
+                     and ledger_id = l_ledger_id
+                     and company_segment = l_company
+                     and db_link = l_db_link;
+                  if l_actual_count <> nvl(l_row_count,0) then
+                    raise_application_error(-20225,'Snapshot row-count validation failed after loading.');
+                  end if;
+                  if l_actual_count = 0 then
+                    l_loaded_by := nvl(v('APP_USER'),user); l_loaded_on := systimestamp;
+                  end if;
+                  apex_json.open_object; apex_json.write('ok',true);
+                  apex_json.open_object('snapshot');
+                  apex_json.write('db_link',l_db_link);
+                  apex_json.write('as_of_date',to_char(l_as_of_date,'YYYY-MM-DD'));
+                  apex_json.write('ledger_id',to_char(l_ledger_id,'FM99999999999999999990'));
+                  apex_json.write('company',l_company); apex_json.write('row_count',l_actual_count);
+                  apex_json.write('loaded_by',l_loaded_by);
+                  apex_json.write('loaded_on',to_char(l_loaded_on,'DD-MON-YYYY HH24:MI:SS'));
+                  apex_json.write('token',to_char(l_loaded_on,'YYYYMMDDHH24MISSFF6'));
+                  apex_json.close_object; apex_json.close_object;
+                exception when others then
+                  rollback; apex_json.open_object; apex_json.write('ok',false);
+                  apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12)
+                    else 'Unable to generate the AP Trial Balance snapshot. Check the APEX debug log.' end);
+                  apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 30
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 895156623912686007
+        }
+    )
+
+)
+

@@ -1,0 +1,868 @@
+page 60 (
+    name: Period Status
+    alias: PERIOD-STATUS
+    title: Period Status
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            (function ($) {
+              var ledgerId = apex.item("P60_INV_LEDGER_ID").getValue();
+              var ledgerNames = {"1003":"TEREX US", "5001":"TEREX UK 120", "10001":"TEREX CH"};
+              if (!ledgerNames[ledgerId]) { return; }
+              var monthName = $("#P60_MONTH_OFFSET option:selected").text();
+              $("#R264744415640464852_heading").text("Inventory Organizations - " + ledgerNames[ledgerId] + " - " + monthName);
+              $("#R264744415640464852").show();
+              window.setTimeout(function () {
+                document.getElementById("R264744415640464852").scrollIntoView({behavior:"auto", block:"start"});
+              }, 0);
+            })(apex.jQuery);
+            ```
+    }
+    css {
+        inline:
+            ```css
+            .xxme-period-status {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              min-width: 132px;
+              min-height: 30px;
+              padding: 5px 12px;
+              border-radius: 16px;
+              color: #fff;
+              font-weight: 700;
+              line-height: 1.2;
+              text-align: center;
+            }
+            .xxme-period-status-OPEN { background-color: #2e7d32; }
+            .xxme-period-status-CLOSED { background-color: #455a64; }
+            .xxme-period-status-PERMANENT { background-color: #263238; }
+            .xxme-period-status-FUTURE { background-color: #287c96; }
+            .xxme-period-status-NEVER { background-color: #8a6d3b; }
+            .xxme-period-status-MIXED { background-color: #6a4c93; }
+            .xxme-period-status-UNKNOWN { background-color: #c62828; }
+            .xxme-inventory-drill {
+              border: 0;
+              background: transparent;
+              padding: 0;
+              cursor: pointer;
+              font: inherit;
+            }
+            .xxme-inventory-drill:hover .xxme-period-status,
+            .xxme-inventory-drill:focus .xxme-period-status {
+              box-shadow: 0 0 0 3px rgba(0, 112, 173, .22);
+            }
+            .p60-pending-count {
+              font-weight: 700;
+              text-decoration: underline;
+            }
+            #R264744415640464852 {
+              display: none;
+              margin-top: 16px;
+            }
+            #R264744415640464852 .t-Report-cell:nth-child(5) {
+              text-align: right;
+              font-weight: 700;
+            }
+            #period-status-report .t-Report-report {
+              table-layout: fixed;
+              width: 100%;
+            }
+            #period-status-report .t-Report-colHead {
+              text-align: center;
+              vertical-align: bottom;
+            }
+            #period-status-report .t-Report-cell {
+              padding-top: 12px;
+              padding-bottom: 12px;
+            }
+            #period-status-report .t-Report-report th:first-child,
+            #period-status-report .t-Report-report td:first-child {
+              width: 22%;
+              text-align: left;
+              font-weight: 700;
+            }
+            #period-status-report .t-Report-report td:not(:first-child) {
+              text-align: center;
+            }
+            
+            /* Approved Page 60 palette. Scoped to the two reports; native appearance preference controls mode. */
+            :is(#R264744415640464851, #R264744415640464852) {
+              --p60-text: #30313b;
+              --p60-line: #e4e2ec;
+              --p60-row-odd: #ffffff;
+              --p60-row-even: #f8f7fb;
+              --p60-header: #f0edf7;
+              --p60-header-text: #484058;
+              --p60-accent: #5c47a3;
+              --p60-open-bg: #eee8f9; --p60-open-text: #58418f;
+              --p60-closed-bg: #edf0f4; --p60-closed-text: #4b5769;
+              --p60-permanent-bg: #dfe4eb; --p60-permanent-text: #39465a;
+              --p60-never-bg: #f4eddf; --p60-never-text: #806132;
+              --p60-future-bg: #e8eef6; --p60-future-text: #425f84;
+              --p60-error-bg: #f9e8eb; --p60-error-text: #a43d53;
+              --p60-panel: #ffffff;
+            }
+            body.tms-dark-mode :is(#R264744415640464851, #R264744415640464852) {
+              --p60-text: #f0f3f9;
+              --p60-line: #465268;
+              --p60-row-odd: #2a3343;
+              --p60-row-even: #303c4f;
+              --p60-header: #384458;
+              --p60-header-text: #e2e8f3;
+              --p60-accent: #bca7ee;
+              --p60-open-bg: #51416f; --p60-open-text: #f4ebff;
+              --p60-closed-bg: #465468; --p60-closed-text: #f1f5fb;
+              --p60-permanent-bg: #3a485c; --p60-permanent-text: #f1f5fb;
+              --p60-never-bg: #58482d; --p60-never-text: #ffe0a5;
+              --p60-future-bg: #293c51; --p60-future-text: #bdd4ee;
+              --p60-error-bg: #4e2934; --p60-error-text: #ffc1cf;
+              --p60-panel: #2b3443;
+            }
+            :is(#R264744415640464851, #R264744415640464852) .t-Report-report {
+              background: var(--p60-panel);
+              color: var(--p60-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .t-Report-report th {
+              background: var(--p60-header) !important;
+              color: var(--p60-header-text) !important;
+              border-color: var(--p60-line) !important;
+            }
+            :is(#R264744415640464851, #R264744415640464852) .t-Report-report td {
+              background: var(--p60-row-odd);
+              color: var(--p60-text);
+              border-color: var(--p60-line);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .t-Report-report tr:nth-child(even) td {
+              background: var(--p60-row-even);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status {
+              border: 1px solid transparent;
+              color: var(--p60-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-OPEN {
+              background: var(--p60-open-bg); color: var(--p60-open-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-CLOSED {
+              background: var(--p60-closed-bg); color: var(--p60-closed-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-PERMANENT {
+              background: var(--p60-permanent-bg); color: var(--p60-permanent-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-NEVER {
+              background: var(--p60-never-bg); color: var(--p60-never-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-FUTURE {
+              background: var(--p60-future-bg); color: var(--p60-future-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-UNKNOWN {
+              background: var(--p60-error-bg); color: var(--p60-error-text);
+            }
+            :is(#R264744415640464851, #R264744415640464852) .xxme-period-status-MIXED {
+              background: var(--p60-panel); color: var(--p60-accent); border-color: var(--p60-accent);
+            }
+            :is(#R264744415640464851, #R264744415640464852) a.p60-pending-count {
+              color: var(--p60-accent);
+            }
+            #R264744415640464851 .xxme-inventory-drill:focus-visible {
+              outline: 2px solid var(--p60-accent); outline-offset: 3px; border-radius: 16px;
+            }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: Period Status
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region inventory-org-drilldown (
+        name: Inventory Organization Details
+        title: Inventory Organization Details
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select d.organization_code,
+                       d.organization_name,
+                       d.operating_unit,
+                       '<span class="xxme-period-status xxme-period-status-' || d.css || '">' || apex_escape.html(d.status) || '</span>' period_status,
+                       case
+                         when d.acct_period_id is null then '&mdash;'
+                         when d.pending > 0 then '<a class="p60-pending-count" href="' ||
+                           apex_escape.html_attribute(apex_page.get_url(
+                             p_page        => 62,
+                             p_clear_cache => '62',
+                             p_items       => 'P62_PERIOD_NAME,P62_ORG_ID,P62_ORG_NAME,P62_MONTH_OFFSET,P62_LEDGER_ID',
+                             p_values      => d.period_name || ',' || d.organization_id || ',\' || d.organization_name || '\,' || nvl(:P60_MONTH_OFFSET, '0') || ',' || d.ledger_id)) ||
+                           '" aria-label="Show ' || d.pending || ' pending transactions for ' || apex_escape.html_attribute(d.organization_name) || ' on Page 62">' || d.pending || '</a>'
+                         else to_char(d.pending)
+                       end required_pending_count,
+                       d.schedule_close_date,
+                       d.period_close_date
+                  from table(xxme_period_status_pkg.get_inv_org_details(
+                         to_number(:P60_INV_LEDGER_ID default null on conversion error),
+                         to_number(nvl(:P60_MONTH_OFFSET, '0') default 0 on conversion error),
+                         :P60_HIDE_NO_PERIOD,
+                         :P60_DB_LINK)) d
+                 order by d.organization_code
+                ```
+            pageItemsToSubmit: [
+                P60_INV_LEDGER_ID
+                P60_MONTH_OFFSET
+                P60_HIDE_NO_PERIOD
+                P60_DB_LINK
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 100
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        performance {
+            lazyLoading: true
+        }
+
+        column OPERATING_UNIT (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Operating Unit
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ORGANIZATION_CODE (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Organization Code
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ORGANIZATION_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Inventory Organization
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PERIOD_CLOSE_DATE (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Period Close Date
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PERIOD_STATUS (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Period Status
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column REQUIRED_PENDING_COUNT (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Pending Transactions Requiring Resolution
+                alignment: center
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column SCHEDULE_CLOSE_DATE (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Scheduled Close Date
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region period-status-filters (
+        name: Period Status Filters
+        title: Period Status Filters
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon"><span class="t-Icon fa fa-calendar" aria-hidden="true"></span></div>
+                    <div class="t-Alert-content">
+                      The matrix compares General Ledger, Payables, Receivables, Purchasing, and Inventory Organization status across all
+                      three Ledgers in Scope. Pending counts include only transactions dated in the selected month.
+                      A dash means the organization has no inventory period for that month.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region period-status-report (
+        name: Period Status Matrix
+        title: Ledger and Subledger Period Status
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select subledger,
+                       terex_us,
+                       terex_uk_120,
+                       terex_ch
+                  from table(xxme_period_status_pkg.get_period_matrix(
+                         to_number(nvl(:P60_MONTH_OFFSET, '0') default 0 on conversion error),
+                         :P60_DB_LINK))
+                 order by seq
+                ```
+            pageItemsToSubmit: [
+                P60_MONTH_OFFSET
+                P60_INV_LEDGER_ID
+                P60_DB_LINK
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 10
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        performance {
+            lazyLoading: true
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column SUBLEDGER (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Subledger
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column TEREX_CH (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: TEREX CH
+                alignment: center
+            }
+            layout {
+                sequence: 40
+                columnAlignment: center
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column TEREX_UK_120 (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: TEREX UK 120
+                alignment: center
+            }
+            layout {
+                sequence: 30
+                columnAlignment: center
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column TEREX_US (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: TEREX US
+                alignment: center
+            }
+            layout {
+                sequence: 20
+                columnAlignment: center
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+    )
+
+    pageItem P60_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 20
+            region: @period-status-filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P60_HIDE_NO_PERIOD (
+        type: checkbox
+        label {
+            label: Hide orgs with no inventory period
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @inventory-org-drilldown
+            slot: regionBody
+            alignment: left
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        advanced {
+            cssClasses: js-ignoreChange
+            warnOnUnsavedChanges: ignore
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P60_INV_LEDGER_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 30
+            region: @period-status-filters
+            slot: regionBody
+        }
+        advanced {
+            warnOnUnsavedChanges: ignore
+        }
+    )
+
+    pageItem P60_MONTH_OFFSET (
+        type: selectList
+        label {
+            label: Month
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select upper(to_char(
+                           add_months(trunc(sysdate, 'MM'), month_offset),
+                           'MON-YYYY',
+                           'NLS_DATE_LANGUAGE=English'
+                       )) d,
+                       month_offset r
+                  from (
+                      select level - 4 month_offset
+                        from dual
+                      connect by level <= 7
+                  )
+                 order by month_offset
+                ```
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @period-status-filters
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        advanced {
+            cssClasses: js-ignoreChange
+            warnOnUnsavedChanges: ignore
+        }
+        default {
+            type: static
+            staticValue: 0
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close
+        layout {
+            sequence: 30
+            region: @period-status-filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button refresh-period-status (
+        buttonName: REFRESH_STATUS
+        label: Refresh Period Status
+        layout {
+            sequence: 20
+            region: @period-status-filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction change-period-month (
+        name: Change Month
+        execution {
+            sequence: 30
+        }
+        when {
+            selectionType: items
+            items: P60_MONTH_OFFSET
+        }
+
+        action hide-inventory-details (
+            name: Hide Inventory Details
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.item("P60_INV_LEDGER_ID").setValue("", null, true);
+                    $("#R264744415640464852").hide();
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action refresh-status-matrix (
+            name: Refresh Status Matrix
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @period-status-report
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction close (
+        name: Close
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action close-window (
+            action: executeJsCode
+            settings {
+                jsCode: window.close();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction filter-inventory-organizations (
+        name: Filter Inventory Organizations
+        execution {
+            sequence: 60
+        }
+        when {
+            selectionType: items
+            items: P60_HIDE_NO_PERIOD
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @inventory-org-drilldown
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction refresh-period-status (
+        name: Refresh Period Status
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @refresh-period-status
+        }
+
+        action refresh-status-report (
+            name: Refresh Status Report
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @period-status-report
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction show-inventory-organizations (
+        name: Show Inventory Organizations
+        execution {
+            sequence: 40
+            eventScope: dynamic
+        }
+        when {
+            event: click
+            selectionType: jQuerySelector
+            jquerySelector: .xxme-inventory-drill
+        }
+
+        action load-inventory-details (
+            name: Load Inventory Details
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    var button = this.triggeringElement;
+                    var ledgerId = button.getAttribute("data-ledger-id");
+                    var ledgerName = button.getAttribute("data-ledger-name");
+                    var monthName = $("#P60_MONTH_OFFSET option:selected").text();
+                    apex.item("P60_INV_LEDGER_ID").setValue(ledgerId, null, true);
+                    $("#R264744415640464852_heading").text("Inventory Organizations - " + ledgerName + " - " + monthName);
+                    $("#R264744415640464852").show();
+                    document.getElementById("R264744415640464852").scrollIntoView({behavior:"smooth", block:"start"});
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action refresh-inventory-details (
+            name: Refresh Inventory Details
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @inventory-org-drilldown
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)
+

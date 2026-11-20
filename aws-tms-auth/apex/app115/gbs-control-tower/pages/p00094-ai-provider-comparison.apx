@@ -1,0 +1,70 @@
+page 94 (
+    name: AI Provider Comparison
+    alias: AI-PROVIDER-COMPARISON
+    title: AI Provider Comparison
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1400
+        height: 820
+        chained: false
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region exact-match-provider-comparison (
+        name: Exact-Match Provider Comparison
+        title: Exact-Match Provider Comparison
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                
+                declare
+                    l_a number; l_b number; l_question clob; l_period varchar2(255); l_app number;
+                    procedure outp(p_text varchar2) is begin sys.htp.prn(p_text); end;
+                    procedure out_clob(p_text clob) is l_pos integer:=1; l_len integer:=dbms_lob.getlength(p_text); begin while l_pos<=l_len loop sys.htp.prn(dbms_lob.substr(p_text,240,l_pos)); l_pos:=l_pos+240; end loop; end;
+                    procedure render_run(p_run_id number) is
+                    begin
+                      for r in (select * from xxme_ai_p50_bench_log where run_id=p_run_id) loop
+                        outp('<section style="min-width:0"><h2>'||apex_escape.html(r.provider_name)||'</h2><p><strong>'||apex_escape.html(r.model_name)||'</strong><br>Run '||r.run_id||' · '||to_char(r.elapsed_ms/1000,'FM9999990D00')||' sec<br>'||apex_escape.html(to_char(r.response_ts,'YYYY-MM-DD HH24:MI:SS'))||'</p><hr><div>');
+                        out_clob(apex_markdown.to_html(r.response_text)); outp('</div></section>');
+                      end loop;
+                    end;
+                begin
+                    select to_number(c001),to_number(c002) into l_a,l_b from apex_collections where collection_name='XXME_AI_COMPARE_SELECTION' and seq_id=1;
+                    select question_text,period_name,application_id into l_question,l_period,l_app from xxme_ai_p50_bench_log where run_id=l_a;
+                    outp('<div class="t-Alert t-Alert--success"><div class="t-Alert-body"><strong>Exact context match</strong>: Application '||l_app||' · Period '||apex_escape.html(l_period)||' · identical question and recorded accounting context.</div></div>');
+                    outp('<h3>Shared Question</h3><pre style="white-space:pre-wrap;font-family:inherit">'); out_clob(apex_escape.html_clob(l_question)); outp('</pre>');
+                    outp('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.5rem;align-items:start">');
+                    render_run(l_a); render_run(l_b); outp('</div>');
+                exception when no_data_found then outp('<div class="t-Alert t-Alert--warning"><div class="t-Alert-body">No valid comparison selection is available. Return to Page 92 and select two matching responses.</div></div>');
+                end;
+                
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+)
+

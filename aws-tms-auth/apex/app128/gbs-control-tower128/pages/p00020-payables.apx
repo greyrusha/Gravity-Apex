@@ -521,7 +521,7 @@ page 20 (
     pageItem P20_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 20

@@ -1079,7 +1079,7 @@ page 99 (
             columnSpan: 4
         }
         appearance {
-            template: 1672985690212569356
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             height: 1
         }
@@ -1113,7 +1113,7 @@ page 99 (
             columnSpan: 4
         }
         appearance {
-            template: 1672985690212569356
+            template: @/optional-floating
             templateOptions: #DEFAULT#
             height: 1
         }

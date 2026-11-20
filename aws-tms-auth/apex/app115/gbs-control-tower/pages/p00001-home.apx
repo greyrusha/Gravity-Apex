@@ -1,0 +1,364 @@
+page 1 (
+    name: Month End Dashboard
+    alias: HOME
+    title: Month End Dashboard
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    css {
+        inline:
+            ```css
+            .kpi-card-body {
+                margin: -8px -12px -12px -12px;
+                padding: 14px 12px 16px 12px;
+                border-left: 6px solid #287c96;
+                border-radius: 4px;
+                min-height: 76px;
+                background-color: #edf7fb;
+            }
+            .kpi-card-body.kpi-good {
+                border-left-color: var(--tms-success-text, #15803d);
+                background-color: var(--tms-success-bg, #f0fdf4);
+            }
+            .kpi-card-body.kpi-warn {
+                border-left-color: var(--tms-warning-text, #b45309);
+                background-color: var(--tms-warning-bg, #fffbeb);
+            }
+            .kpi-card-body.kpi-bad {
+                border-left-color: #b91c1c;
+                background-color: #fef2f2;
+            }
+            body.tms-dark-mode .kpi-card-body.kpi-good {
+                background-color: var(--tms-success-bg, #243f32);
+                color: var(--tms-text, #e4e8ed);
+                border-left-color: var(--tms-success-text, #a0dfbc);
+            }
+            body.tms-dark-mode .kpi-card-body.kpi-warn {
+                background-color: var(--tms-warning-bg, #403623);
+                color: var(--tms-text, #e4e8ed);
+                border-left-color: var(--tms-warning-text, #f0ce8f);
+            }
+            body.tms-dark-mode .kpi-card-body.kpi-bad {
+                background-color: #422b30;
+                color: var(--tms-text, #e4e8ed);
+                border-left-color: #f1a3ab;
+            }
+            
+            /* Dashboard heading icon only; follows the existing native appearance palette. */
+            #R190046942772711880 .t-HeroRegion-icon {
+              background-color: var(--tms-accent, #4840a8);
+              color: var(--tms-on-accent, #fff);
+            }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region filters (
+        name: Filters
+        title: Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region month-end-dashboard-title (
+        name: Month End Dashboard
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/hero
+            templateOptions: #DEFAULT#
+            icon: fa-calendar-check-o
+        }
+    )
+
+    region month_end_overview (
+        name: MONTH_END_OVERVIEW
+        title: Month End Overview
+        type: cards
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select display_sequence,
+                       card_title,
+                       card_text,
+                       card_icon,
+                       card_color_class,
+                       open_count,
+                       us_count,
+                       uk_count,
+                       ch_count,
+                       is_clickable,
+                       card_link
+                  from table(xxme_dashboard_pkg.get_overview_cards(:P1_PERIOD_NAME, :P1_DB_LINK, to_number(:APP_ID)))
+                 order by display_sequence
+                ```
+            pageItemsToSubmit: [
+                P1_PERIOD_NAME
+                P1_DB_LINK
+            ]
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/cards-container
+            templateOptions: [
+                #DEFAULT#
+                t-CardsRegion--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        serverSideCondition {
+            type: item=value
+            item: G_DASHBOARD_READY
+            value: Y
+        }
+        componentAppearance {
+            gridColumns: 5
+        }
+        title {
+            column: CARD_TITLE
+        }
+        body {
+            advancedFormatting: true
+            htmlExpression:
+                ```html
+                <div class="kpi-card-body &CARD_COLOR_CLASS.">
+                  &CARD_TEXT!RAW.
+                </div>
+                ```
+        }
+        iconAndBadge {
+            iconSource: iconClassColumn
+            iconColumn: CARD_ICON
+        }
+        performance {
+            lazyLoading: true
+        }
+
+        action action (
+            type: fullCard
+            layout {
+                sequence: 10
+            }
+            behavior {
+                type: redirectUrl
+                targetUrl: &CARD_LINK.
+                linkAttributes: target="_blank"
+            }
+            serverSideCondition {
+                type: item=value
+                item: IS_CLICKABLE
+                value: Y
+            }
+        )
+
+    )
+
+    pageItem P1_AI_SERVICE_ID (
+        type: selectList
+        label {
+            label: AI Provider / Model
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select s.remote_server_name || ' · ' || s.provider_type || ' · ' ||
+                       nvl(s.model_name,'Provider default') display_value,
+                       to_char(s.remote_server_id) return_value
+                  from apex_workspace_ai_services s
+                 where exists (
+                       select 1
+                         from apex_appl_ai_configs c
+                        where c.application_id = :APP_ID
+                          and c.remote_server_id = s.remote_server_id
+                          and c.agent_static_id in (
+                              'month-end-analyst-claude',
+                              'month-end-analyst-deepseek',
+                              'month-end-analyst-gemini',
+                              'month-end-analyst-local-llm',
+                              'month-end-analyst-mlx-local',
+                              'month-end-analyst-openai',
+                              'month-end-analyst-oci'
+                          )
+                   )
+                 order by s.remote_server_name
+                ```
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select coalesce(v('G_AI_SERVICE_ID'), to_char(ai_server_id))
+                  from apex_applications
+                 where application_id = :APP_ID
+                ```
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    pageItem P1_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P1_PERIOD_NAME (
+        type: selectList
+        label {
+            label: Period Name
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
+        }
+    )
+
+    button refresh-gl (
+        buttonName: REFRESH_GL
+        label: Show Dashboard
+        layout {
+            sequence: 30
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    dynamicAction select-ai-provider (
+        name: Select AI Provider
+        execution {
+            sequence: 10
+        }
+        when {
+            selectionType: items
+            items: P1_AI_SERVICE_ID
+        }
+        config {
+            buildOption: @feature-ai
+        }
+
+        action store-ai-provider (
+            name: Store Provider and Start New Conversation
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    :G_AI_SERVICE_ID := :P1_AI_SERVICE_ID;
+                    xxme_ai_chat_pkg.new_conversation;
+                    ```
+                itemsToSubmit: P1_AI_SERVICE_ID
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+            config {
+                buildOption: @feature-ai
+            }
+        )
+
+    )
+
+    process set-dashboard-source (
+        name: Set Dashboard Database Source
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                    :G_DB_LINK := xxme_db_source_pkg.normalize_db_link(:P1_DB_LINK);
+                    :G_DASHBOARD_READY := 'Y';
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 111000000000900003
+        }
+        serverSideCondition {
+            whenButtonPressed: @refresh-gl
+        }
+    )
+
+)
+

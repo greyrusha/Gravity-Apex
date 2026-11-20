@@ -1,0 +1,69 @@
+app GBS-CONTROL-TOWER (
+    name: TMS GBS Control Tower
+    logo {
+        type: text
+        text: TMS GBS Control Tower
+    }
+    navigation {
+        homeUrl: {
+            page: 1
+        }
+        loginUrl: {
+            page: LOGIN
+        }
+    }
+    navigationMenu {
+        listTemplate: @/side-navigation-menu
+        templateOptions: [
+            #DEFAULT#
+            js-defaultCollapsed
+            js-navCollapsed--hidden
+            t-TreeNav--styleA
+        ]
+        list: @navigation-menu
+    }
+    navigationBar {
+        list: @navigation-bar
+        listTemplate: @/navigation-bar
+        templateOptions: #DEFAULT#
+    }
+    userInterface {
+        currentTheme: @universal-theme
+        globalPage: 0
+        addBuiltWithApexToFooter: false
+    }
+    appFormatMasks {
+        date: DS
+        timestamp: DS
+        timestampTimeZone: DS
+    }
+    authentication {
+        scheme: @ebs-credentials
+    }
+    authorization {
+        scheme: @tms-application-access
+        runOnBackgroundJob: false
+    }
+    security {
+        allowBotAccess: true
+        runtimeApiUsage: modifyThisApp
+    }
+    progressiveWebApp {
+        installable: true
+        display: browser
+    }
+    runtime {
+        allowFeedback: true
+    }
+    availability {
+        status: available
+    }
+
+    substitution APP_NAME (
+        value {
+            staticValue: TMS GBS Control Tower
+        }
+    )
+
+)
+

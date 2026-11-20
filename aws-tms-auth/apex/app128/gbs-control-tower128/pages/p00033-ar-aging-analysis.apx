@@ -1250,7 +1250,7 @@ page 33 (
     pageItem P33_AGING_BUCKET_ID (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 100
@@ -1292,7 +1292,7 @@ page 33 (
     pageItem P33_BUCKET_1_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 105
@@ -1303,7 +1303,7 @@ page 33 (
     pageItem P33_BUCKET_2_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 106
@@ -1314,7 +1314,7 @@ page 33 (
     pageItem P33_BUCKET_3_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 107
@@ -1325,7 +1325,7 @@ page 33 (
     pageItem P33_BUCKET_4_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 108
@@ -1336,7 +1336,7 @@ page 33 (
     pageItem P33_BUCKET_5_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 109
@@ -1347,7 +1347,7 @@ page 33 (
     pageItem P33_BUCKET_6_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 110
@@ -1358,7 +1358,7 @@ page 33 (
     pageItem P33_BUCKET_7_LABEL (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 111
@@ -1389,7 +1389,7 @@ page 33 (
     pageItem P33_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10
@@ -1526,7 +1526,7 @@ page 33 (
     pageItem P33_SNAPSHOT_READY (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 101

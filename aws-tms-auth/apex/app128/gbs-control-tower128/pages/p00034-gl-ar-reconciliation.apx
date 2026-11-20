@@ -1087,7 +1087,7 @@ page 34 (
     pageItem P34_AGING_BUCKET_ID (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 100
@@ -1149,7 +1149,7 @@ page 34 (
     pageItem P34_CONTEXT_READY (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 101
@@ -1160,7 +1160,7 @@ page 34 (
     pageItem P34_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10

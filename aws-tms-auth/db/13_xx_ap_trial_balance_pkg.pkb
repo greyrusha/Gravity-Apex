@@ -180,14 +180,22 @@ CREATE OR REPLACE PACKAGE BODY xx_ap_trial_balance_pkg AS
     -- in the text, so (unlike the old version of this procedure) there's
     -- no repeated-placeholder/positional-USING-list bookkeeping to get
     -- wrong here.
+    IF p_ledger_id IS NULL OR p_snapshot_date IS NULL OR p_company IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20002, 'Snapshot key parameters (ledger, date, company) are required.');
+    END IF;
+
+    -- Wave 3 (Item 1B): push company pruning (gl_code_combinations) into the xx
+    -- aggregation block, replace _kfv with base gl_code_combinations, drop rigid
+    -- global USE_NL on xte2/aia/pvs/pv while retaining PUSH_PRED(aps_due), and pass
+    -- DBMS_ASSERT / locale-independent literals so @ADG sees exact selectivity.
     l_sql :=
-      'SELECT /*+ DRIVING_SITE(aia) use_nl (xx xte2 aia pvs pv) push_pred(aps_due) */' ||
+      'SELECT /*+ DRIVING_SITE(aia) NO_MERGE(xx) LEADING(xx xte2 aia pvs pv aps_due) USE_NL(xte2 aia aps_due) USE_HASH(pvs pv) SWAP_JOIN_INPUTS(pvs) SWAP_JOIN_INPUTS(pv) PUSH_PRED(aps_due) */' ||
       '       aia.org_id,' ||
       '       xx.entity_id,' ||
       '       xx.open_accounted_amount,' ||
       '       xx.open_entered_amount,' ||
-      '       gcc.concatenated_segments,' ||
-      '       gcc.code_combination_id,' ||
+      '       xx.concatenated_segments,' ||
+      '       xx.code_combination_id,' ||
       '       aia.invoice_num,' ||
       '       aia.invoice_id,' ||
       '       aia.vendor_id,' ||
@@ -201,45 +209,51 @@ CREATE OR REPLACE PACKAGE BODY xx_ap_trial_balance_pkg AS
       '       aia.invoice_date,' ||
       '       aps_due.min_due_date,' ||
       '       aps_due.max_due_date,' ||
-      '       gcc.segment8' ||
+      '       xx.segment8' ||
       ' FROM' ||
-      '     ( SELECT /*+ NO_MERGE FULL(tb) */' ||
+      '     ( SELECT /*+ NO_MERGE LEADING(gl xtd gcc tb) USE_HASH(tb) FULL(tb) */' ||
       '              tb.code_combination_id,' ||
-      '              trx_currency_code,' ||
+      '              tb.trx_currency_code,' ||
       '              NVL(tb.applied_to_entity_id, tb.source_entity_id) entity_id,' ||
       '              SUM(NVL(tb.acctd_rounded_cr,0)) - SUM(NVL(tb.acctd_rounded_dr,0)) open_accounted_amount,' ||
-      '              SUM(NVL(tb.entered_rounded_cr,0)) - SUM(NVL(tb.entered_rounded_dr,0)) open_entered_amount' ||
+      '              SUM(NVL(tb.entered_rounded_cr,0)) - SUM(NVL(tb.entered_rounded_dr,0)) open_entered_amount,' ||
+      '              MAX(gcc.segment1 || ''.'' || gcc.segment2 || ''.'' || gcc.segment3 || ''.'' ||' ||
+      '                  gcc.segment4 || ''.'' || gcc.segment5 || ''.'' || gcc.segment6 || ''.'' ||' ||
+      '                  gcc.segment7 || ''.'' || gcc.segment8 || ''.'' || gcc.segment9) concatenated_segments,' ||
+      '              MAX(gcc.segment8) segment8' ||
       '       FROM   apps.xla_trial_balances@' || l_db_link || ' tb,' ||
       '              apps.gl_ledgers@' || l_db_link || ' gl,' ||
-      '              apps.xla_tb_definitions_b@' || l_db_link || ' xtd' ||
-      '       WHERE  tb.gl_date < TRUNC(:p_snapshot_date) + 1' ||
-      '       AND    gl.ledger_id = :p_ledger_id' ||
+      '              apps.xla_tb_definitions_b@' || l_db_link || ' xtd,' ||
+      '              apps.gl_code_combinations@' || l_db_link || ' gcc' ||
+      '       WHERE  tb.gl_date < TO_DATE(' ||
+                     DBMS_ASSERT.ENQUOTE_LITERAL(TO_CHAR(TRUNC(p_snapshot_date), 'YYYY-MM-DD')) ||
+                     ', ''YYYY-MM-DD'') + 1' ||
+      '       AND    gl.ledger_id = ' || TO_CHAR(p_ledger_id, 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') ||
       '       AND    gl.ledger_category_code = ''PRIMARY''' ||
       '       AND    tb.definition_code = xtd.definition_code' ||
       '       AND    xtd.ledger_id = gl.ledger_id' ||
+      '       AND    gcc.code_combination_id = tb.code_combination_id' ||
+      '       AND    gcc.segment1 = ' || DBMS_ASSERT.ENQUOTE_LITERAL(p_company) ||
       '       GROUP BY tb.code_combination_id,' ||
       '                NVL(tb.applied_to_entity_id, tb.source_entity_id),' ||
-      '                trx_currency_code' ||
+      '                tb.trx_currency_code' ||
       '       HAVING SUM(NVL(tb.acctd_rounded_cr,0)) <> SUM(NVL(tb.acctd_rounded_dr,0))' ||
       '     ) xx,' ||
       '     apps.ap_invoices_all@' || l_db_link || ' aia,' ||
       '     xla.xla_transaction_entities@' || l_db_link || ' xte2,' ||
       '     apps.ap_supplier_sites_all@' || l_db_link || ' pvs,' ||
       '     apps.ap_suppliers@' || l_db_link || ' pv,' ||
-      '     apps.gl_code_combinations_kfv@' || l_db_link || ' gcc,' ||
-      '     ( SELECT invoice_id, MIN(due_date) min_due_date, MAX(due_date) max_due_date' ||
-      '       FROM   apps.ap_payment_schedules_all@' || l_db_link ||
-      '       GROUP BY invoice_id ) aps_due' ||
+      '     ( SELECT aps.invoice_id, MIN(aps.due_date) min_due_date, MAX(aps.due_date) max_due_date' ||
+      '       FROM   apps.ap_payment_schedules_all@' || l_db_link || ' aps' ||
+      '       GROUP BY aps.invoice_id ) aps_due' ||
       ' WHERE  aia.invoice_id = xte2.source_id_int_1' ||
       ' AND    xte2.entity_id = xx.entity_id' ||
       ' AND    xte2.application_id = 200' ||
       ' AND    aia.vendor_site_id = pvs.vendor_site_id' ||
       ' AND    pvs.vendor_id = pv.vendor_id' ||
-      ' AND    gcc.segment1 = :p_company' ||
-      ' AND    xx.code_combination_id = gcc.code_combination_id' ||
       ' AND    aps_due.invoice_id(+) = aia.invoice_id';
 
-    OPEN l_cursor FOR l_sql USING p_snapshot_date, p_ledger_id, p_company;
+    OPEN l_cursor FOR l_sql;
 
     LOOP
       FETCH l_cursor BULK COLLECT INTO
@@ -645,7 +659,9 @@ CREATE OR REPLACE PACKAGE BODY xx_ap_trial_balance_pkg AS
     -- GL_YTD_NON_PAYABLES_ACTIVITY comments for what this does and does
     -- not explain.
     l_sql :=
-      'SELECT /*+ DRIVING_SITE(jl) LEADING(gl gp jh jl) USE_HASH(jl) FULL(jh) */ jl.code_combination_id,' ||
+      'SELECT /*+ DRIVING_SITE(jl) LEADING(gl gp jl jh) USE_NL(jl jh)' ||
+      '           INDEX(jl GL_JE_LINES_N1) INDEX(jh GL_JE_HEADERS_U1) */' ||
+      '       jl.code_combination_id,' ||
       '       CASE WHEN jh.je_source = ''Payables''    THEN ''P''' ||
       '            WHEN jh.je_source = ''Revaluation'' THEN ''R''' ||
       '            ELSE ''N'' END,' ||
@@ -655,6 +671,7 @@ CREATE OR REPLACE PACKAGE BODY xx_ap_trial_balance_pkg AS
       '        apps.gl_periods@' || l_db_link || ' gp,' ||
       '        apps.gl_ledgers@' || l_db_link || ' gl' ||
       ' WHERE  jl.je_header_id = jh.je_header_id' ||
+      ' AND    jl.period_name  = gp.period_name' ||
       ' AND    jh.ledger_id    = :p_ledger_id' ||
       ' AND    gl.ledger_id    = :p_ledger_id' ||
       ' AND    gp.period_set_name = gl.period_set_name' ||

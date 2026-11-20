@@ -1,0 +1,323 @@
+list navigation-menu (
+    name: Navigation Menu
+
+    entry ai-conversation-review (
+        label: AI Conversation Review
+        icon {
+            imageIconCssClasses: fa-comments-o
+        }
+        layout {
+            sequence: 9980
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                92
+                93
+                94
+                95
+            ]
+        }
+        link {
+            target: {
+                page: 92
+                clearCache: 92
+                action: resetPagination
+            }
+        }
+        security {
+            authorizationScheme: @tms-application-access
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    entry ai-knowledge-manager (
+        label: AI Knowledge Manager
+        icon {
+            imageIconCssClasses: fa-book
+        }
+        layout {
+            sequence: 9970
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                96
+                97
+                98
+                99
+            ]
+        }
+        link {
+            target: {
+                page: 96
+                clearCache: 96
+                action: resetPagination
+            }
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    entry ai-month-end-analyst (
+        label: AI Month-End Analyst
+        layout {
+            sequence: 70
+        }
+        isCurrent {
+            type: pages
+            pages: 50
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    entry fixed-assets (
+        label: Fixed Assets
+        icon {
+            imageIconCssClasses: fa-building
+        }
+        layout {
+            sequence: 55
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                71
+                72
+            ]
+        }
+        link {
+            target: {
+                page: 71
+            }
+        }
+        security {
+            authorizationScheme: @tms-application-access
+        }
+    )
+
+    entry general-ledger (
+        label: General Ledger
+        layout {
+            sequence: 20
+        }
+        isCurrent {
+            type: pages
+            pages: 10
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry gl-ap-reconciliation (
+        label: GL/AP Reconciliation
+        icon {
+            imageIconCssClasses: fa-balance-scale
+        }
+        layout {
+            sequence: 68
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                22
+                23
+                24
+            ]
+        }
+        link {
+            target: {
+                page: 22
+                clearCache: 22
+                action: resetPagination
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry gl-ar-reconciliation (
+        label: GL/AR Reconciliation
+        icon {
+            imageIconCssClasses: fa-balance-scale
+        }
+        layout {
+            sequence: 69
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                32
+                33
+                34
+            ]
+        }
+        link {
+            target: {
+                page: 32
+                clearCache: 32
+                action: resetPagination
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry home (
+        label: Home
+        layout {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+                clearCache: 1
+            }
+            linkAttributes: target="tms_dashboard"
+        }
+    )
+
+    entry inventory-pending-transactions (
+        label: Inventory Pending Transactions
+        icon {
+            imageIconCssClasses: fa-table
+        }
+        layout {
+            sequence: 65
+        }
+        isCurrent {
+            type: pages
+            pages: 61
+        }
+        link {
+            target: {
+                page: 61
+            }
+            linkAttributes: target="_blank" rel="noopener"
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry month-end-activity (
+        label: Month-End Activity
+        icon {
+            imageIconCssClasses: fa-dashboard
+        }
+        layout {
+            sequence: 63
+        }
+        isCurrent {
+            type: pages
+            pages: 70
+        }
+        link {
+            target: {
+                page: 70
+            }
+        }
+    )
+
+    entry payables (
+        label: Payables
+        layout {
+            sequence: 30
+        }
+        isCurrent {
+            type: pages
+            pages: 20
+        }
+        link {
+            target: {
+                page: 20
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry period-status (
+        label: Period Status
+        icon {
+            imageIconCssClasses: fa-calendar-check-o
+        }
+        layout {
+            sequence: 60
+        }
+        isCurrent {
+            type: pages
+            pages: 60
+        }
+        link {
+            target: {
+                page: 60
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry receivables (
+        label: Receivables
+        layout {
+            sequence: 40
+        }
+        isCurrent {
+            type: pages
+            pages: 30
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry subledger-accounting (
+        label: Cost Management
+        layout {
+            sequence: 50
+        }
+        isCurrent {
+            type: pages
+            pages: 41
+        }
+        link {
+            target: {
+                page: 41
+            }
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+)
+

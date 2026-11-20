@@ -1142,11 +1142,12 @@ page 71 (
             alignment: left
         }
         settings {
-            displayAs: NOT_ENTERABLE
+            displayAs: inlinePopup
         }
         lov {
-            type: sqlQuery
-            sqlQuery: select name d,to_char(ledger_id) r from apps.gl_ledgers@ADG where object_type_code='L' and ledger_id in (1003,5001,10001) order by name
+            type: sharedComponent
+            lov: @tms-approved-ledgers
+            displayExtraValues: false
             displayNullValue: false
         }
         multipleValues {
@@ -1173,18 +1174,16 @@ page 71 (
     )
 
     pageItem P71_PERIOD_NAME (
-        type: popupLov
+        type: selectList
         label {
             label: Period
             alignment: left
         }
-        settings {
-            displayAs: NOT_ENTERABLE
-        }
         lov {
-            type: sqlQuery
-            sqlQuery: select dp.period_name d,dp.period_name r from apps.fa_deprn_periods@ADG dp,apps.fa_book_controls@ADG bc where bc.book_type_code=dp.book_type_code and bc.set_of_books_id in (1003,5001,10001) and bc.date_ineffective is null and dp.period_open_date>add_months(sysdate,-24) group by dp.period_name order by max(dp.period_counter) desc
-            nullDisplayValue: Previous month
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayExtraValues: false
+            displayNullValue: false
         }
         layout {
             sequence: 10
@@ -1197,7 +1196,15 @@ page 71 (
         appearance {
             template: @/optional-floating
             templateOptions: #DEFAULT#
-            valuePlaceholder: Previous month
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
         }
     )
 

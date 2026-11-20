@@ -1013,7 +1013,7 @@ page 24 (
     pageItem P24_CONTEXT_READY (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 100
@@ -1028,7 +1028,7 @@ page 24 (
     pageItem P24_DB_LINK (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 10
@@ -1064,7 +1064,7 @@ page 24 (
     pageItem P24_LEDGER_ID (
         type: hidden
         settings {
-            valueProtected: false
+            valueProtected: true
         }
         layout {
             sequence: 30

@@ -386,78 +386,7 @@ page 62 (
         source {
             plsqlCode:
                 ```plsql
-                declare
-                  l_period varchar2(15) := upper(trim(apex_util.get_session_state('P62_PERIOD_NAME')));
-                  l_org_text varchar2(30) := trim(apex_util.get_session_state('P62_ORG_ID'));
-                  l_offset_text varchar2(10) := trim(apex_util.get_session_state('P62_MONTH_OFFSET'));
-                  l_ledger_text varchar2(30) := trim(apex_util.get_session_state('P62_LEDGER_ID'));
-                  l_org number;
-                  l_offset number;
-                  l_ledger number;
-                  l_snapshot_id varchar2(32);
-                  l_collection_name varchar2(255);
-                begin
-                  if l_period is null or not regexp_like(l_period, '^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)-[0-9]{4}$', 'c') then
-                    raise_application_error(-20182, 'Select a valid inventory period from Period Status.');
-                  end if;
-                  if l_org_text is null or not regexp_like(l_org_text, '^[0-9]{1,18}$', 'c') then
-                    raise_application_error(-20183, 'Select a valid inventory organization from Period Status.');
-                  end if;
-                  if l_offset_text is null or not regexp_like(l_offset_text, '^-?[0-9]+$', 'c') then
-                    raise_application_error(-20184, 'The selected month is invalid.');
-                  end if;
-                  if l_ledger_text is null or not regexp_like(l_ledger_text, '^[0-9]{1,18}$', 'c') then
-                    raise_application_error(-20185, 'The selected ledger is invalid.');
-                  end if;
-                  l_org := to_number(l_org_text);
-                  l_offset := to_number(l_offset_text);
-                  l_ledger := to_number(l_ledger_text);
-                  if l_ledger not in (1003, 5001, 10001) then
-                    raise_application_error(-20185, 'The selected ledger is outside the Page 60 scope.');
-                  end if;
-                  if l_offset not in (-3, -2, -1, 0, 1, 2, 3)
-                     or l_period <> upper(to_char(add_months(trunc(sysdate, 'MM'), l_offset), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English')) then
-                    raise_application_error(-20184, 'The selected month does not match Period Status.');
-                  end if;
-                  declare n number; begin
-                    select /*+ DRIVING_SITE(ood) */ count(*) into n from apps.org_organization_definitions@ADG ood
-                    where ood.organization_id=l_org and ood.set_of_books_id=l_ledger and nvl(ood.disable_date,sysdate)>=sysdate;
-                    if n<>1 then raise_application_error(-20185, 'The selected organization does not belong to the selected ledger.'); end if;
-                  end;
-                  l_snapshot_id := rawtohex(sys_guid());
-                  l_collection_name := 'P62DTL_' || l_snapshot_id;
-                  apex_collection.create_collection(p_collection_name=>l_collection_name);
-                  for r in (
-                    select period_name, schedule_close_date, organization_name,
-                           transaction_type, transaction_date, resolution, transaction_ref,
-                           transaction_ref_id, transaction_type_name, item
-                      from table(xxinv128_period_pending_pkg.get_required_details(l_period, l_org))
-                  ) loop
-                    apex_collection.add_member(
-                      p_collection_name=>l_collection_name,
-                      p_c001=>r.period_name,
-                      p_d001=>r.schedule_close_date,
-                      p_c002=>r.organization_name,
-                      p_c003=>r.transaction_type,
-                      p_d002=>r.transaction_date,
-                      p_c004=>r.resolution,
-                      p_c005=>r.transaction_ref,
-                      p_c006=>r.transaction_ref_id,
-                      p_c007=>r.transaction_type_name,
-                      p_c008=>r.item);
-                  end loop;
-                  apex_util.set_session_state(
-                    p_name=>'P62_SNAPSHOT_ID',
-                    p_value=>l_snapshot_id,
-                    p_commit=>false);
-                exception
-                  when others then
-                    if l_collection_name is not null and apex_collection.collection_exists(l_collection_name) then
-                      apex_collection.delete_collection(l_collection_name);
-                    end if;
-                    apex_util.set_session_state(p_name=>'P62_SNAPSHOT_ID', p_value=>null, p_commit=>false);
-                    raise;
-                end;
+                xxme_inv_pending_ui_pkg.capture_p62_snapshot;
                 ```
         }
         execution {
