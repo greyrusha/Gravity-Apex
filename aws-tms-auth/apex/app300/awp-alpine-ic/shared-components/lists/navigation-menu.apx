@@ -1,0 +1,89 @@
+list navigation-menu (
+    name: Navigation Menu
+
+    entry excel-export (
+        label: Excel Export
+        icon {
+            imageIconCssClasses: fa-table
+        }
+        layout {
+            sequence: 20
+        }
+        isCurrent {
+            type: pages
+            pages: 10
+        }
+        link {
+            target: {
+                page: 10
+            }
+            linkAttributes: target="_blank" rel="noopener"
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+    entry home (
+        label: Home
+        icon {
+            imageIconCssClasses: fa-home
+        }
+        layout {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry multi-leg-serials (
+        label: Multi-Leg Serials
+        icon {
+            imageIconCssClasses: fa-sitemap
+        }
+        layout {
+            sequence: 40
+        }
+        isCurrent {
+            type: pages
+            pages: 30
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+    )
+
+    entry pivot-library (
+        label: Pivot Library
+        icon {
+            imageIconCssClasses: fa-th-large
+        }
+        layout {
+            sequence: 30
+        }
+        isCurrent {
+            type: pages
+            pages: [
+                20
+                21
+                22
+            ]
+        }
+        link {
+            target: {
+                page: 20
+            }
+            linkAttributes: target="_blank" rel="noopener"
+        }
+        userDefinedAttributes {
+            6: _blank
+        }
+    )
+
+)
+

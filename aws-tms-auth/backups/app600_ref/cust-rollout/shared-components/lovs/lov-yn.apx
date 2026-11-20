@@ -1,0 +1,20 @@
+lov lov-yn (
+    name: INCLUDE_YN
+    source {
+        location: staticValues
+    }
+
+    entry inc-n (
+        sequence: 20
+        display: N — Excluded
+        return: N
+    )
+
+    entry inc-y (
+        sequence: 10
+        display: Y — Included
+        return: Y
+    )
+
+)
+

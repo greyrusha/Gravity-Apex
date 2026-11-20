@@ -1,0 +1,32 @@
+authorization tms-application-access (
+    name: TMS Application Access
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody:
+            ```plsql
+            begin
+                return xx_tms_security_pkg.can_access(:APP_USER, :APP_ID);
+            end;
+            ```
+    }
+    error {
+        errorMessage: You are not authorized to access this application.
+    }
+)
+
+authorization workspace-administrator (
+    name: Workspace Administrator
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody:
+            ```plsql
+            begin
+                return xx_tms_security_pkg.is_workspace_admin(:APP_USER);
+            end;
+            ```
+    }
+    error {
+        errorMessage: Insufficient privileges; workspace administrator access is required.
+    }
+)
+

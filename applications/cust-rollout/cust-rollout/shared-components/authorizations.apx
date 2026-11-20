@@ -1,0 +1,98 @@
+authorization administration-rights (
+    name: Administration Rights
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.is_admin;
+    }
+    error {
+        errorMessage: Rollout Administrator privileges are required to perform this action.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+
+authorization application-access (
+    name: Application Access (Provisioned EBS User)
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.can_access_app;
+    }
+    error {
+        errorMessage: Your Oracle EBS account has not been provisioned in EBS Customer OU Rollout Workbench (App 600), or access is disabled. Contact a Rollout Administrator.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+
+authorization can-admin-project (
+    name: Project Rollout Administrator (Active Project Extract & Setup)
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.can_admin_project(to_number(v('P0_PROJECT_ID') default null on conversion error));
+    }
+    error {
+        errorMessage: Segregation of Duties: Rollout Administrator (ROLLOUT_ADMIN) role on the active project is required to run @ADG extracts.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+
+authorization can-approve-finance (
+    name: Finance Approver / Checker (Set Target OU/BSV, Bulk GL Remap & Sign Off Warnings)
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.can_approve_finance(to_number(v('P0_PROJECT_ID') default null on conversion error));
+    }
+    error {
+        errorMessage: Segregation of Duties: Finance Approver (FINANCE_APPROVER) or Rollout Admin role on the active project is required to set Target OU/BSV scope, apply bulk GL remapping, or sign off validation warnings.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+
+authorization can-edit-data (
+    name: Data Steward / Maker (Edit Master Data, Upload Excel & Resolve Duplicates)
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.can_edit_data(to_number(v('P0_PROJECT_ID') default null on conversion error));
+    }
+    error {
+        errorMessage: Segregation of Duties: Data Steward (DATA_STEWARD) or Rollout Admin role on the active project is required to edit customer master data, upload Excel workbooks, or resolve duplicates.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+
+authorization can-edit-or-approve (
+    name: Data Steward or Finance Approver (Run Validation Checks)
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.can_edit_or_approve(to_number(v('P0_PROJECT_ID') default null on conversion error));
+    }
+    error {
+        errorMessage: Read-Only Viewers cannot trigger validation runs on the active project.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+
+authorization rollout-admin (
+    name: Rollout Administrator (IT / Conversion Lead)
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xxcr_security_pkg.is_admin;
+    }
+    error {
+        errorMessage: Segregation of Duties: Only a Rollout Administrator (ROLLOUT_ADMIN) can create conversion projects, run @ADG extracts, or manage user roles.
+    }
+    advanced {
+        evaluationType: always
+    }
+)
+

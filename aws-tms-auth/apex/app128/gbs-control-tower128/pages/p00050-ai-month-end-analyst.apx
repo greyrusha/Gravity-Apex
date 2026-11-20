@@ -1,0 +1,1495 @@
+page 50 (
+    name: AI Month-End Analyst
+    alias: AI-MONTH-END-ANALYST
+    title: AI Month-End Analyst
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    javaScript {
+        functionAndGlobalVariableDeclaration:
+            ```javascript-browser
+            (function($){
+              function showRelevantExamples(){
+                var apSource=apex.item("P50_AP_SOURCE_PAGE").getValue();
+                var arSource=apex.item("P50_AR_SOURCE_PAGE").getValue();
+                var apScope=apex.item("P50_AP_SCOPE_AS_OF_DATE").getValue();
+                var arScope=apex.item("P50_AR_SCOPE_AS_OF_DATE").getValue();
+                var source="default";
+                if(arScope&&["32","33","34"].indexOf(arSource)!==-1){source=arSource;}
+                else if(apScope&&["22","23","24"].indexOf(apSource)!==-1){source=apSource;}
+                var groups=$(".xxme-ai-context-set");
+                var selected=groups.filter("[data-source-page=\""+source+"\"]");
+                if(!selected.length){selected=groups.filter("[data-source-page=\"default\"]");}
+                groups.attr("hidden","hidden");
+                selected.removeAttr("hidden");
+                $("#xxme-ai-context-title").text(selected.attr("data-title")||"Questions for this report");
+              }
+              $(function(){
+                showRelevantExamples();
+                $(document).off("click.xxmeAiExamples",".xxme-ai-example").on("click.xxmeAiExamples",".xxme-ai-example",function(){
+                  apex.item("P50_AI_QUESTION").setValue($(this).text().trim());
+                  var question=document.getElementById("P50_AI_QUESTION");
+                  if(question){question.scrollIntoView({behavior:"smooth",block:"center"});question.focus();}
+                });
+              });
+            })(apex.jQuery);
+            ```
+    }
+    css {
+        inline:
+            ```css
+            .xxme-ai-examples{margin-top:1rem;}
+            .xxme-ai-examples h3{font-size:1rem;margin:.9rem 0 .45rem;}
+            .xxme-ai-example-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(22rem,1fr));gap:.45rem;margin:0;padding:0;list-style:none;}
+            .xxme-ai-example{width:100%;height:auto;min-height:2.5rem;justify-content:flex-start;text-align:left;white-space:normal;line-height:1.35;padding:.55rem .75rem;}
+            .xxme-ai-example:hover{background:#eff6ff;border-color:#2563eb;}
+            .xxme-ai-example-note{margin-top:.8rem;color:var(--ut-component-text-muted-color);font-size:.875rem;}
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region ai-context (
+        name: AI Context
+        title: AI Context
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region ar-snapshot-context (
+        name: AR Snapshot Context
+        title: AR Snapshot Context
+        type: staticContent
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        serverSideCondition {
+            type: rowsReturned
+            sqlQuery: select 1 from dual where :P50_AR_SCOPE_AS_OF_DATE is not null
+        }
+    )
+
+    region ask-the-month-end-analyst (
+        name: Ask the Month-End Analyst
+        title: Ask the Month-End Analyst
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>Choose a suggested question or enter your own. Selecting a suggestion places it in the analyst question box for review before sending.</p>
+                <div class="xxme-ai-examples">
+                  <h3 id="xxme-ai-context-title">Questions for this report</h3>
+                  <div class="xxme-ai-context-set" data-source-page="22" data-title="Questions for the AP snapshot" hidden>
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize the selected AP snapshot and identify the largest supplier exposures.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show the top ten suppliers by open accounted balance in the selected AP snapshot.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Identify the oldest open invoices and their suppliers in the selected AP snapshot.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize the selected AP open balance by full liability account.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Identify unusual, negative, or high-risk balances in the selected AP snapshot.</button></li>
+                    </ul>
+                  </div>
+                  <div class="xxme-ai-context-set" data-source-page="23" data-title="Questions for AP aging" hidden>
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize the selected AP aging results by yearly bucket.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Which suppliers have balances in the 4+ Years bucket?</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show the largest overdue supplier exposures in the selected AP snapshot.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Compare current AP balances with the older aging buckets.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show invoice detail for the most material supplier in the oldest aging bucket.</button></li>
+                    </ul>
+                  </div>
+                  <div class="xxme-ai-context-set" data-source-page="24" data-title="Questions for AP/GL reconciliation" hidden>
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Which liability accounts have the largest non-zero AP/GL variances?</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Explain the largest AP/GL variance using the reconciliation bridge.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize AP not transferred to GL by full liability account.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Identify material period non-payables activity affecting AP reconciliation.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Which AP liability accounts require investigation before period close?</button></li>
+                    </ul>
+                  </div>
+                  <div class="xxme-ai-context-set" data-source-page="32" data-title="Questions for the AR snapshot" hidden>
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize the selected AR snapshot and identify the largest customer exposures.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show the top ten customers by open accounted balance in the selected AR snapshot.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Identify the oldest open AR transactions and their customers.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize the selected AR open balance by full receivable account.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show transactions posted outside the approved AR control accounts.</button></li>
+                    </ul>
+                  </div>
+                  <div class="xxme-ai-context-set" data-source-page="33" data-title="Questions for AR aging" hidden>
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize the selected AR aging results by yearly bucket.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Which customers have balances in the 4+ Years bucket?</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show the largest overdue customer exposures in the selected AR snapshot.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Compare current AR balances with the older aging buckets.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Show transaction detail for the most material customer in the oldest aging bucket.</button></li>
+                    </ul>
+                  </div>
+                  <div class="xxme-ai-context-set" data-source-page="34" data-title="Questions for AR/GL reconciliation" hidden>
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Which receivable accounts have the largest non-zero AR/GL variances?</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Explain the largest AR/GL variance using the reconciliation bridge.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize AR not transferred to GL by full receivable account.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Identify material period non-receivables activity affecting AR reconciliation.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Which AR control accounts require investigation before period close?</button></li>
+                    </ul>
+                  </div>
+                  <div class="xxme-ai-context-set" data-source-page="default" data-title="Questions for the selected month-end context">
+                    <ul class="xxme-ai-example-list">
+                      <li><button type="button" class="t-Button xxme-ai-example">Which accounting period and ledgers are currently in scope?</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">What are the main GL readiness blockers for the selected period?</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize current active AP holds by ledger and currency.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Summarize current unapplied receipts by ledger and currency.</button></li>
+                      <li><button type="button" class="t-Button xxme-ai-example">Run Cost Management SLA analysis and show the open conditions.</button></li>
+                    </ul>
+                  </div>
+                  <h3>Application-wide questions</h3>
+                  <ul class="xxme-ai-example-list">
+                    <li><button type="button" class="t-Button xxme-ai-example">Give me an executive month-end summary and identify the top three priorities.</button></li>
+                    <li><button type="button" class="t-Button xxme-ai-example">Compare GL readiness across all ledgers in the selected period.</button></li>
+                    <li><button type="button" class="t-Button xxme-ai-example">Compare Payables and Receivables accounting exceptions by ledger.</button></li>
+                    <li><button type="button" class="t-Button xxme-ai-example">Identify the largest AP and AR open-balance exposures that require attention.</button></li>
+                    <li><button type="button" class="t-Button xxme-ai-example">What unresolved issues are most likely to prevent period close?</button></li>
+                  </ul>
+                  <p class="xxme-ai-example-note">Period-based analyses use the selected period. AP holds and AR unapplied receipts reflect the current live position.</p>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region breadcrumb (
+        name: Breadcrumb
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region conversation-history (
+        name: Conversation History
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select seq_id,
+                       case c001
+                           when 'user' then nvl(c003, :APP_USER)
+                           else 'Month-End Analyst'
+                       end as user_name,
+                       case c001
+                           when 'user' then 'fa-user'
+                           else 'fa-comments'
+                       end as user_icon,
+                       apex_markdown.to_html(
+                           p_markdown => clob001
+                       ) as comment_text,
+                       case
+                           when c001 = 'user' then
+                               to_char(d001, 'YYYY-MM-DD HH24:MI:SS')
+                           when previous_role = 'user' then
+                               to_char(d001, 'YYYY-MM-DD HH24:MI:SS')
+                               || ' • '
+                               || round((d001 - previous_date) * 86400)
+                               || ' sec'
+                           else
+                               to_char(d001, 'YYYY-MM-DD HH24:MI:SS')
+                       end as comment_date,
+                       null as actions,
+                       null as attribute_1,
+                       null as attribute_2,
+                       null as attribute_3,
+                       null as attribute_4,
+                       null as comment_modifiers,
+                       case c001
+                           when 'user' then 'u-color-8'
+                           else 'u-color-4'
+                       end as icon_modifier,
+                       c001 as message_role,
+                       c002 as period_name
+                  from (
+                        select c.*,
+                               lag(d001) over (order by seq_id) as previous_date,
+                               lag(c001) over (order by seq_id) as previous_role
+                          from apex_collections c
+                         where collection_name = 'XXME_AI_CHAT_HISTORY'
+                       )
+                 order by seq_id
+                ```
+        }
+        layout {
+            sequence: 25
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes-no-grid
+            templateOptions: #DEFAULT#
+        }
+        componentAppearance {
+            template: @/comments
+            templateOptions: [
+                #DEFAULT#
+                t-Comments--chat
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+
+        column ACTIONS (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Actions
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ATTRIBUTE_1 (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Attribute 1
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ATTRIBUTE_2 (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Attribute 2
+            }
+            layout {
+                sequence: 100
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ATTRIBUTE_3 (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Attribute 3
+            }
+            layout {
+                sequence: 110
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ATTRIBUTE_4 (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Attribute 4
+            }
+            layout {
+                sequence: 120
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column COMMENT_DATE (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Comment Date
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column COMMENT_MODIFIERS (
+            reportColumnQueryId: 11
+            derivedColumn: N
+            heading {
+                heading: Comment Modifiers
+            }
+            layout {
+                sequence: 130
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column COMMENT_TEXT (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Comment Text
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column ICON_MODIFIER (
+            reportColumnQueryId: 12
+            derivedColumn: N
+            heading {
+                heading: Icon Modifier
+            }
+            layout {
+                sequence: 140
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column MESSAGE_ROLE (
+            reportColumnQueryId: 13
+            derivedColumn: N
+            heading {
+                heading: Message Role
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PERIOD_NAME (
+            reportColumnQueryId: 14
+            derivedColumn: N
+            heading {
+                heading: Period Name
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column SEQ_ID (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Seq Id
+                alignment: end
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column USER_ICON (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: User Icon
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column USER_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: User Name
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    pageItem P50_ACTIVE_AI (
+        type: displayOnly
+        label {
+            label: Active Ai
+            alignment: left
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+        layout {
+            sequence: 5
+            region: @ask-the-month-end-analyst
+            slot: regionBody
+            alignment: left
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        source {
+            type: sqlQuerySingleValue
+            sqlQuery:
+                ```sql
+                select a.ai_server_name
+                       || ' · '
+                       || nvl(s.provider_type, 'Unknown provider')
+                       || ' · '
+                       || nvl(s.model_name, 'Provider default')
+                  from apex_applications a
+                  left join apex_workspace_ai_services s
+                    on s.remote_server_id = a.ai_server_id
+                 where a.application_id = :APP_ID
+                ```
+        }
+    )
+
+    pageItem P50_AI_QUESTION (
+        type: textarea
+        label {
+            label: Ask the Month-End Analyst
+            alignment: left
+        }
+        settings {
+            autoHeight: true
+        }
+        layout {
+            sequence: 10
+            region: @ask-the-month-end-analyst
+            slot: regionBody
+            alignment: left
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+            height: 5
+            valuePlaceholder: Ask a question about GL, AP, AR, AP Holds, AR Unapplied Receipts, or Cost Management
+        }
+    )
+
+    pageItem P50_AI_QUESTION_SEQ_ID (
+        type: hidden
+        layout {
+            sequence: 50
+            region: @ask-the-month-end-analyst
+            slot: regionBody
+        }
+    )
+
+    pageItem P50_AP_AS_OF_DATE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 90
+            slot: body
+        }
+    )
+
+    pageItem P50_AP_COMPANY (
+        type: displayOnly
+        label {
+            label: AP Snapshot Company Code
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @ai-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: rowsReturned
+            sqlQuery: select 1 from dual where :P50_AP_SCOPE_AS_OF_DATE is not null
+        }
+    )
+
+    pageItem P50_AP_LEDGER_ID (
+        type: displayOnly
+        label {
+            label: AP Snapshot Ledger ID
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @ai-context
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: rowsReturned
+            sqlQuery: select 1 from dual where :P50_AP_SCOPE_AS_OF_DATE is not null
+        }
+    )
+
+    pageItem P50_AP_RECON_READY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 85
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P50_AP_SCOPE_AS_OF_DATE (
+        type: displayOnly
+        label {
+            label: AP Snapshot As-of Date
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @ai-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: rowsReturned
+            sqlQuery: select 1 from dual where :P50_AP_SCOPE_AS_OF_DATE is not null
+        }
+    )
+
+    pageItem P50_AP_SOURCE_PAGE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 80
+            slot: body
+        }
+    )
+
+    pageItem P50_AR_AGING_BUCKET_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 40
+            region: @ar-snapshot-context
+            slot: regionBody
+        }
+    )
+
+    pageItem P50_AR_COMPANY (
+        type: displayOnly
+        label {
+            label: AR Snapshot Company Code
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @ar-snapshot-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P50_AR_LEDGER_ID (
+        type: displayOnly
+        label {
+            label: AR Snapshot Ledger ID
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @ar-snapshot-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P50_AR_RECON_READY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 60
+            region: @ar-snapshot-context
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P50_AR_SCOPE_AS_OF_DATE (
+        type: displayOnly
+        label {
+            label: AR Snapshot As-of Date
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @ar-snapshot-context
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P50_AR_SOURCE_PAGE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 50
+            region: @ar-snapshot-context
+            slot: regionBody
+        }
+    )
+
+    pageItem P50_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 20
+            region: @ai-context
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P50_EXEC_CONTEXT_STATUS (
+        type: displayOnly
+        label {
+            label: Executive Context
+            alignment: left
+        }
+        settings {
+            sendOnPageSubmit: false
+        }
+        layout {
+            sequence: 7
+            region: @ask-the-month-end-analyst
+            slot: regionBody
+            alignment: left
+            columnSpan: 10
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: Executive AI context loading...
+        }
+        comments {
+            comments: Application 119 only. Session snapshot status; provider-independent.
+        }
+    )
+
+    pageItem P50_PERIOD_NAME (
+        type: selectList
+        label {
+            label: Period Name
+            alignment: left
+        }
+        lov {
+            type: sharedComponent
+            lov: @tms-close-periods
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @ai-context
+            slot: regionBody
+            alignment: left
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate - 7, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close AI Analyst
+        layout {
+            sequence: 20
+            region: @ai-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button new-ai-conversation (
+        buttonName: NEW_AI_CONVERSATION
+        label: New Conversation
+        layout {
+            sequence: 40
+            region: @ask-the-month-end-analyst
+            slot: regionBody
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-plus
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button refresh-exec-context (
+        buttonName: REFRESH_EXEC_CONTEXT
+        label: Refresh Executive Context
+        layout {
+            sequence: 15
+            region: @ask-the-month-end-analyst
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-refresh
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        comments {
+            comments: Explicitly rebuild the provider-independent Page 50 snapshot.
+        }
+    )
+
+    button send-ai-message (
+        buttonName: SEND_AI_MESSAGE
+        label: Send
+        layout {
+            sequence: 30
+            region: @ask-the-month-end-analyst
+            slot: regionBody
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-send
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction click (
+        name: Click
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @send-ai-message
+        }
+
+        action ensure-executive-context (
+            name: Ensure Executive Context
+            action: executeServerSideCode
+            settings {
+                plsqlCode: xxme_ai_exec_context_pkg.ensure_snapshot(:P50_PERIOD_NAME, :P50_DB_LINK);
+                itemsToSubmit: [
+                    P50_PERIOD_NAME
+                    P50_DB_LINK
+                ]
+            }
+            execution {
+                sequence: 7
+                fireOnInit: false
+            }
+            comments {
+                comments: Synchronous fallback. Normally a no-op because Page 50 preloads the same snapshot in the background.
+            }
+        )
+
+        action generate-ai-answer (
+            name: Generate AI Answer
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    apex_util.set_session_state('P50_AP_AS_OF_DATE', null);
+                    :P50_AP_AS_OF_DATE := null;
+                    xxme_ai_chat_pkg.generate_answer (
+                        p_question_seq_id => :P50_AI_QUESTION_SEQ_ID
+                    );
+                    ```
+            }
+            execution {
+                sequence: 50
+                fireOnInit: false
+            }
+        )
+
+        action isolate-ai-conversation-scope (
+            name: Isolate AI Conversation Scope
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    declare
+                      l_scope_key varchar2(4000);
+                      l_previous  varchar2(4000);
+                    begin
+                      l_scope_key := case
+                        when :P50_AR_SCOPE_AS_OF_DATE is not null then
+                          'AR|' || upper(nvl(:P50_DB_LINK,'-')) || '|' || upper(nvl(:P50_PERIOD_NAME,'-')) || '|' ||
+                          nvl(:P50_AR_SCOPE_AS_OF_DATE,'-') || '|' || nvl(:P50_AR_LEDGER_ID,'-') || '|' ||
+                          upper(nvl(:P50_AR_COMPANY,'-')) || '|' || nvl(:P50_AR_AGING_BUCKET_ID,'-')
+                        when :P50_AP_SCOPE_AS_OF_DATE is not null then
+                          'AP|' || upper(nvl(:P50_DB_LINK,'-')) || '|' || upper(nvl(:P50_PERIOD_NAME,'-')) || '|' ||
+                          nvl(:P50_AP_SCOPE_AS_OF_DATE,'-') || '|' || nvl(:P50_AP_LEDGER_ID,'-') || '|' || upper(nvl(:P50_AP_COMPANY,'-'))
+                        else 'ENTERPRISE|' || upper(nvl(:P50_DB_LINK,'-')) || '|' || upper(nvl(:P50_PERIOD_NAME,'-')) end;
+                      begin
+                        select c001 into l_previous from apex_collections
+                         where collection_name = 'P50_AI_SCOPE_STATE' and seq_id = 1;
+                      exception when no_data_found then l_previous := null; end;
+                      if l_previous is not null and l_previous <> l_scope_key then
+                        xxme_ai_chat_pkg.new_conversation;
+                      end if;
+                      apex_collection.create_or_truncate_collection('P50_AI_SCOPE_STATE');
+                      apex_collection.add_member(p_collection_name=>'P50_AI_SCOPE_STATE',p_c001=>l_scope_key);
+                    end;
+                    ```
+                itemsToSubmit: [
+                    P50_PERIOD_NAME
+                    P50_DB_LINK
+                    P50_AP_SCOPE_AS_OF_DATE
+                    P50_AP_LEDGER_ID
+                    P50_AP_COMPANY
+                    P50_AR_SCOPE_AS_OF_DATE
+                    P50_AR_LEDGER_ID
+                    P50_AR_COMPANY
+                    P50_AR_AGING_BUCKET_ID
+                ]
+            }
+            execution {
+                sequence: 5
+                fireOnInit: false
+            }
+        )
+
+        action native-clear (
+            action: clear
+            affectedElements {
+                selectionType: items
+                items: P50_AI_QUESTION
+            }
+            execution {
+                sequence: 100
+                fireOnInit: false
+            }
+        )
+
+        action native-set-focus (
+            action: setFocus
+            affectedElements {
+                selectionType: items
+                items: P50_AI_QUESTION
+            }
+            execution {
+                sequence: 110
+            }
+        )
+
+        action refresh-answer (
+            name: Refresh Answer
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @conversation-history
+            }
+            execution {
+                sequence: 60
+                fireOnInit: false
+            }
+        )
+
+        action refresh-question (
+            name: Refresh Question
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @conversation-history
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+        action remove-processing-indicator (
+            name: Remove processing indicator
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    if (window.xxmeAiChatSpinner) {
+                        window.xxmeAiChatSpinner.remove();
+                        window.xxmeAiChatSpinner = null;
+                    }
+                    
+                    ```
+            }
+            execution {
+                sequence: 70
+                fireOnInit: false
+            }
+        )
+
+        action show-explicit-processing-indicator (
+            name: Show explicit processing indicator
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    window.xxmeAiChatSpinner = apex.util.showSpinner(null, {
+                        fixed: true,
+                        alert: "The Month-End Analyst is preparing a response."
+                    });
+                    ```
+            }
+            execution {
+                sequence: 40
+                fireOnInit: false
+            }
+        )
+
+        action store-question (
+            name: Store Question
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    begin
+                        :G_DB_LINK := xxme_db_source_pkg.normalize_db_link(:P50_DB_LINK);
+                        :P50_AI_QUESTION_SEQ_ID := xxme_ai_chat_pkg.add_question (
+                        p_question    => :P50_AI_QUESTION,
+                        p_period_name => :P50_PERIOD_NAME
+                        );
+                    end;
+                    ```
+                itemsToSubmit: [
+                    P50_AI_QUESTION
+                    P50_PERIOD_NAME
+                    P50_DB_LINK
+                    P50_AP_SCOPE_AS_OF_DATE
+                    P50_AP_LEDGER_ID
+                    P50_AP_COMPANY
+                    P50_AP_SOURCE_PAGE
+                    P50_AP_RECON_READY
+                    P50_AR_SCOPE_AS_OF_DATE
+                    P50_AR_LEDGER_ID
+                    P50_AR_COMPANY
+                    P50_AR_AGING_BUCKET_ID
+                    P50_AR_SOURCE_PAGE
+                    P50_AR_RECON_READY
+                ]
+                itemsToReturn: P50_AI_QUESTION_SEQ_ID
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction close (
+        name: Close
+        execution {
+            sequence: 40
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    apex.page.cancelWarnOnUnsavedChanges();
+                    window.close();
+                    ```
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction new (
+        name: New
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @new-ai-conversation
+        }
+
+        action native-clear (
+            action: clear
+            affectedElements {
+                selectionType: items
+                items: P50_AI_QUESTION
+            }
+            execution {
+                sequence: 40
+                fireOnInit: false
+            }
+        )
+
+        action native-confirm (
+            action: confirm
+            settings {
+                message: Start a new conversation? The current session conversation will be cleared
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action native-execute-plsql-code (
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    xxme_ai_chat_pkg.new_conversation;
+                    
+                    ```
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @conversation-history
+            }
+            execution {
+                sequence: 30
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process initialize-ai-conversation (
+        name: Initialize AI Conversation
+        type: executeCode
+        source {
+            plsqlCode: xxme_ai_chat_pkg.initialize_conversation;
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 17295863358533650
+        }
+    )
+
+    process isolate-ai-conversation-scope-on-entry (
+        name: Isolate AI Conversation Scope
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_scope_key varchar2(4000);
+                  l_previous  varchar2(4000);
+                begin
+                  l_scope_key := case
+                    when :P50_AR_SCOPE_AS_OF_DATE is not null then
+                      'AR|' || upper(nvl(:P50_DB_LINK,'-')) || '|' || upper(nvl(:P50_PERIOD_NAME,'-')) || '|' ||
+                      nvl(:P50_AR_SCOPE_AS_OF_DATE,'-') || '|' || nvl(:P50_AR_LEDGER_ID,'-') || '|' ||
+                      upper(nvl(:P50_AR_COMPANY,'-')) || '|' || nvl(:P50_AR_AGING_BUCKET_ID,'-')
+                    when :P50_AP_SCOPE_AS_OF_DATE is not null then
+                      'AP|' || upper(nvl(:P50_DB_LINK,'-')) || '|' || upper(nvl(:P50_PERIOD_NAME,'-')) || '|' ||
+                      nvl(:P50_AP_SCOPE_AS_OF_DATE,'-') || '|' || nvl(:P50_AP_LEDGER_ID,'-') || '|' || upper(nvl(:P50_AP_COMPANY,'-'))
+                    else 'ENTERPRISE|' || upper(nvl(:P50_DB_LINK,'-')) || '|' || upper(nvl(:P50_PERIOD_NAME,'-')) end;
+                  begin
+                    select c001 into l_previous from apex_collections
+                     where collection_name = 'P50_AI_SCOPE_STATE' and seq_id = 1;
+                  exception when no_data_found then l_previous := null; end;
+                  if l_previous is not null and l_previous <> l_scope_key then
+                    xxme_ai_chat_pkg.new_conversation;
+                  end if;
+                  apex_collection.create_or_truncate_collection('P50_AI_SCOPE_STATE');
+                  apex_collection.add_member(p_collection_name=>'P50_AI_SCOPE_STATE',p_c001=>l_scope_key);
+                end;
+                ```
+        }
+        execution {
+            sequence: 15
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 962537130522542991
+        }
+    )
+
+    process load-exec-context (
+        name: LOAD_EXEC_CONTEXT
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                
+                declare
+                    l_force varchar2(1) := upper(nvl(apex_application.g_x01, 'N'));
+                begin
+                    if l_force = 'Y' then
+                        xxme_ai_exec_context_pkg.refresh_snapshot(:P50_PERIOD_NAME, :P50_DB_LINK);
+                    else
+                        xxme_ai_exec_context_pkg.ensure_snapshot(:P50_PERIOD_NAME, :P50_DB_LINK);
+                    end if;
+                
+                    apex_json.open_object;
+                    apex_json.write('ok', true);
+                    apex_json.write('statusText', xxme_ai_exec_context_pkg.status_text(:P50_PERIOD_NAME, :P50_DB_LINK));
+                    apex_json.write('rowCount', xxme_ai_exec_context_pkg.row_count);
+                    apex_json.close_object;
+                exception
+                    when others then
+                        apex_json.open_object;
+                        apex_json.write('ok', false);
+                        apex_json.write('statusText', 'Executive AI context load failed: ' || sqlerrm);
+                        apex_json.close_object;
+                end;
+                
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 990280002000000003
+        }
+        comments {
+            comments: Background load/reuse of provider-independent executive context.
+        }
+    )
+
+    process normalize-ai-context (
+        name: Normalize AI Context
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  procedure clear_item(p_name varchar2) is
+                  begin
+                    apex_util.set_session_state(p_name, null);
+                  end;
+                begin
+                  clear_item('P50_AP_AS_OF_DATE');
+                  :P50_AP_AS_OF_DATE := null;
+                  if :P50_AR_SCOPE_AS_OF_DATE is not null and :P50_AR_SOURCE_PAGE in ('32','33','34') then
+                    clear_item('P50_AP_SCOPE_AS_OF_DATE'); clear_item('P50_AP_LEDGER_ID');
+                    clear_item('P50_AP_COMPANY'); clear_item('P50_AP_SOURCE_PAGE'); clear_item('P50_AP_RECON_READY');
+                    :P50_AP_SCOPE_AS_OF_DATE := null; :P50_AP_LEDGER_ID := null; :P50_AP_COMPANY := null;
+                    :P50_AP_SOURCE_PAGE := null; :P50_AP_RECON_READY := null;
+                  elsif :P50_AP_SCOPE_AS_OF_DATE is not null and :P50_AP_SOURCE_PAGE in ('22','23','24') then
+                    clear_item('P50_AR_SCOPE_AS_OF_DATE'); clear_item('P50_AR_LEDGER_ID'); clear_item('P50_AR_COMPANY');
+                    clear_item('P50_AR_AGING_BUCKET_ID'); clear_item('P50_AR_SOURCE_PAGE'); clear_item('P50_AR_RECON_READY');
+                    :P50_AR_SCOPE_AS_OF_DATE := null; :P50_AR_LEDGER_ID := null; :P50_AR_COMPANY := null;
+                    :P50_AR_AGING_BUCKET_ID := null; :P50_AR_SOURCE_PAGE := null; :P50_AR_RECON_READY := null;
+                  else
+                    clear_item('P50_AP_SCOPE_AS_OF_DATE'); clear_item('P50_AP_LEDGER_ID'); clear_item('P50_AP_COMPANY');
+                    clear_item('P50_AP_SOURCE_PAGE'); clear_item('P50_AP_RECON_READY');
+                    clear_item('P50_AR_SCOPE_AS_OF_DATE'); clear_item('P50_AR_LEDGER_ID'); clear_item('P50_AR_COMPANY');
+                    clear_item('P50_AR_AGING_BUCKET_ID'); clear_item('P50_AR_SOURCE_PAGE'); clear_item('P50_AR_RECON_READY');
+                    :P50_AP_SCOPE_AS_OF_DATE := null; :P50_AP_LEDGER_ID := null; :P50_AP_COMPANY := null;
+                    :P50_AP_SOURCE_PAGE := null; :P50_AP_RECON_READY := null;
+                    :P50_AR_SCOPE_AS_OF_DATE := null; :P50_AR_LEDGER_ID := null; :P50_AR_COMPANY := null;
+                    :P50_AR_AGING_BUCKET_ID := null; :P50_AR_SOURCE_PAGE := null; :P50_AR_RECON_READY := null;
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 950000000000000200
+        }
+    )
+
+    process register-executive-context-loader (
+        name: Register Executive Context Loader
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin apex_javascript.add_onload_code(p_code => '
+                (function ($) {
+                    ''use strict'';
+                
+                    function setStatus(text) {
+                        apex.item(''P50_EXEC_CONTEXT_STATUS'').setValue(text || ''Executive AI context status unavailable'', null, true);
+                    }
+                
+                    function setSendEnabled(enabled) {
+                        $(''#send-ai-message'').prop(''disabled'', !enabled).toggleClass(''is-disabled'', !enabled);
+                    }
+                
+                    function load(force) {
+                        setStatus(force ? ''Refreshing executive AI context...'' : ''Loading executive AI context...'');
+                        setSendEnabled(false);
+                        apex.server.process(''LOAD_EXEC_CONTEXT'', {
+                            x01: force ? ''Y'' : ''N'',
+                            pageItems: ''#P50_PERIOD_NAME,#P50_DB_LINK''
+                        }, {
+                            dataType: ''json''
+                        }).done(function (data) {
+                            setStatus(data && data.statusText);
+                            setSendEnabled(true);
+                            if (!data || data.ok !== true) {
+                                apex.message.showErrors([{
+                                    type: ''error'',
+                                    location: ''page'',
+                                    message: (data && data.statusText) || ''Executive AI context could not be loaded.'',
+                                    unsafe: false
+                                }]);
+                            }
+                        }).fail(function (request, status, error) {
+                            setStatus(''Executive AI context load failed'');
+                            setSendEnabled(true);
+                            apex.message.showErrors([{
+                                type: ''error'',
+                                location: ''page'',
+                                message: error || status || ''Executive AI context could not be loaded.'',
+                                unsafe: false
+                            }]);
+                        });
+                    }
+                
+                    window.xxmeExecutiveContext = { load: load };
+                    $(''#refresh-exec-context'').off(''click.xxmeExec'').on(''click.xxmeExec'', function (event) {
+                        event.preventDefault();
+                        load(true);
+                    });
+                    $(''#P50_PERIOD_NAME,#P50_DB_LINK'').off(''change.xxmeExec'').on(''change.xxmeExec'', function () {
+                        load(false);
+                    });
+                    load(false);
+                })(apex.jQuery);
+                '); end;
+                ```
+        }
+        execution {
+            sequence: 30
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 990280002000000004
+        }
+        comments {
+            comments: Registers the Page 50 asynchronous snapshot loader and explicit refresh handler.
+        }
+    )
+
+    process show-selected-ai-provider (
+        name: Show Selected AI Provider
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_display varchar2(1000);
+                begin
+                    if v('G_AI_SERVICE_ID') is null then
+                        apex_util.set_session_state('P50_ACTIVE_AI', null);
+                    else
+                        select remote_server_name
+                               || ' · '
+                               || nvl(provider_type, 'Unknown provider')
+                               || ' · '
+                               || nvl(model_name, 'Provider default')
+                          into l_display
+                          from apex_workspace_ai_services
+                         where remote_server_id = to_number(v('G_AI_SERVICE_ID'));
+                        apex_util.set_session_state('P50_ACTIVE_AI', l_display);
+                    end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 920260923000000004
+        }
+    )
+
+)
+

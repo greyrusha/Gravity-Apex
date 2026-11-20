@@ -1,0 +1,22 @@
+appProcess tms-set-appearance (
+    name: TMS_SET_APPEARANCE
+    source {
+        plsqlCode:
+            ```plsql
+            begin
+             if :APP_ID<>128 or not apex_authentication.is_authenticated then raise_application_error(-20001,'Authentication required'); end if;
+             if apex_application.g_x01 not in ('light','dark') or apex_application.g_x01 is null then raise_application_error(-20002,'Invalid appearance'); end if;
+             apex_theme.set_user_style(p_application_id=>128,p_user=>:APP_USER,p_theme_number=>42,p_id=>case apex_application.g_x01 when 'dark' then 1282310000000102 else 1282310000000101 end);
+             apex_json.open_object;apex_json.write('ok',true);apex_json.close_object;
+            end;
+            ```
+    }
+    execution {
+        sequence: 10
+        point: ajaxCallback
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+)
+

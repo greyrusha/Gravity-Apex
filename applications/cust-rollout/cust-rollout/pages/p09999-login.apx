@@ -1,0 +1,147 @@
+page 9999 (
+    name: Sign In
+    alias: LOGIN
+    title: Sign In | EBS Customer OU Rollout Workbench
+    appearance {
+        pageTemplate: @/login
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        cursorFocus: firstItemOnPage
+        warnOnUnsavedChanges: false
+    }
+    css {
+        inline: ".t-Login-region{max-width:31rem}.xxcr-login-note{margin:0 0 1.25rem;color:var(--ut-component-text-muted-color);line-height:1.55;font-size:.92rem}"
+    }
+    security {
+        authentication: public
+    }
+
+    region ebs-login-card (
+        name: EBS Customer OU Rollout Workbench
+        title: EBS Customer OU Rollout Workbench
+        type: staticContent
+        source {
+            htmlCode: <p class="xxcr-login-note">Sign in with your <strong>Oracle E-Business Suite</strong> username and password. Credentials are verified live over HTTPS against EBS and governed by App 600 Segregation of Duties roles.</p>
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/login
+            templateOptions: #DEFAULT#
+            icon: fa-database
+        }
+    )
+
+    pageItem P9999_PASSWORD (
+        type: password
+        label {
+            label: EBS Password
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @ebs-login-card
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+            icon: fa-key
+            width: 40
+            valuePlaceholder: EBS Password
+        }
+        validation {
+            maxLength: 256
+        }
+        advanced {
+            customAttributes: autocomplete="current-password"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P9999_USERNAME (
+        type: textField
+        label {
+            label: EBS Username
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @ebs-login-card
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/hidden
+            templateOptions: #DEFAULT#
+            icon: fa-user
+            width: 40
+            valuePlaceholder: EBS Username (e.g. FIRST.LAST)
+        }
+        validation {
+            maxLength: 100
+        }
+        advanced {
+            customAttributes: autocomplete="username"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    button login (
+        buttonName: LOGIN
+        label: Sign In with EBS
+        layout {
+            sequence: 30
+            region: @ebs-login-card
+            slot: next
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process sign-in-with-ebs (
+        name: Sign in with Oracle EBS Credentials
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  apex_authentication.login(
+                    p_username => upper(trim(:P9999_USERNAME)),
+                    p_password => :P9999_PASSWORD
+                  );
+                  :P9999_PASSWORD := null;
+                exception
+                  when others then
+                    :P9999_PASSWORD := null;
+                    raise;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 600099991
+        }
+        serverSideCondition {
+            whenButtonPressed: @login
+        }
+    )
+
+)
+

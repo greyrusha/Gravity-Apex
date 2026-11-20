@@ -1,0 +1,32 @@
+lov lov-dup-resolution (
+    name: DUPLICATE_RESOLUTION_ACTION
+    source {
+        location: staticValues
+    }
+
+    entry res-excl (
+        sequence: 20
+        display: EXCLUDE_DUPLICATE — Exclude Duplicate (Keep Survivor)
+        return: EXCLUDE_DUPLICATE
+    )
+
+    entry res-keep (
+        sequence: 40
+        display: KEEP_BOTH_OVERRIDE — Intentional Keep Both
+        return: KEEP_BOTH_OVERRIDE
+    )
+
+    entry res-open (
+        sequence: 10
+        display: OPEN — Pending Review
+        return: OPEN
+    )
+
+    entry res-reuse (
+        sequence: 30
+        display: REUSE_EXISTING — Map to Existing Party / Site
+        return: REUSE_EXISTING
+    )
+
+)
+

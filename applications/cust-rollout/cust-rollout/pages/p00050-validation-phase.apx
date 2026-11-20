@@ -1,0 +1,514 @@
+page 50 (
+    name: Validation & Triage
+    alias: VALIDATION-PHASE
+    title: 4. Validation Phase & Exception Triage
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region buttons (
+        name: Validation Phase Controls
+        title: 4-Stage Pre-API Validation Gatekeeper
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: [
+                #DEFAULT#
+                t-ButtonRegion--noPadding
+                t-ButtonRegion--noUI
+            ]
+        }
+    )
+
+    region val-errors-ig (
+        name: 4-Stage Validation Exceptions & Warnings (XXCR_VAL_ERRORS)
+        title: 4-Stage Validation Exceptions & Warnings (Stage 1 Structural, Stage 2 Hierarchy, Stage 3 Target OU/Ledger, Stage 4 Shared-Object Guard)
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_VAL_ERRORS
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-approve-finance
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60005001
+        }
+
+        savedReport 60005002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @ERROR_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @VAL_STAGE
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @SEVERITY
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @ERROR_CODE
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @ENTITY_LEVEL
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @ACCOUNT_NUMBER
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @SITE_REF_CODE
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @COLUMN_NAME
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @INVALID_VALUE
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @ERROR_MESSAGE
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @SUGGESTED_FIX
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @ACK_YN
+                layout {
+                    sequence: 130
+                }
+            )
+
+        )
+
+        column ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Account #
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column ACK_YN (
+            type: selectList
+            heading {
+                heading: Acknowledge Warning
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: ACK_YN
+                dataType: varchar2
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column COLUMN_NAME (
+            type: displayOnly
+            heading {
+                heading: Column Name
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: COLUMN_NAME
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column ENTITY_LEVEL (
+            type: displayOnly
+            heading {
+                heading: Entity Level
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: ENTITY_LEVEL
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column ERROR_CODE (
+            type: displayOnly
+            heading {
+                heading: Rule Code
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ERROR_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column ERROR_ID (
+            type: displayOnly
+            heading {
+                heading: Error ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: ERROR_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ERROR_MESSAGE (
+            type: displayOnly
+            heading {
+                heading: Validation Message
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: ERROR_MESSAGE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column INVALID_VALUE (
+            type: displayOnly
+            heading {
+                heading: Current Value
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: INVALID_VALUE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SEVERITY (
+            type: displayOnly
+            heading {
+                heading: Severity
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: SEVERITY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SITE_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Ref
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: SITE_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SUGGESTED_FIX (
+            type: displayOnly
+            heading {
+                heading: Suggested Remediation
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: SUGGESTED_FIX
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column VAL_STAGE (
+            type: displayOnly
+            heading {
+                heading: Validation Stage
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: VAL_STAGE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+    )
+
+    button btn-ack-warnings (
+        buttonName: ACK_ALL_WARNINGS
+        label: Sign Off / Acknowledge All Amber Warnings (Finance Checker)
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-check
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-approve-finance
+        }
+    )
+
+    button btn-revalidate (
+        buttonName: REVALIDATE
+        label: Run 4-Stage Validation Engine
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-refresh
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-or-approve
+        }
+    )
+
+    process init-active-project-p50 (
+        name: Resolve Active Conversion Project
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  :P0_PROJECT_ID := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 1
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60005010
+        }
+    )
+
+    process run-validation-actions (
+        name: Execute Validation or Acknowledge Warnings
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  if l_proj_id is not null then
+                    if :REQUEST = 'ACK_ALL_WARNINGS' and xxcr_security_pkg.can_approve_finance(l_proj_id) then
+                      update xxcr_val_errors
+                         set ack_yn = 'Y',
+                             ack_by = coalesce(sys_context('APEX$SESSION','APP_USER'), user),
+                             ack_at = systimestamp
+                       where project_id = l_proj_id
+                         and severity = 'WARNING';
+                      xxcr_security_pkg.log_security_event(
+                        p_event_code => 'WARNINGS_SIGNED_OFF',
+                        p_project_id => l_proj_id,
+                        p_details    => 'Finance Checker acknowledged amber validation warnings'
+                      );
+                    end if;
+                
+                    if :REQUEST = 'REVALIDATE' and xxcr_security_pkg.can_edit_or_approve(l_proj_id) then
+                      xxcr_rollout_pkg.validate_project(l_proj_id);
+                    end if;
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        successMessage {
+            successMessage: 4-Stage Validation & Finance Sign-Off refreshed for active project!
+        }
+        advanced {
+            executionMappingIdentifier: 60005012
+        }
+        serverSideCondition {
+            type: requestIsNotContainedInValue
+            value: SWITCH_PROJECT
+        }
+    )
+
+    process save-val-errors-ig (
+        name: Save Validation Warning Acknowledgements
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @val-errors-ig
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 60005011
+        }
+        security {
+            authorizationScheme: @can-approve-finance
+        }
+    )
+
+)
+

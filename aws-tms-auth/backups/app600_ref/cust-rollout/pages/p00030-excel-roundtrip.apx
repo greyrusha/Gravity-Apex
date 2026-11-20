@@ -1,0 +1,24 @@
+page 30 (
+    name: Redirect to Unified Workbench (Excel)
+    alias: EXCEL-ROUNDTRIP
+    title: Redirecting to Customer Master Workbench
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    branch (
+        name: Redirect Legacy Page 30 to Unified Workbench Page 10
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        behavior {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+)
+

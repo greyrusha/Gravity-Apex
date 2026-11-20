@@ -1,0 +1,5012 @@
+page 10 (
+    name: Customer Master Workbench
+    alias: CUSTOMERS-SITES
+    title: 2. Customer Master Workbench
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region acct-relates-ig (
+        name: 6. Account Relationships
+        title: 6. Account Relationships
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_ACCT_RELATES
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 60
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60001061
+        }
+
+        savedReport 60001062 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @STG_RELATE_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @SRC_PARTY_NAME
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TGT_RELATED_ACCOUNT_NUM
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @SRC_RELATED_PARTY_NAME
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @BOTH_IN_SCOPE_YN
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @TGT_BILL_TO_FLAG
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @TGT_SHIP_TO_FLAG
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_RECIPROCAL_FLAG
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @USER_NOTES
+                layout {
+                    sequence: 120
+                }
+            )
+
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column BOTH_IN_SCOPE_YN (
+            type: displayOnly
+            heading {
+                heading: Both In Scope
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: BOTH_IN_SCOPE_YN
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column SRC_PARTY_NAME (
+            type: displayOnly
+            heading {
+                heading: Party Name
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: SRC_PARTY_NAME
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_RELATED_PARTY_NAME (
+            type: displayOnly
+            heading {
+                heading: Related Party Name
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: SRC_RELATED_PARTY_NAME
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column STG_RELATE_ID (
+            type: displayOnly
+            heading {
+                heading: ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_RELATE_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Account #
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_BILL_TO_FLAG (
+            type: selectList
+            heading {
+                heading: Bill-To Allowed
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: TGT_BILL_TO_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column TGT_RECIPROCAL_FLAG (
+            type: selectList
+            heading {
+                heading: Reciprocal
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: TGT_RECIPROCAL_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column TGT_RELATED_ACCOUNT_NUM (
+            type: displayOnly
+            heading {
+                heading: Related Account #
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TGT_RELATED_ACCOUNT_NUM
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_SHIP_TO_FLAG (
+            type: selectList
+            heading {
+                heading: Ship-To Allowed
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: TGT_SHIP_TO_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column USER_NOTES (
+            type: textField
+            heading {
+                heading: User Notes
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: USER_NOTES
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region buttons (
+        name: Workbench Toolbar
+        title: Customer Master Workbench Toolbar
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: [
+                #DEFAULT#
+                t-ButtonRegion--noPadding
+                t-ButtonRegion--noUI
+            ]
+        }
+    )
+
+    region contacts-ig (
+        name: 4. Contacts & Roles
+        title: 4. Contacts & Roles
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_CONTACTS
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 40
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60002003
+        }
+
+        savedReport 60002004 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 20
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @EDIT_DRAWER_CNT
+                layout {
+                    sequence: 15
+                }
+            )
+
+            displayColumn (
+                column: @STG_CONTACT_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @CONTACT_REF_CODE
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @SITE_REF_CODE
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @CONTACT_ACTION
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @TGT_FIRST_NAME
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @TGT_LAST_NAME
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @TGT_JOB_TITLE
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_DEPARTMENT
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PRIMARY_FLAG
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @TGT_RESPONSIBILITIES
+                layout {
+                    sequence: 130
+                }
+            )
+
+            displayColumn (
+                column: @TGT_EMAIL_ADDRESS
+                layout {
+                    sequence: 140
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PHONE_AREA_CODE
+                layout {
+                    sequence: 150
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PHONE_NUMBER
+                layout {
+                    sequence: 160
+                }
+            )
+
+            displayColumn (
+                column: @TGT_MOBILE_NUMBER
+                layout {
+                    sequence: 162
+                }
+            )
+
+            displayColumn (
+                column: @TGT_FAX_NUMBER
+                layout {
+                    sequence: 164
+                }
+            )
+
+            displayColumn (
+                column: @MODIFIED_YN
+                layout {
+                    sequence: 170
+                }
+            )
+
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column CONTACT_ACTION (
+            type: displayOnly
+            heading {
+                heading: Contact Action
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: CONTACT_ACTION
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column CONTACT_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Contact Ref
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: CONTACT_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column EDIT_DRAWER_CNT (
+            type: link
+            heading {
+                heading: Guided Edit
+            }
+            layout {
+                sequence: 15
+            }
+            link {
+                target: {
+                    page: 15
+                    items: {
+                        P15_ENTITY: CONTACT
+                        P15_ROW_ID: &STG_CONTACT_ID.
+                    }
+                    clearCache: 15
+                }
+                linkText: Edit Form
+                linkAttributes: class="t-Button t-Button--small t-Button--simple"
+            }
+            source {
+                type: none
+            }
+            security {
+                authorizationScheme: @can-edit-data
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column MODIFIED_YN (
+            type: displayOnly
+            heading {
+                heading: Modified
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                databaseColumn: MODIFIED_YN
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SITE_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Ref Code
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: SITE_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column STG_CONTACT_ID (
+            type: displayOnly
+            heading {
+                heading: Stg Contact ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_CONTACT_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Customer Account #
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_DEPARTMENT (
+            type: textField
+            heading {
+                heading: Department
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: TGT_DEPARTMENT
+                dataType: varchar2
+            }
+        )
+
+        column TGT_EMAIL_ADDRESS (
+            type: textField
+            heading {
+                heading: Email Address
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: TGT_EMAIL_ADDRESS
+                dataType: varchar2
+            }
+        )
+
+        column TGT_FAX_NUMBER (
+            type: textField
+            heading {
+                heading: Fax Number
+            }
+            layout {
+                sequence: 164
+            }
+            source {
+                databaseColumn: TGT_FAX_NUMBER
+                dataType: varchar2
+            }
+        )
+
+        column TGT_FIRST_NAME (
+            type: textField
+            heading {
+                heading: First Name
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: TGT_FIRST_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_JOB_TITLE (
+            type: textField
+            heading {
+                heading: Job Title
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: TGT_JOB_TITLE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_LAST_NAME (
+            type: textField
+            heading {
+                heading: Last Name
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: TGT_LAST_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_MOBILE_NUMBER (
+            type: textField
+            heading {
+                heading: Mobile Number
+            }
+            layout {
+                sequence: 162
+            }
+            source {
+                databaseColumn: TGT_MOBILE_NUMBER
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PHONE_AREA_CODE (
+            type: textField
+            heading {
+                heading: Area Code
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                databaseColumn: TGT_PHONE_AREA_CODE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PHONE_NUMBER (
+            type: textField
+            heading {
+                heading: Phone Number
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                databaseColumn: TGT_PHONE_NUMBER
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PRIMARY_FLAG (
+            type: selectList
+            heading {
+                heading: Primary
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: TGT_PRIMARY_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column TGT_RESPONSIBILITIES (
+            type: textField
+            heading {
+                heading: Role Responsibilities
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: TGT_RESPONSIBILITIES
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region customers-ig (
+        name: 1. Customers & Credit Profiles
+        title: 1. Customers & Credit Profiles
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_CUSTOMERS
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 10
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60001001
+        }
+
+        savedReport 60001002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 20
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @EDIT_DRAWER
+                layout {
+                    sequence: 15
+                }
+            )
+
+            displayColumn (
+                column: @STG_CUST_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @ACTION_CODE
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @SCOPE_CLASS
+                layout {
+                    sequence: 45
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PARTY_NAME
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NAME
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @TGT_TAX_REFERENCE
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @TGT_CUSTOMER_CLASS_CODE
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PROFILE_CLASS_NAME
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_COLLECTOR_NAME
+                layout {
+                    sequence: 105
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PAYMENT_TERM_NAME
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @TGT_CREDIT_CURRENCY
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @TGT_OVERALL_CREDIT_LIMIT
+                layout {
+                    sequence: 130
+                }
+            )
+
+            displayColumn (
+                column: @TGT_TRX_CREDIT_LIMIT
+                layout {
+                    sequence: 135
+                }
+            )
+
+            displayColumn (
+                column: @SRC_OPEN_AR_AMT
+                layout {
+                    sequence: 140
+                }
+            )
+
+            displayColumn (
+                column: @SRC_TRX_CNT_RECENT
+                layout {
+                    sequence: 145
+                }
+            )
+
+            displayColumn (
+                column: @DUP_ROLE
+                layout {
+                    sequence: 147
+                }
+            )
+
+            displayColumn (
+                column: @DUP_COUNT
+                layout {
+                    sequence: 148
+                }
+            )
+
+            displayColumn (
+                column: @MODIFIED_YN
+                layout {
+                    sequence: 150
+                }
+            )
+
+            displayColumn (
+                column: @CHANGE_SUMMARY
+                layout {
+                    sequence: 160
+                }
+            )
+
+            displayColumn (
+                column: @VAL_STATUS
+                layout {
+                    sequence: 170
+                }
+            )
+
+            displayColumn (
+                column: @USER_NOTES
+                layout {
+                    sequence: 190
+                }
+            )
+
+        )
+
+        column ACTION_CODE (
+            type: selectList
+            heading {
+                heading: Rollout Action
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-cust-action
+                displayNullValue: false
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ACTION_CODE
+                dataType: varchar2
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column CHANGE_SUMMARY (
+            type: displayOnly
+            heading {
+                heading: Delta Summary
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                databaseColumn: CHANGE_SUMMARY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column DUP_COUNT (
+            type: displayOnly
+            heading {
+                heading: Duplicates
+                alignment: end
+            }
+            layout {
+                sequence: 180
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: DUP_COUNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column DUP_ROLE (
+            type: displayOnly
+            heading {
+                heading: Dup Role (Survivor / Duplicate)
+            }
+            layout {
+                sequence: 147
+            }
+            source {
+                databaseColumn: DUP_ROLE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column EDIT_DRAWER (
+            type: link
+            heading {
+                heading: Guided Edit
+            }
+            layout {
+                sequence: 15
+            }
+            link {
+                target: {
+                    page: 15
+                    items: {
+                        P15_ENTITY: CUSTOMER
+                        P15_ROW_ID: &STG_CUST_ID.
+                    }
+                    clearCache: 15
+                }
+                linkText: Edit Form
+                linkAttributes: class="t-Button t-Button--small t-Button--simple"
+            }
+            source {
+                type: none
+            }
+            security {
+                authorizationScheme: @can-edit-data
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column MODIFIED_YN (
+            type: displayOnly
+            heading {
+                heading: Modified
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                databaseColumn: MODIFIED_YN
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SCOPE_CLASS (
+            type: displayOnly
+            heading {
+                heading: AWP Scope Class
+            }
+            layout {
+                sequence: 45
+            }
+            source {
+                databaseColumn: SCOPE_CLASS
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_OPEN_AR_AMT (
+            type: displayOnly
+            heading {
+                heading: Source Open AR
+                alignment: end
+            }
+            layout {
+                sequence: 140
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_OPEN_AR_AMT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SRC_TRX_CNT_RECENT (
+            type: displayOnly
+            heading {
+                heading: 24m Trx Cnt
+                alignment: end
+            }
+            layout {
+                sequence: 145
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_TRX_CNT_RECENT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column STG_CUST_ID (
+            type: displayOnly
+            heading {
+                heading: Stg Cust ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_CUST_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NAME (
+            type: textField
+            heading {
+                heading: Target Account Name
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: textField
+            heading {
+                heading: Target Account #
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+            }
+            readOnly {
+                type: expression
+                plsqlExpression: :ACTION_CODE = 'EXTEND_OU'
+                execute: forEachRow
+            }
+        )
+
+        column TGT_COLLECTOR_NAME (
+            type: popupLov
+            heading {
+                heading: Collector
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-collectors
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 105
+            }
+            source {
+                databaseColumn: TGT_COLLECTOR_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_CREDIT_CURRENCY (
+            type: selectList
+            heading {
+                heading: Credit Currency
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-currencies
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: TGT_CREDIT_CURRENCY
+                dataType: varchar2
+            }
+        )
+
+        column TGT_CUSTOMER_CLASS_CODE (
+            type: popupLov
+            heading {
+                heading: Customer Class
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-customer-classes
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: TGT_CUSTOMER_CLASS_CODE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_OVERALL_CREDIT_LIMIT (
+            type: numberField
+            heading {
+                heading: Overall Credit Limit
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_OVERALL_CREDIT_LIMIT
+                dataType: number
+            }
+        )
+
+        column TGT_PARTY_NAME (
+            type: textField
+            heading {
+                heading: Target Party Name
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TGT_PARTY_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PAYMENT_TERM_NAME (
+            type: popupLov
+            heading {
+                heading: Payment Term
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-payment-terms
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: TGT_PAYMENT_TERM_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PROFILE_CLASS_NAME (
+            type: popupLov
+            heading {
+                heading: Profile Class
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-profile-classes
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: TGT_PROFILE_CLASS_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_TAX_REFERENCE (
+            type: textField
+            heading {
+                heading: Tax Reference
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: TGT_TAX_REFERENCE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_TRX_CREDIT_LIMIT (
+            type: numberField
+            heading {
+                heading: Order Credit Limit
+                alignment: end
+            }
+            layout {
+                sequence: 135
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_TRX_CREDIT_LIMIT
+                dataType: number
+            }
+        )
+
+        column USER_NOTES (
+            type: textField
+            heading {
+                heading: User Notes
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                databaseColumn: USER_NOTES
+                dataType: varchar2
+            }
+        )
+
+        column VAL_STATUS (
+            type: displayOnly
+            heading {
+                heading: Validation Status
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                databaseColumn: VAL_STATUS
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+    )
+
+    region deltas-ig (
+        name: Cell-by-Cell Modification & Cascading Exclusion Audit Trail
+        title: Cell-by-Cell Modification & Cascading Exclusion Audit Trail
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_XLS_DELTAS
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 10
+            parentRegion: @excel-roundtrip-tab
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60003001
+        }
+
+        savedReport 60003002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @DELTA_ID
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @IMPORT_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @SHEET_NAME
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @ENTITY_LEVEL
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @RECORD_KEY
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @COLUMN_NAME
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @OLD_VALUE
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @NEW_VALUE
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @CHANGE_TYPE
+                layout {
+                    sequence: 90
+                }
+            )
+
+        )
+
+        column CHANGE_TYPE (
+            type: displayOnly
+            heading {
+                heading: Change Type
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: CHANGE_TYPE
+                dataType: varchar2
+            }
+        )
+
+        column COLUMN_NAME (
+            type: displayOnly
+            heading {
+                heading: Column Modified
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: COLUMN_NAME
+                dataType: varchar2
+            }
+        )
+
+        column DELTA_ID (
+            type: displayOnly
+            heading {
+                heading: Delta ID
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: DELTA_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ENTITY_LEVEL (
+            type: displayOnly
+            heading {
+                heading: Entity Level
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ENTITY_LEVEL
+                dataType: varchar2
+            }
+        )
+
+        column IMPORT_ID (
+            type: displayOnly
+            heading {
+                heading: Import Run #
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: IMPORT_ID
+                dataType: number
+            }
+        )
+
+        column NEW_VALUE (
+            type: displayOnly
+            heading {
+                heading: New Value
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: NEW_VALUE
+                dataType: varchar2
+            }
+        )
+
+        column OLD_VALUE (
+            type: displayOnly
+            heading {
+                heading: Prior Snapshot Value
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: OLD_VALUE
+                dataType: varchar2
+            }
+        )
+
+        column RECORD_KEY (
+            type: displayOnly
+            heading {
+                heading: Record Key
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: RECORD_KEY
+                dataType: varchar2
+            }
+        )
+
+        column SHEET_NAME (
+            type: displayOnly
+            heading {
+                heading: Source Sheet
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: SHEET_NAME
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region excel-roundtrip-tab (
+        name: 8. Connected Excel Upload & Audit
+        title: 8. Connected Excel Upload & Audit
+        type: staticContent
+        layout {
+            sequence: 80
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region payment-instr-ig (
+        name: 7. Payment & Receipt Instruments
+        title: 7. Payment & Receipt Instruments
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_PAYMENT_INSTR
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 70
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60001071
+        }
+
+        savedReport 60001072 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @STG_PMT_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @ASSIGNMENT_SOURCE
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @ASSIGNMENT_LEVEL
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @TGT_LOCATION_CODE
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @INSTRUMENT_TYPE
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @MASKED_ACCOUNT_OR_METHOD
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @CURRENCY_CODE
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PRIMARY_FLAG
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ORDER_OF_PREF
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @TGT_RECEIPT_METHOD_NAME
+                layout {
+                    sequence: 130
+                }
+            )
+
+            displayColumn (
+                column: @USER_NOTES
+                layout {
+                    sequence: 140
+                }
+            )
+
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column ASSIGNMENT_LEVEL (
+            type: displayOnly
+            heading {
+                heading: Scope Level
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ASSIGNMENT_LEVEL
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column ASSIGNMENT_SOURCE (
+            type: displayOnly
+            heading {
+                heading: Source Module
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ASSIGNMENT_SOURCE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: displayOnly
+            heading {
+                heading: Currency
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: CURRENCY_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column INSTRUMENT_TYPE (
+            type: displayOnly
+            heading {
+                heading: Instrument Type
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: INSTRUMENT_TYPE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column MASKED_ACCOUNT_OR_METHOD (
+            type: displayOnly
+            heading {
+                heading: Masked Account / Receipt Method
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: MASKED_ACCOUNT_OR_METHOD
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column STG_PMT_ID (
+            type: displayOnly
+            heading {
+                heading: ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_PMT_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Account #
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_LOCATION_CODE (
+            type: displayOnly
+            heading {
+                heading: Bill-To Location
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: TGT_LOCATION_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_ORDER_OF_PREF (
+            type: numberField
+            heading {
+                heading: Preference #
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_ORDER_OF_PREF
+                dataType: number
+            }
+        )
+
+        column TGT_PRIMARY_FLAG (
+            type: selectList
+            heading {
+                heading: Primary
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: TGT_PRIMARY_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column TGT_RECEIPT_METHOD_NAME (
+            type: popupLov
+            heading {
+                heading: Target Receipt Method
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-receipt-methods
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: TGT_RECEIPT_METHOD_NAME
+                dataType: varchar2
+            }
+        )
+
+        column USER_NOTES (
+            type: textField
+            heading {
+                heading: User Notes
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: USER_NOTES
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region prof-amts-ig (
+        name: 5. Multi-Currency Credit
+        title: 5. Multi-Currency Credit
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_PROFILE_AMTS
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 50
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60001051
+        }
+
+        savedReport 60001052 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @STG_PROF_AMT_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @SITE_REF_CODE
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TGT_LOCATION_CODE
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @SRC_CURRENCY_CODE
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @TGT_CURRENCY_CODE
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @SRC_OVERALL_CREDIT_LIMIT
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @TGT_OVERALL_CREDIT_LIMIT
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_TRX_CREDIT_LIMIT
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @MODIFIED_YN
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @USER_NOTES
+                layout {
+                    sequence: 130
+                }
+            )
+
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column MODIFIED_YN (
+            type: displayOnly
+            heading {
+                heading: Modified
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: MODIFIED_YN
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SITE_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Ref
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: SITE_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_CURRENCY_CODE (
+            type: displayOnly
+            heading {
+                heading: Src Currency
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: SRC_CURRENCY_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_OVERALL_CREDIT_LIMIT (
+            type: displayOnly
+            heading {
+                heading: Src Overall Limit
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_OVERALL_CREDIT_LIMIT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column STG_PROF_AMT_ID (
+            type: displayOnly
+            heading {
+                heading: ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_PROF_AMT_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Account #
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_CURRENCY_CODE (
+            type: selectList
+            heading {
+                heading: Target Currency
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-currencies
+                displayNullValue: false
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: TGT_CURRENCY_CODE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_LOCATION_CODE (
+            type: displayOnly
+            heading {
+                heading: Bill-To Location
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TGT_LOCATION_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_OVERALL_CREDIT_LIMIT (
+            type: numberField
+            heading {
+                heading: Target Overall Limit
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_OVERALL_CREDIT_LIMIT
+                dataType: number
+            }
+        )
+
+        column TGT_TRX_CREDIT_LIMIT (
+            type: numberField
+            heading {
+                heading: Target Order Limit
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_TRX_CREDIT_LIMIT
+                dataType: number
+            }
+        )
+
+        column USER_NOTES (
+            type: textField
+            heading {
+                heading: User Notes
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: USER_NOTES
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region site-uses-ig (
+        name: 3. Site Uses & GL Accounts
+        title: 3. Site Uses & GL Accounts
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_SITE_USES
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 30
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60002001
+        }
+
+        savedReport 60002002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 20
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @EDIT_DRAWER_SU
+                layout {
+                    sequence: 15
+                }
+            )
+
+            displayColumn (
+                column: @STG_SITE_USE_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @SCOPE_CLASS
+                layout {
+                    sequence: 35
+                }
+            )
+
+            displayColumn (
+                column: @SITE_REF_CODE
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TGT_SITE_USE_CODE
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @TGT_LOCATION_CODE
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PRIMARY_FLAG
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @DUP_ROLE
+                layout {
+                    sequence: 82
+                }
+            )
+
+            displayColumn (
+                column: @DUP_COUNT
+                layout {
+                    sequence: 83
+                }
+            )
+
+            displayColumn (
+                column: @SRC_OPEN_AR_AMT
+                layout {
+                    sequence: 84
+                }
+            )
+
+            displayColumn (
+                column: @SRC_TRX_CNT_RECENT
+                layout {
+                    sequence: 86
+                }
+            )
+
+            displayColumn (
+                column: @SRC_OPEN_SO_CNT
+                layout {
+                    sequence: 87
+                }
+            )
+
+            displayColumn (
+                column: @SRC_LAST_TRX_DATE
+                layout {
+                    sequence: 88
+                }
+            )
+
+            displayColumn (
+                column: @TGT_BILL_TO_LOCATION_CODE
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PROFILE_CLASS_NAME
+                layout {
+                    sequence: 92
+                }
+            )
+
+            displayColumn (
+                column: @TGT_COLLECTOR_NAME
+                layout {
+                    sequence: 94
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PAYMENT_TERM_NAME
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_CREDIT_CURRENCY
+                layout {
+                    sequence: 102
+                }
+            )
+
+            displayColumn (
+                column: @TGT_OVERALL_CREDIT_LIMIT
+                layout {
+                    sequence: 104
+                }
+            )
+
+            displayColumn (
+                column: @TGT_TRX_CREDIT_LIMIT
+                layout {
+                    sequence: 106
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ORDER_TYPE_NAME
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PRICE_LIST_NAME
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @TGT_WAREHOUSE_CODE
+                layout {
+                    sequence: 130
+                }
+            )
+
+            displayColumn (
+                column: @TGT_TAX_REFERENCE
+                layout {
+                    sequence: 131
+                }
+            )
+
+            displayColumn (
+                column: @TGT_AWP_GENIE_REP
+                layout {
+                    sequence: 132
+                }
+            )
+
+            displayColumn (
+                column: @MULTI_CURR_SUMMARY
+                layout {
+                    sequence: 133
+                }
+            )
+
+            displayColumn (
+                column: @TGT_SEND_STATEMENTS
+                layout {
+                    sequence: 134
+                }
+            )
+
+            displayColumn (
+                column: @TGT_STATEMENT_CYCLE_NAME
+                layout {
+                    sequence: 135
+                }
+            )
+
+            displayColumn (
+                column: @TGT_DISCOUNT_TERMS
+                layout {
+                    sequence: 136
+                }
+            )
+
+            displayColumn (
+                column: @TGT_AUTOCASH_RULE_NAME
+                layout {
+                    sequence: 137
+                }
+            )
+
+            displayColumn (
+                column: @TGT_GROUPING_RULE_NAME
+                layout {
+                    sequence: 138
+                }
+            )
+
+            displayColumn (
+                column: @TGT_SHIP_VIA
+                layout {
+                    sequence: 139
+                }
+            )
+
+            displayColumn (
+                column: @TGT_GL_REC_CONCAT
+                layout {
+                    sequence: 140
+                }
+            )
+
+            displayColumn (
+                column: @TGT_GL_REV_CONCAT
+                layout {
+                    sequence: 150
+                }
+            )
+
+            displayColumn (
+                column: @SRC_GL_REC_CONCAT
+                layout {
+                    sequence: 160
+                }
+            )
+
+            displayColumn (
+                column: @MODIFIED_YN
+                layout {
+                    sequence: 170
+                }
+            )
+
+            displayColumn (
+                column: @CHANGE_SUMMARY
+                layout {
+                    sequence: 180
+                }
+            )
+
+            displayColumn (
+                column: @VAL_STATUS
+                layout {
+                    sequence: 190
+                }
+            )
+
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column CHANGE_SUMMARY (
+            type: displayOnly
+            heading {
+                heading: Delta Summary
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                databaseColumn: CHANGE_SUMMARY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column DUP_COUNT (
+            type: displayOnly
+            heading {
+                heading: Duplicates
+                alignment: end
+            }
+            layout {
+                sequence: 83
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: DUP_COUNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column DUP_ROLE (
+            type: displayOnly
+            heading {
+                heading: Dup Role (Survivor / Duplicate)
+            }
+            layout {
+                sequence: 82
+            }
+            source {
+                databaseColumn: DUP_ROLE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column EDIT_DRAWER_SU (
+            type: link
+            heading {
+                heading: Guided Edit
+            }
+            layout {
+                sequence: 15
+            }
+            link {
+                target: {
+                    page: 15
+                    items: {
+                        P15_ENTITY: SITE_USE
+                        P15_ROW_ID: &STG_SITE_USE_ID.
+                    }
+                    clearCache: 15
+                }
+                linkText: Edit Form
+                linkAttributes: class="t-Button t-Button--small t-Button--simple"
+            }
+            source {
+                type: none
+            }
+            security {
+                authorizationScheme: @can-edit-data
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column MODIFIED_YN (
+            type: displayOnly
+            heading {
+                heading: Modified
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                databaseColumn: MODIFIED_YN
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column MULTI_CURR_SUMMARY (
+            type: displayOnly
+            heading {
+                heading: Multi-Curr Credit Limits
+            }
+            layout {
+                sequence: 133
+            }
+            source {
+                databaseColumn: MULTI_CURR_SUMMARY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SCOPE_CLASS (
+            type: displayOnly
+            heading {
+                heading: AWP Scope Class
+            }
+            layout {
+                sequence: 35
+            }
+            source {
+                databaseColumn: SCOPE_CLASS
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SITE_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Ref Code
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: SITE_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_GL_REC_CONCAT (
+            type: displayOnly
+            heading {
+                heading: Source Receivable GL Account
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                databaseColumn: SRC_GL_REC_CONCAT
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_LAST_TRX_DATE (
+            type: displayOnly
+            heading {
+                heading: Last Activity Date
+            }
+            layout {
+                sequence: 88
+            }
+            source {
+                databaseColumn: SRC_LAST_TRX_DATE
+                dataType: date
+                queryOnly: true
+            }
+        )
+
+        column SRC_OPEN_AR_AMT (
+            type: displayOnly
+            heading {
+                heading: Site Use Open AR
+                alignment: end
+            }
+            layout {
+                sequence: 84
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_OPEN_AR_AMT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SRC_OPEN_SO_CNT (
+            type: displayOnly
+            heading {
+                heading: Open SO Cnt
+                alignment: end
+            }
+            layout {
+                sequence: 87
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_OPEN_SO_CNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SRC_TRX_CNT_RECENT (
+            type: displayOnly
+            heading {
+                heading: 24m Trx Cnt
+                alignment: end
+            }
+            layout {
+                sequence: 86
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_TRX_CNT_RECENT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column STG_SITE_USE_ID (
+            type: displayOnly
+            heading {
+                heading: Stg Site Use ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_SITE_USE_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Customer Account #
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_AUTOCASH_RULE_NAME (
+            type: selectList
+            heading {
+                heading: AutoCash Rule
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-autocash-rules
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 137
+            }
+            source {
+                databaseColumn: TGT_AUTOCASH_RULE_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_AWP_GENIE_REP (
+            type: textField
+            heading {
+                heading: AWP - Genie Rep (DFF)
+            }
+            layout {
+                sequence: 132
+            }
+            source {
+                databaseColumn: TGT_AWP_GENIE_REP
+                dataType: varchar2
+            }
+        )
+
+        column TGT_BILL_TO_LOCATION_CODE (
+            type: textField
+            heading {
+                heading: Bill-To Location Ref
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: TGT_BILL_TO_LOCATION_CODE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_COLLECTOR_NAME (
+            type: popupLov
+            heading {
+                heading: Collector
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-collectors
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 94
+            }
+            source {
+                databaseColumn: TGT_COLLECTOR_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_CREDIT_CURRENCY (
+            type: selectList
+            heading {
+                heading: Credit Currency
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-currencies
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 102
+            }
+            source {
+                databaseColumn: TGT_CREDIT_CURRENCY
+                dataType: varchar2
+            }
+        )
+
+        column TGT_DISCOUNT_TERMS (
+            type: selectList
+            heading {
+                heading: Discount Terms
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 136
+            }
+            source {
+                databaseColumn: TGT_DISCOUNT_TERMS
+                dataType: varchar2
+            }
+        )
+
+        column TGT_GL_REC_CONCAT (
+            type: textField
+            heading {
+                heading: Target Receivable GL Account
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: TGT_GL_REC_CONCAT
+                dataType: varchar2
+            }
+        )
+
+        column TGT_GL_REV_CONCAT (
+            type: textField
+            heading {
+                heading: Target Revenue GL Account
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                databaseColumn: TGT_GL_REV_CONCAT
+                dataType: varchar2
+            }
+        )
+
+        column TGT_GROUPING_RULE_NAME (
+            type: selectList
+            heading {
+                heading: Grouping Rule
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-grouping-rules
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 138
+            }
+            source {
+                databaseColumn: TGT_GROUPING_RULE_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_LOCATION_CODE (
+            type: textField
+            heading {
+                heading: Location Code
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: TGT_LOCATION_CODE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_ORDER_TYPE_NAME (
+            type: popupLov
+            heading {
+                heading: Order Type
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-order-types
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: TGT_ORDER_TYPE_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_OVERALL_CREDIT_LIMIT (
+            type: numberField
+            heading {
+                heading: Overall Credit Limit
+                alignment: end
+            }
+            layout {
+                sequence: 104
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_OVERALL_CREDIT_LIMIT
+                dataType: number
+            }
+        )
+
+        column TGT_PAYMENT_TERM_NAME (
+            type: popupLov
+            heading {
+                heading: Payment Term
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-payment-terms
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: TGT_PAYMENT_TERM_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PRICE_LIST_NAME (
+            type: popupLov
+            heading {
+                heading: Price List
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-price-lists
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: TGT_PRICE_LIST_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PRIMARY_FLAG (
+            type: selectList
+            heading {
+                heading: Primary
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: TGT_PRIMARY_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PROFILE_CLASS_NAME (
+            type: popupLov
+            heading {
+                heading: Profile Class
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-profile-classes
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 92
+            }
+            source {
+                databaseColumn: TGT_PROFILE_CLASS_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_SEND_STATEMENTS (
+            type: selectList
+            heading {
+                heading: Send Stmts
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 134
+            }
+            source {
+                databaseColumn: TGT_SEND_STATEMENTS
+                dataType: varchar2
+            }
+        )
+
+        column TGT_SHIP_VIA (
+            type: textField
+            heading {
+                heading: Ship Via (Carrier)
+            }
+            layout {
+                sequence: 139
+            }
+            source {
+                databaseColumn: TGT_SHIP_VIA
+                dataType: varchar2
+            }
+        )
+
+        column TGT_SITE_USE_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Use Code
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TGT_SITE_USE_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_STATEMENT_CYCLE_NAME (
+            type: selectList
+            heading {
+                heading: Statement Cycle
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-stmt-cycles
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 135
+            }
+            source {
+                databaseColumn: TGT_STATEMENT_CYCLE_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TGT_TAX_REFERENCE (
+            type: textField
+            heading {
+                heading: Site Tax Ref (ABN)
+            }
+            layout {
+                sequence: 131
+            }
+            source {
+                databaseColumn: TGT_TAX_REFERENCE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_TRX_CREDIT_LIMIT (
+            type: numberField
+            heading {
+                heading: Order Credit Limit
+                alignment: end
+            }
+            layout {
+                sequence: 106
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TGT_TRX_CREDIT_LIMIT
+                dataType: number
+            }
+        )
+
+        column TGT_WAREHOUSE_CODE (
+            type: popupLov
+            heading {
+                heading: Warehouse
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-warehouses
+                nullDisplayValue: — None —
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: TGT_WAREHOUSE_CODE
+                dataType: varchar2
+            }
+        )
+
+        column VAL_STATUS (
+            type: displayOnly
+            heading {
+                heading: Validation Status
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                databaseColumn: VAL_STATUS
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+    )
+
+    region sites-ig (
+        name: 2. Addresses & Sites
+        title: 2. Addresses & Sites
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_STG_SITES
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 20
+            parentRegion: @workbench-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60001003
+        }
+
+        savedReport 60001004 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 20
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @EDIT_DRAWER_SITE
+                layout {
+                    sequence: 15
+                }
+            )
+
+            displayColumn (
+                column: @STG_SITE_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDE_YN
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @SITE_REF_CODE
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ACCOUNT_NUMBER
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @DUP_ROLE
+                layout {
+                    sequence: 52
+                }
+            )
+
+            displayColumn (
+                column: @DUP_COUNT
+                layout {
+                    sequence: 53
+                }
+            )
+
+            displayColumn (
+                column: @SRC_OPEN_AR_AMT
+                layout {
+                    sequence: 54
+                }
+            )
+
+            displayColumn (
+                column: @SRC_TRX_CNT_RECENT
+                layout {
+                    sequence: 56
+                }
+            )
+
+            displayColumn (
+                column: @SRC_OPEN_SO_CNT
+                layout {
+                    sequence: 57
+                }
+            )
+
+            displayColumn (
+                column: @SRC_LAST_TRX_DATE
+                layout {
+                    sequence: 58
+                }
+            )
+
+            displayColumn (
+                column: @ADDRESS_MODE
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @TGT_PARTY_SITE_NUMBER
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @TGT_COUNTRY
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ADDRESS1
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @TGT_ADDRESS2
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @TGT_CITY
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @TGT_STATE
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @TGT_POSTAL_CODE
+                layout {
+                    sequence: 130
+                }
+            )
+
+            displayColumn (
+                column: @TGT_CUSTOMER_CATEGORY
+                layout {
+                    sequence: 140
+                }
+            )
+
+            displayColumn (
+                column: @TGT_SALES_CURRENCY
+                layout {
+                    sequence: 142
+                }
+            )
+
+            displayColumn (
+                column: @TGT_RPS_HOLD_FLAG
+                layout {
+                    sequence: 144
+                }
+            )
+
+            displayColumn (
+                column: @TGT_THIRD_PARTY_NAME
+                layout {
+                    sequence: 146
+                }
+            )
+
+            displayColumn (
+                column: @ADDR_CHANGED_YN
+                layout {
+                    sequence: 150
+                }
+            )
+
+            displayColumn (
+                column: @CHANGE_SUMMARY
+                layout {
+                    sequence: 160
+                }
+            )
+
+            displayColumn (
+                column: @VAL_STATUS
+                layout {
+                    sequence: 170
+                }
+            )
+
+            displayColumn (
+                column: @USER_NOTES
+                layout {
+                    sequence: 190
+                }
+            )
+
+        )
+
+        column ADDRESS_MODE (
+            type: displayOnly
+            heading {
+                heading: Address Mode (REUSE_PARTY_SITE / NEW_ADDRESS)
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: ADDRESS_MODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column ADDR_CHANGED_YN (
+            type: displayOnly
+            heading {
+                heading: Address Edited
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                databaseColumn: ADDR_CHANGED_YN
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column CHANGE_SUMMARY (
+            type: displayOnly
+            heading {
+                heading: Delta Summary
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                databaseColumn: CHANGE_SUMMARY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column DUP_COUNT (
+            type: displayOnly
+            heading {
+                heading: Duplicates
+                alignment: end
+            }
+            layout {
+                sequence: 53
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: DUP_COUNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column DUP_ROLE (
+            type: displayOnly
+            heading {
+                heading: Dup Role (Survivor / Duplicate)
+            }
+            layout {
+                sequence: 52
+            }
+            source {
+                databaseColumn: DUP_ROLE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column EDIT_DRAWER_SITE (
+            type: link
+            heading {
+                heading: Guided Edit
+            }
+            layout {
+                sequence: 15
+            }
+            link {
+                target: {
+                    page: 15
+                    items: {
+                        P15_ENTITY: SITE
+                        P15_ROW_ID: &STG_SITE_ID.
+                    }
+                    clearCache: 15
+                }
+                linkText: Edit Form
+                linkAttributes: class="t-Button t-Button--small t-Button--simple"
+            }
+            source {
+                type: none
+            }
+            security {
+                authorizationScheme: @can-edit-data
+            }
+        )
+
+        column INCLUDE_YN (
+            type: selectList
+            heading {
+                heading: Include
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-yn
+                displayExtraValues: false
+                displayNullValue: false
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: INCLUDE_YN
+                dataType: varchar2
+            }
+        )
+
+        column SITE_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Ref Code
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: SITE_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SRC_LAST_TRX_DATE (
+            type: displayOnly
+            heading {
+                heading: Last Activity Date
+            }
+            layout {
+                sequence: 58
+            }
+            source {
+                databaseColumn: SRC_LAST_TRX_DATE
+                dataType: date
+                queryOnly: true
+            }
+        )
+
+        column SRC_OPEN_AR_AMT (
+            type: displayOnly
+            heading {
+                heading: Site Open AR
+                alignment: end
+            }
+            layout {
+                sequence: 54
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_OPEN_AR_AMT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SRC_OPEN_SO_CNT (
+            type: displayOnly
+            heading {
+                heading: Open SO Cnt
+                alignment: end
+            }
+            layout {
+                sequence: 57
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_OPEN_SO_CNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SRC_TRX_CNT_RECENT (
+            type: displayOnly
+            heading {
+                heading: 24m Trx Cnt
+                alignment: end
+            }
+            layout {
+                sequence: 56
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SRC_TRX_CNT_RECENT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column STG_SITE_ID (
+            type: displayOnly
+            heading {
+                heading: Stg Site ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: STG_SITE_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TGT_ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Customer Account #
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: TGT_ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_ADDRESS1 (
+            type: textField
+            heading {
+                heading: Address Line 1
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: TGT_ADDRESS1
+                dataType: varchar2
+            }
+        )
+
+        column TGT_ADDRESS2 (
+            type: textField
+            heading {
+                heading: Address Line 2
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: TGT_ADDRESS2
+                dataType: varchar2
+            }
+        )
+
+        column TGT_CITY (
+            type: textField
+            heading {
+                heading: City
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: TGT_CITY
+                dataType: varchar2
+            }
+        )
+
+        column TGT_COUNTRY (
+            type: popupLov
+            heading {
+                heading: Country
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-countries
+                displayNullValue: false
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: TGT_COUNTRY
+                dataType: varchar2
+            }
+        )
+
+        column TGT_CUSTOMER_CATEGORY (
+            type: textField
+            heading {
+                heading: Site Category
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                databaseColumn: TGT_CUSTOMER_CATEGORY
+                dataType: varchar2
+            }
+        )
+
+        column TGT_PARTY_SITE_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Party Site #
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: TGT_PARTY_SITE_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column TGT_POSTAL_CODE (
+            type: textField
+            heading {
+                heading: Postal Code
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                databaseColumn: TGT_POSTAL_CODE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_RPS_HOLD_FLAG (
+            type: selectList
+            heading {
+                heading: Denied Party Hold (DFF)
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-flag-yn
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 144
+            }
+            source {
+                databaseColumn: TGT_RPS_HOLD_FLAG
+                dataType: varchar2
+            }
+        )
+
+        column TGT_SALES_CURRENCY (
+            type: selectList
+            heading {
+                heading: Sales Currency (DFF)
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-ebs-currencies
+                nullDisplayValue: —
+            }
+            layout {
+                sequence: 142
+            }
+            source {
+                databaseColumn: TGT_SALES_CURRENCY
+                dataType: varchar2
+            }
+        )
+
+        column TGT_STATE (
+            type: textField
+            heading {
+                heading: State / Province
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                databaseColumn: TGT_STATE
+                dataType: varchar2
+            }
+        )
+
+        column TGT_THIRD_PARTY_NAME (
+            type: textField
+            heading {
+                heading: 3rd Party Cust Name (DFF)
+            }
+            layout {
+                sequence: 146
+            }
+            source {
+                databaseColumn: TGT_THIRD_PARTY_NAME
+                dataType: varchar2
+            }
+        )
+
+        column USER_NOTES (
+            type: textField
+            heading {
+                heading: User Notes
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                databaseColumn: USER_NOTES
+                dataType: varchar2
+            }
+        )
+
+        column VAL_STATUS (
+            type: displayOnly
+            heading {
+                heading: Validation Status
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                databaseColumn: VAL_STATUS
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+    )
+
+    region workbench-tabs (
+        name: Connected Customer Master Tabs
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/tabs-container
+            templateOptions: [
+                #DEFAULT#
+                js-useLocalStorage
+                t-TabsRegion-mod--simple
+            ]
+        }
+    )
+
+    pageItem P10_EXCEL_FILE (
+        type: fileUpload
+        label {
+            label: Upload Edited Connected 8-Tab Workbook (.xlsx)
+        }
+        display {
+            displayAs: inlineDropzone
+            dropzoneTitle: Drop Edited Connected 8-Tab Workbook (.xlsx) Here
+            dropzoneDesc: Automatically applies cell-by-cell edits across Customers, Sites, Site Uses, Contacts, Multi-Currency Credit, Account Relationships & Payment Instruments, cascades exclusions, and refreshes 4-stage validation.
+        }
+        storage {
+            type: appTempFiles
+        }
+        layout {
+            sequence: 10
+            region: @excel-roundtrip-tab
+            slot: regionBody
+            columnSpan: 8
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P10_TARGET_SHEET (
+        type: selectList
+        label {
+            label: Worksheet Import Scope
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:All Connected Worksheets (Recommended);AUTO,Tab 1 Only - Customers & Credit Profiles;CUSTOMERS,Tab 2 Only - Addresses & Sites;SITES,Tab 3 Only - Site Uses & GL Accounts;SITE_USES,Tab 4 Only - Contacts & Roles;CONTACTS,Tab 5 Only - Multi-Currency Credit;MULTI_CURR,Tab 6 Only - Account Relationships;ACCT_RELATES,Tab 7 Only - Payment Instruments;PAYMENT_INSTR
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @excel-roundtrip-tab
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button btn-auto-exclude-p10 (
+        buttonName: AUTO_EXCLUDE_DUPS
+        label: Auto-Exclude $0-AR / 0-Open-SO Duplicates
+        layout {
+            sequence: 7
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-filter
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    button btn-download-xlsx-p10 (
+        buttonName: DOWNLOAD_CONNECTED_P10
+        label: Download Connected 8-Tab Workbook (.xlsx)
+        layout {
+            sequence: 5
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-file-excel-o
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 10
+                request: DOWNLOAD_CONNECTED_XLSX
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button btn-upload-excel (
+        buttonName: UPLOAD_EXCEL
+        label: Upload Connected Workbook & Apply Changes
+        layout {
+            sequence: 10
+            region: @excel-roundtrip-tab
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-upload
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Save Inline Edits, Cascade Exclusions & Re-Validate
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    dynamicAction da-refresh-after-drawer (
+        name: Refresh Workbench Grids After Drawer Save
+        execution {
+            sequence: 10
+        }
+        when {
+            event: apexafterclosedialog
+            selectionType: jQuerySelector
+            jquerySelector: body
+        }
+
+        action act-refresh-cnt-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @contacts-ig
+            }
+            execution {
+                sequence: 40
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-cust-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @customers-ig
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-deltas-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @deltas-ig
+            }
+            execution {
+                sequence: 50
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-pa-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @prof-amts-ig
+            }
+            execution {
+                sequence: 42
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-pmt-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @payment-instr-ig
+            }
+            execution {
+                sequence: 46
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-rel-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @acct-relates-ig
+            }
+            execution {
+                sequence: 44
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-sites-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @sites-ig
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+        action act-refresh-su-ig (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @site-uses-ig
+            }
+            execution {
+                sequence: 30
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    validation val-contacts-ig (
+        name: Pre-Save Contact Name & Email Format Check (Contacts)
+        execution {
+            sequence: 40
+        }
+        validation {
+            editableRegion: @contacts-ig
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                return xxcr_rollout_pkg.validate_contact_row(
+                  p_include_yn   => :INCLUDE_YN,
+                  p_primary_flag => :TGT_PRIMARY_FLAG,
+                  p_first_name   => :TGT_FIRST_NAME,
+                  p_last_name    => :TGT_LAST_NAME,
+                  p_email        => :TGT_EMAIL_ADDRESS
+                );
+                ```
+        }
+        error {
+            associatedColumn: TGT_EMAIL_ADDRESS
+        }
+    )
+
+    validation val-cust-ig (
+        name: Pre-Save EBS Lookup & Credit Limit Check (Customers)
+        execution {
+            sequence: 10
+        }
+        validation {
+            editableRegion: @customers-ig
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                return xxcr_rollout_pkg.validate_cust_row(
+                  p_include_yn         => :INCLUDE_YN,
+                  p_action_code        => :ACTION_CODE,
+                  p_tgt_party_name     => :TGT_PARTY_NAME,
+                  p_tgt_account_number => :TGT_ACCOUNT_NUMBER,
+                  p_cust_class         => :TGT_CUSTOMER_CLASS_CODE,
+                  p_profile_class      => :TGT_PROFILE_CLASS_NAME,
+                  p_collector          => :TGT_COLLECTOR_NAME,
+                  p_payment_term       => :TGT_PAYMENT_TERM_NAME,
+                  p_credit_curr        => :TGT_CREDIT_CURRENCY,
+                  p_overall_limit      => :TGT_OVERALL_CREDIT_LIMIT,
+                  p_trx_limit          => :TGT_TRX_CREDIT_LIMIT
+                );
+                ```
+        }
+        error {
+            associatedColumn: INCLUDE_YN
+        }
+    )
+
+    validation val-prof-amts-ig (
+        name: Pre-Save Multi-Currency Credit Limit Check
+        execution {
+            sequence: 45
+        }
+        validation {
+            editableRegion: @prof-amts-ig
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                return xxcr_rollout_pkg.validate_prof_amt_row(
+                  p_include_yn    => :INCLUDE_YN,
+                  p_currency_code => :TGT_CURRENCY_CODE,
+                  p_overall_limit => :TGT_OVERALL_CREDIT_LIMIT,
+                  p_trx_limit     => :TGT_TRX_CREDIT_LIMIT
+                );
+                ```
+        }
+        error {
+            associatedColumn: TGT_OVERALL_CREDIT_LIMIT
+        }
+    )
+
+    validation val-sites-ig (
+        name: Pre-Save EBS Country & Address Check (Sites)
+        execution {
+            sequence: 20
+        }
+        validation {
+            editableRegion: @sites-ig
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                return xxcr_rollout_pkg.validate_site_row(
+                  p_include_yn  => :INCLUDE_YN,
+                  p_country     => :TGT_COUNTRY,
+                  p_address1    => :TGT_ADDRESS1,
+                  p_city        => :TGT_CITY,
+                  p_postal_code => :TGT_POSTAL_CODE,
+                  p_sales_curr  => :TGT_SALES_CURRENCY,
+                  p_rps_hold    => :TGT_RPS_HOLD_FLAG
+                );
+                ```
+        }
+        error {
+            associatedColumn: TGT_COUNTRY
+        }
+    )
+
+    validation val-su-ig (
+        name: Pre-Save EBS Terms, Warehouse, Price List & GL Check (Site Uses)
+        execution {
+            sequence: 30
+        }
+        validation {
+            editableRegion: @site-uses-ig
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                return xxcr_rollout_pkg.validate_site_use_row(
+                  p_include_yn     => :INCLUDE_YN,
+                  p_primary_flag   => :TGT_PRIMARY_FLAG,
+                  p_location_code  => :TGT_LOCATION_CODE,
+                  p_profile_class  => :TGT_PROFILE_CLASS_NAME,
+                  p_collector      => :TGT_COLLECTOR_NAME,
+                  p_payment_term   => :TGT_PAYMENT_TERM_NAME,
+                  p_credit_curr    => :TGT_CREDIT_CURRENCY,
+                  p_overall_limit  => :TGT_OVERALL_CREDIT_LIMIT,
+                  p_trx_limit      => :TGT_TRX_CREDIT_LIMIT,
+                  p_warehouse_code => :TGT_WAREHOUSE_CODE,
+                  p_order_type     => :TGT_ORDER_TYPE_NAME,
+                  p_price_list     => :TGT_PRICE_LIST_NAME,
+                  p_tax_code       => :TGT_TAX_CODE,
+                  p_gl_rec         => :TGT_GL_REC_CONCAT,
+                  p_gl_rev         => :TGT_GL_REV_CONCAT,
+                  p_gl_tax         => :TGT_GL_TAX_CONCAT,
+                  p_stmt_cycle     => :TGT_STATEMENT_CYCLE_NAME,
+                  p_autocash_rule  => :TGT_AUTOCASH_RULE_NAME,
+                  p_grouping_rule  => :TGT_GROUPING_RULE_NAME
+                );
+                ```
+        }
+        error {
+            associatedColumn: INCLUDE_YN
+        }
+    )
+
+    process download-connected-xlsx (
+        name: Stream Connected 5-Tab Excel Workbook
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id  number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                  l_proj_cd  varchar2(60);
+                  l_blob     blob;
+                begin
+                  select project_code
+                    into l_proj_cd
+                    from xxcr_projects
+                   where project_id = l_proj_id;
+                
+                  l_blob := xxcr_rollout_pkg.generate_connected_xlsx(l_proj_id);
+                
+                  apex_http.download(
+                    p_blob         => l_blob,
+                    p_content_type => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    p_filename     => l_proj_cd || '_Connected_Workbook_' || to_char(sysdate, 'YYYYMMDD_HH24MI') || '.xlsx'
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60003010
+        }
+        serverSideCondition {
+            type: request=Value
+            value: DOWNLOAD_CONNECTED_XLSX
+        }
+    )
+
+    process init-active-project-p10 (
+        name: Resolve Active Conversion Project
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  :P0_PROJECT_ID := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 1
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60001010
+        }
+    )
+
+    process run-auto-exclude-dups (
+        name: Auto-Exclude $0-AR / 0-Open-SO Duplicates
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                  l_cnt     number := 0;
+                begin
+                  if l_proj_id is not null then
+                    xxcr_rollout_pkg.auto_exclude_dormant_duplicates(l_proj_id, l_cnt);
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 45
+        }
+        successMessage {
+            successMessage: Dormant duplicate Sites, Site Uses ($0 Open AR & 0 Open Sales Orders), and duplicate Contacts excluded and cascaded on active project!
+        }
+        advanced {
+            executionMappingIdentifier: 60001017
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-auto-exclude-p10
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process run-excel-import (
+        name: Parse Uploaded Connected Excel & Apply Deltas
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id   number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                  l_import_id number;
+                begin
+                  for r_file in (
+                    select filename, mime_type, blob_content
+                      from apex_application_temp_files
+                     where name = :P10_EXCEL_FILE
+                  ) loop
+                    xxcr_rollout_pkg.process_excel_upload(
+                      p_project_id   => l_proj_id,
+                      p_file_name    => r_file.filename,
+                      p_mime_type    => r_file.mime_type,
+                      p_file_blob    => r_file.blob_content,
+                      p_target_sheet => nvl(:P10_TARGET_SHEET, 'AUTO'),
+                      p_import_id    => l_import_id
+                    );
+                  end loop;
+                end;
+                ```
+        }
+        execution {
+            sequence: 50
+        }
+        successMessage {
+            successMessage: Connected Excel workbook parsed for active project, cascading exclusions & cell deltas applied across all 4 entities, duplicates re-scanned, and 4-stage validation refreshed!
+        }
+        advanced {
+            executionMappingIdentifier: 60003011
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-upload-excel
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-acct-relates-ig (
+        name: Save Account Relationships Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @acct-relates-ig
+        execution {
+            sequence: 42
+        }
+        advanced {
+            executionMappingIdentifier: 60001065
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-contacts-ig (
+        name: Save Contacts Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @contacts-ig
+        execution {
+            sequence: 40
+        }
+        advanced {
+            executionMappingIdentifier: 60002012
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-customers-ig (
+        name: Save Customers Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @customers-ig
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 60001011
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-payment-instr-ig (
+        name: Save Payment Instruments Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @payment-instr-ig
+        execution {
+            sequence: 43
+        }
+        advanced {
+            executionMappingIdentifier: 60001075
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-prof-amts-ig (
+        name: Save Multi-Currency Credit Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @prof-amts-ig
+        execution {
+            sequence: 41
+        }
+        advanced {
+            executionMappingIdentifier: 60001055
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-site-uses-ig (
+        name: Save Site Uses Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @site-uses-ig
+        execution {
+            sequence: 30
+        }
+        advanced {
+            executionMappingIdentifier: 60002011
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process save-sites-ig (
+        name: Save Sites Interactive Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @sites-ig
+        execution {
+            sequence: 20
+        }
+        advanced {
+            executionMappingIdentifier: 60001012
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process sync-and-validate-after-save (
+        name: Cascade Exclusions, Sync Deltas & Re-Validate After Inline Save
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  if l_proj_id is not null then
+                    xxcr_rollout_pkg.cascade_exclusions(l_proj_id);
+                    xxcr_rollout_pkg.sync_deltas(l_proj_id);
+                    xxcr_rollout_pkg.find_duplicates(l_proj_id);
+                    xxcr_rollout_pkg.validate_project(l_proj_id);
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 60
+        }
+        successMessage {
+            successMessage: Inline edits saved on active project, Account/Site exclusions cascaded, duplicates re-scanned, and 4-stage validation refreshed!
+        }
+        advanced {
+            executionMappingIdentifier: 60001013
+        }
+        serverSideCondition {
+            type: requestIsNotContainedInValue
+            value: UPLOAD_EXCEL:AUTO_EXCLUDE_DUPS:SWITCH_PROJECT
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+)
+

@@ -1,0 +1,22 @@
+authentication ebs-credentials (
+    name: EBS Credentials
+    type: custom
+    settings {
+        authFunctionName: xxcr_security_pkg.authenticate
+    }
+    postLogout {
+        redirectTo: url
+        url: f?p=&APP_ID.:9999:0
+    }
+    sessionSharing {
+        type: custom
+        cookieName: XXCR_APP600
+        cookiePath: /ords/
+    }
+)
+
+authentication oracle-apex-accounts (
+    name: Oracle APEX Accounts
+    type: oracleApexAccounts
+)
+

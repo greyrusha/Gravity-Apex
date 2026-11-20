@@ -1,0 +1,20 @@
+lov lov-flag-yn (
+    name: FLAG_YES_NO
+    source {
+        location: staticValues
+    }
+
+    entry flg-n (
+        sequence: 20
+        display: N — No
+        return: N
+    )
+
+    entry flg-y (
+        sequence: 10
+        display: Y — Yes
+        return: Y
+    )
+
+)
+

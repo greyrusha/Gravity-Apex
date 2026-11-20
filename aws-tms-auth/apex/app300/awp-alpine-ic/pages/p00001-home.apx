@@ -1,0 +1,645 @@
+page 1 (
+    name: Current Markup
+    alias: HOME
+    title: AWP Alpine IC Inventory Reconciliation
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    javaScript {
+        functionAndGlobalVariableDeclaration:
+            ```javascript-browser
+            window.icMarkupRefresh = (function () {
+                var pollHandle = null;
+                var runId = null;
+            
+                function formatSeconds(value) {
+                    var seconds = Math.max(0, Math.floor(Number(value || 0)));
+                    var hours = Math.floor(seconds / 3600);
+                    var minutes = Math.floor((seconds % 3600) / 60);
+                    var remainder = seconds % 60;
+                    return (hours ? hours + ':' : '') +
+                           String(minutes).padStart(hours ? 2 : 1, '0') + ':' +
+                           String(remainder).padStart(2, '0');
+                }
+            
+                function setBusy(isBusy) {
+                    var $ = apex.jQuery;
+                    $('#dataset-status .ic-status').toggleClass('is-refreshing', isBusy).attr('aria-busy', isBusy ? 'true' : 'false');
+                    $('#refresh-now').prop('disabled', isBusy);
+                    $('#P1_EBS_INSTANCE').prop('disabled', isBusy);
+                    $('#open-excel,#open-pivot').attr('aria-disabled', isBusy ? 'true' : 'false');
+                }
+            
+                function showError(message) {
+                    apex.message.clearErrors();
+                    apex.message.showErrors([{type:'error', location:'page', message:message, unsafe:false}]);
+                }
+            
+                function render(data) {
+                    var $ = apex.jQuery;
+                    $('#refresh-run-status').text('Status: ' + (data.display_status || data.status || 'Unknown'));
+                    (data.stages || []).forEach(function (stage) {
+                        var $card = $('#refresh-stage-' + stage.number);
+                        $card.removeClass('ic-stage--running ic-stage--completed ic-stage--error ic-stage--skipped ic-stage--rolled_back');
+                        $card.addClass('ic-stage--' + String(stage.status || 'waiting').toLowerCase());
+                        $card.find('em').text(stage.display_status || stage.status || 'Waiting');
+                        $card.find('small').text(formatSeconds(stage.elapsed_seconds));
+                        $card.find('.ic-stage__dates').html('Started (ET): ' + (stage.started_at || '-') + '<br>Completed (ET): ' + (stage.completed_at || '-'));
+                        $card.find('.ic-stage__count').text(stage.row_count === null || stage.row_count === undefined ? '' : stage.row_count + ' row(s)');
+                    });
+                }
+            
+                function poll() {
+                    apex.server.process('REFRESH_STATUS', {x01:String(runId), pageItems:'#P1_EBS_INSTANCE'}, {dataType:'json'})
+                        .done(function (data) {
+                            if (!data.ok) {
+                                if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+                                setBusy(false);
+                                showError(data.message || 'Unable to read refresh status.');
+                                return;
+                            }
+                            render(data);
+                            if (data.status === 'COMPLETED') {
+                                clearInterval(pollHandle);
+                                pollHandle = null;
+                                setBusy(false);
+                                window.setTimeout(function () { window.location.reload(); }, 900);
+                            } else if (data.status === 'ERROR') {
+                                clearInterval(pollHandle);
+                                pollHandle = null;
+                                setBusy(false);
+                                showError(data.message || 'Refresh failed. No changes were published.');
+                            }
+                        })
+                        .fail(function () {
+                            if (pollHandle) { clearInterval(pollHandle); pollHandle = null; }
+                            setBusy(false);
+                            showError('Unable to read refresh status.');
+                        });
+                }
+            
+                function start() {
+                    apex.message.clearErrors();
+                    setBusy(true);
+                    apex.server.process('START_REFRESH', {pageItems:'#P1_EBS_INSTANCE'}, {dataType:'json'})
+                        .done(function (data) {
+                            if (!data.ok) {
+                                setBusy(false);
+                                showError(data.message || 'Unable to start refresh.');
+                                return;
+                            }
+                            runId = data.run_id;
+                            render(data);
+                            poll();
+                            pollHandle = window.setInterval(poll, 2000);
+                        })
+                        .fail(function () {
+                            setBusy(false);
+                            showError('Unable to start refresh.');
+                        });
+                }
+            
+                function init() {
+                    var $ = apex.jQuery;
+                    $('#refresh-now').off('click.icRefresh').on('click.icRefresh', start);
+                    var $status = $('#dataset-status .ic-status');
+                    runId = Number($status.attr('data-run-id')) || null;
+                    var status = $status.attr('data-run-status');
+                    if (runId && (status === 'QUEUED' || status === 'RUNNING')) {
+                        setBusy(true);
+                        poll();
+                        pollHandle = window.setInterval(poll, 2000);
+                    }
+                }
+            
+                return {init:init};
+            }());
+            ```
+        executeWhenPageLoads: icMarkupRefresh.init();
+    }
+    css {
+        inline:
+            ```css
+            #dataset-status { position: relative; }
+            .ic-status { border-left: 4px solid #2563eb; border-radius: .35rem; padding: 1rem; background: #eff6ff; }
+            .ic-status__header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+            .ic-status__header h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
+            .ic-status__header p { margin: .2rem 0; }
+            .ic-status__actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+            .ic-stage-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
+            .ic-stage { background: #fff; border: 1px solid #dbeafe; border-radius: .35rem; padding: .75rem; display: grid; gap: .25rem; }
+            .ic-stage span { font-weight: 700; color: #2563eb; }
+            .ic-stage em { font-style: normal; color: #6b7280; }
+            .ic-stage small { font-variant-numeric: tabular-nums; }
+            .ic-stage__dates,.ic-stage__count { font-size:.75rem; color:#6b7280; }
+            .ic-stage--running { border-color:#2563eb; box-shadow:0 0 0 1px #2563eb inset; }
+            .ic-stage--completed { border-color:#16a34a; }
+            .ic-stage--error { border-color:#dc2626; background:#fef2f2; }
+            .ic-stage--skipped { border-color:#d97706; background:#fffbeb; }
+            .ic-stage--rolled_back { border-color:#dc2626; background:#fff7ed; }
+            .ic-status--running { border-left-color:#2563eb; }
+            .ic-status--completed { border-left-color:#16a34a; background:#f0fdf4; }
+            .ic-status--error { border-left-color:#dc2626; background:#fef2f2; }
+            .ic-status.is-refreshing .ic-status__actions a { pointer-events:none; opacity:.55; }
+            .ic-admin-error { margin-top:1rem; padding:.75rem; background:#fff; border:1px solid #fecaca; white-space:pre-wrap; overflow:auto; }
+            @media (max-width: 800px) { .ic-status__header { display: block; } .ic-status__actions { margin-top: .75rem; } .ic-stage-grid { grid-template-columns: 1fr; } }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region awp-alpine-ic-inventory-reconciliation (
+        name: AWP Alpine IC Inventory Reconciliation
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/hero
+            templateOptions: #DEFAULT#
+        }
+        image {
+            fileUrl: #APP_FILES#icons/app-icon-512.png
+        }
+    )
+
+    region current-markup (
+        name: Current Markup by Model and Ledger
+        title: Current Markup by Model and Ledger
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select model_name,
+                       ledger_name,
+                       sum(usd_amount) as usd_amount
+                  from xx_ic_markup_report_all_v
+                 where ebs_instance_code = :P1_EBS_INSTANCE
+                   and sold_yes_no = 'NO'
+                 group by model_name, ledger_name
+                ```
+            pageItemsToSubmit: P1_EBS_INSTANCE
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        serverSideCondition {
+            type: rowsReturned
+            sqlQuery: select 1 from dual where 1 = 0
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        advanced {
+            savedReportMappingIdentifier: 32243989446131104
+        }
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column MODEL_NAME (
+            type: plainText
+            heading {
+                heading: Model Name
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column USD_AMOUNT (
+            type: plainText
+            heading {
+                heading: Usd Amount
+                alignment: end
+            }
+            layout {
+                sequence: 370
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AK
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Current Markup by Model and Ledger
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                pivot: true
+                default: pivot
+                rowsPerPage: 50
+            }
+
+            displayColumn LEDGER_NAME (
+                sequence: 2
+            )
+
+            displayColumn MODEL_NAME (
+                sequence: 1
+            )
+
+            displayColumn USD_AMOUNT (
+                sequence: 3
+            )
+
+            pivotColumn (
+                column: LEDGER_NAME
+                layout {
+                    sequence: 1
+                }
+            )
+
+            pivotRowColumn (
+                column: MODEL_NAME
+                layout {
+                    sequence: 1
+                }
+            )
+
+            pivotAggregate ir-pivot-agg (
+                heading: USD Markup
+                aggregate {
+                    function: sum
+                    column: USD_AMOUNT
+                    displaySum: true
+                }
+                appearance {
+                    formatMask: 999G999G999G999G990
+                }
+                layout {
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region dataset-status (
+        name: Dataset Status
+        title: Dataset Status
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                    l_count          number := 0;
+                    l_refreshed      varchar2(100) := 'No successful refresh recorded';
+                    l_refreshed_by   varchar2(255) := 'Not recorded';
+                    l_context        varchar2(100) := nvl(:P1_EBS_INSTANCE, 'Not selected');
+                    l_export_url     varchar2(4000);
+                    l_pivot_url      varchar2(4000);
+                    l_run_id         number;
+                    l_run_status     varchar2(30) := 'READY';
+                    l_stage_status   varchar2(30);
+                    l_stage_started  varchar2(100);
+                    l_stage_completed varchar2(100);
+                    l_stage_duration number;
+                    l_stage_count    number;
+                    l_stage_message  varchar2(1000);
+                    l_stage_name     varchar2(100);
+                    l_stage_class    varchar2(50);
+                    l_status_label   varchar2(100);
+                    l_html           clob;
+                begin
+                    begin
+                        select unsold_machine_count,
+                               nvl(to_char(
+                                       from_tz(cast(latest_refresh_date as timestamp), 'UTC')
+                                           at time zone 'America/New_York',
+                                       'YYYY-MM-DD HH:MI:SS AM TZD'
+                                   ), 'No successful refresh recorded'),
+                               nvl(latest_refresh_by, 'Not recorded')
+                          into l_count, l_refreshed, l_refreshed_by
+                          from xx_ic_markup_context_status_v
+                         where ebs_instance_code = :P1_EBS_INSTANCE;
+                    exception
+                        when no_data_found then null;
+                    end;
+                
+                    begin
+                        select run_id, status
+                          into l_run_id, l_run_status
+                          from (
+                              select run_id, status
+                                from xx_ic_markup_refresh_run
+                               where ebs_instance_code = :P1_EBS_INSTANCE
+                               order by run_id desc
+                          )
+                         where rownum = 1;
+                    exception
+                        when no_data_found then null;
+                    end;
+                
+                    l_export_url := apex_page.get_url(
+                        p_page        => 10,
+                        p_clear_cache => '10',
+                        p_items       => 'P10_EBS_INSTANCE',
+                        p_values      => :P1_EBS_INSTANCE,
+                        p_plain_url   => true
+                    );
+                    l_pivot_url := apex_page.get_url(
+                        p_page        => 20,
+                        p_clear_cache => '20',
+                        p_items       => 'P20_EBS_INSTANCE',
+                        p_values      => :P1_EBS_INSTANCE,
+                        p_plain_url   => true
+                    );
+                
+                    l_status_label := case l_run_status
+                        when 'QUEUED' then 'Queued'
+                        when 'RUNNING' then 'Refresh in progress'
+                        when 'COMPLETED' then 'Ready'
+                        when 'ERROR' then 'Refresh failed - no changes were published'
+                        else 'Ready'
+                    end;
+                
+                    l_html := '<div class="ic-status ic-status--' || lower(l_run_status) ||
+                              '" data-run-id="' || nvl(to_char(l_run_id), '') ||
+                              '" data-run-status="' || apex_escape.html_attribute(l_run_status) || '">' ||
+                           '<div class="ic-status__header"><div>' ||
+                           '<h2>Local Dataset Status</h2>' ||
+                           '<p><strong>Context:</strong> ' || apex_escape.html(l_context) || '</p>' ||
+                           '<p><strong>Unsold machines:</strong> ' || to_char(l_count, 'FM999G999G999') || '</p>' ||
+                           '<p><strong>Latest EBS refresh (ET):</strong> ' || apex_escape.html(l_refreshed) || '</p>' ||
+                           '<p><strong>Refreshed by:</strong> ' || apex_escape.html(l_refreshed_by) || '</p>' ||
+                           '<p id="refresh-run-status" class="ic-status__timing">Status: ' || apex_escape.html(l_status_label) || '</p></div>' ||
+                           '<div class="ic-status__actions">' ||
+                           '<button id="refresh-now" type="button" class="t-Button t-Button--hot"' ||
+                           case when l_run_status in ('QUEUED', 'RUNNING') then ' disabled' end || '>Refresh Now</button>' ||
+                           '<a id="open-excel" class="t-Button" href="' || apex_escape.html_attribute(l_export_url) || '" target="_blank" rel="noopener">Open Excel Export</a>' ||
+                           '<a id="open-pivot" class="t-Button" href="' || apex_escape.html_attribute(l_pivot_url) || '" target="_blank" rel="noopener">Open Pivot Library</a>' ||
+                           '</div></div>' ||
+                           '<div class="ic-stage-grid">';
+                
+                    for i in 1 .. 4 loop
+                        begin
+                            select stage_name, status,
+                                   case when started_date is not null then
+                                       to_char(from_tz(cast(started_date as timestamp), 'UTC')
+                                           at time zone 'America/New_York', 'YYYY-MM-DD HH:MI:SS AM TZD')
+                                   end,
+                                   case when completed_date is not null then
+                                       to_char(from_tz(cast(completed_date as timestamp), 'UTC')
+                                           at time zone 'America/New_York', 'YYYY-MM-DD HH:MI:SS AM TZD')
+                                   end,
+                                   case when status = 'RUNNING' and started_date is not null
+                                        then round((cast(systimestamp as date) - cast(started_date as date)) * 86400)
+                                        else nvl(duration_seconds, 0)
+                                   end,
+                                   row_count, status_message
+                              into l_stage_name, l_stage_status, l_stage_started, l_stage_completed,
+                                   l_stage_duration, l_stage_count, l_stage_message
+                              from xx_ic_markup_refresh_stage
+                             where run_id = l_run_id
+                               and stage_no = i;
+                        exception
+                            when no_data_found then
+                                l_stage_name := case i
+                                    when 1 then 'Get new rows'
+                                    when 2 then 'Update GL accounts'
+                                    when 3 then 'Update sold / unsold status'
+                                    when 4 then 'Update reversal status'
+                                end;
+                                l_stage_status := 'WAITING';
+                                l_stage_started := null;
+                                l_stage_completed := null;
+                                l_stage_duration := 0;
+                                l_stage_count := null;
+                                l_stage_message := null;
+                        end;
+                
+                        l_stage_class := lower(l_stage_status);
+                        l_html := l_html || '<div id="refresh-stage-' || i || '" class="ic-stage ic-stage--' || l_stage_class || '">' ||
+                                  '<span>' || i || '</span><strong>' || apex_escape.html(l_stage_name) || '</strong>' ||
+                                  '<em>' || apex_escape.html(initcap(replace(lower(l_stage_status), '_', ' '))) || '</em>' ||
+                                  '<small>' || trunc(nvl(l_stage_duration, 0) / 60) || ':' || lpad(mod(trunc(nvl(l_stage_duration, 0)), 60), 2, '0') || '</small>' ||
+                                  '<span class="ic-stage__dates">Started (ET): ' || nvl(l_stage_started, '-') ||
+                                  '<br>Completed (ET): ' || nvl(l_stage_completed, '-') || '</span>' ||
+                                  '<span class="ic-stage__count">' || case when l_stage_count is not null then to_char(l_stage_count) || ' row(s)' end || '</span>' ||
+                                  case when l_stage_message is not null then '<span class="ic-stage__count">' || apex_escape.html(l_stage_message) || '</span>' end ||
+                                  '</div>';
+                    end loop;
+                
+                    l_html := l_html || '</div></div>';
+                
+                    return l_html;
+                end;
+                ```
+            pageItemsToSubmit: P1_EBS_INSTANCE
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P1_EBS_INSTANCE (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @dataset-status
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: PTRXI
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    process refresh-status (
+        name: REFRESH_STATUS
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_run_id          number;
+                    l_status          varchar2(30);
+                    l_started_date    timestamp;
+                    l_completed_date  timestamp;
+                    l_elapsed_seconds number := 0;
+                begin
+                    apex_json.open_object;
+                    begin
+                        l_run_id := to_number(apex_application.g_x01);
+                
+                        select status, started_date, completed_date,
+                               case
+                                   when started_date is null then 0
+                                   when completed_date is null
+                                       then round((cast(systimestamp as date) - cast(started_date as date)) * 86400)
+                                   else round((cast(completed_date as date) - cast(started_date as date)) * 86400)
+                               end
+                          into l_status, l_started_date, l_completed_date, l_elapsed_seconds
+                          from xx_ic_markup_refresh_run
+                         where run_id = l_run_id
+                           and ebs_instance_code = :P1_EBS_INSTANCE;
+                
+                        apex_json.write('ok', true);
+                        apex_json.write('run_id', l_run_id);
+                        apex_json.write('status', l_status);
+                        apex_json.write('display_status', case l_status
+                            when 'QUEUED' then 'Queued'
+                            when 'RUNNING' then 'Refresh in progress (' || l_elapsed_seconds || ' seconds)'
+                            when 'COMPLETED' then 'Completed'
+                            when 'ERROR' then 'Refresh failed'
+                            else initcap(lower(l_status))
+                        end);
+                        apex_json.write('elapsed_seconds', l_elapsed_seconds);
+                        apex_json.write('message', case when l_status = 'ERROR'
+                            then 'Refresh failed. No changes were published.' end);
+                
+                        apex_json.open_array('stages');
+                        for s in (
+                            select stage_no, stage_name, status, started_date, completed_date,
+                                   case
+                                       when status = 'RUNNING' and started_date is not null
+                                           then round((cast(systimestamp as date) - cast(started_date as date)) * 86400)
+                                       else nvl(duration_seconds, 0)
+                                   end as elapsed_seconds,
+                                   row_count, status_message
+                              from xx_ic_markup_refresh_stage
+                             where run_id = l_run_id
+                             order by stage_no
+                        ) loop
+                            apex_json.open_object;
+                            apex_json.write('number', s.stage_no);
+                            apex_json.write('name', s.stage_name);
+                            apex_json.write('status', s.status);
+                            apex_json.write('display_status', initcap(replace(lower(s.status), '_', ' ')));
+                            apex_json.write('started_at', case when s.started_date is not null then
+                                to_char(from_tz(cast(s.started_date as timestamp), 'UTC')
+                                    at time zone 'America/New_York', 'YYYY-MM-DD HH:MI:SS AM TZD') end);
+                            apex_json.write('completed_at', case when s.completed_date is not null then
+                                to_char(from_tz(cast(s.completed_date as timestamp), 'UTC')
+                                    at time zone 'America/New_York', 'YYYY-MM-DD HH:MI:SS AM TZD') end);
+                            apex_json.write('elapsed_seconds', s.elapsed_seconds);
+                            apex_json.write('row_count', nvl(s.row_count, 0));
+                            apex_json.write('status_message', s.status_message);
+                            apex_json.close_object;
+                        end loop;
+                        apex_json.close_array;
+                    exception
+                        when others then
+                            apex_json.write('ok', false);
+                            apex_json.write('message', 'Unable to read refresh status.');
+                    end;
+                    apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 300001402
+        }
+    )
+
+    process start-refresh (
+        name: START_REFRESH
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_run_id number;
+                begin
+                    apex_json.open_object;
+                    begin
+                        if :P1_EBS_INSTANCE is null then
+                            raise_application_error(-20003, 'Select an EBS instance.');
+                        end if;
+                
+                        xx_ic_markup_refresh_pkg.submit_refresh(
+                            p_ebs_instance_code => :P1_EBS_INSTANCE,
+                            p_requested_by      => :APP_USER,
+                            p_run_id            => l_run_id
+                        );
+                
+                        apex_json.write('ok', true);
+                        apex_json.write('run_id', l_run_id);
+                        apex_json.write('status', 'QUEUED');
+                        apex_json.write('display_status', 'Queued');
+                    exception
+                        when others then
+                            apex_json.write('ok', false);
+                            apex_json.write(
+                                'message',
+                                case
+                                    when sqlcode = -20002 then 'A refresh is already queued or running for this EBS instance.'
+                                    when sqlcode = -20003 then 'Select an EBS instance.'
+                                    else 'Unable to start refresh. Contact the application administrator.'
+                                end
+                            );
+                    end;
+                    apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 300001401
+        }
+    )
+
+)
+

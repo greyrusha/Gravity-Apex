@@ -1,0 +1,95 @@
+page 0 (
+    name: Global Page
+    appearance {
+        templateOptions: #DEFAULT#
+    }
+
+    region app-owner-support (
+        name: Application Owner Support
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <style id="xxme-app-owner-support-style">
+                .xxme-support-footer{margin-top:1.5rem;padding:.75rem 1rem;border-top:1px solid var(--ut-component-border-color,#d9dce1);text-align:center;}
+                .xxme-support-footer .xxme-support-note{margin-left:.5rem;color:var(--ut-component-text-muted-color,#5f6368);font-size:.8rem;}
+                @media(max-width:640px){.xxme-support-footer .xxme-support-note{display:block;margin:.35rem 0 0;}}
+                </style>
+                <div class="xxme-support-footer">
+                  <a id="xxme-support-mail-link" class="t-Button t-Button--small t-Button--link"
+                     href="mailto:artur.rushevich@terex.com"
+                     aria-label="Report an issue to the application owner"
+                     title="Report an issue to the application owner">
+                    <span class="t-Icon fa fa-envelope" aria-hidden="true"></span> Report an Issue
+                  </a>
+                  <span class="xxme-support-note">Opens your default email application.</span>
+                </div>
+                <script>
+                (function () {
+                  "use strict";
+                  var link = document.getElementById("xxme-support-mail-link");
+                  var root = link && link.closest(".u-hidden");
+                  var pageId = Number("&APP_PAGE_ID.");
+                  var appUser = "&APP_USER.";
+                  var pageNames = {
+                    1: "Current Markup",
+                    10: "Excel Export",
+                    20: "Pivot Library",
+                    21: "Product Line by Ledger",
+                    22: "Pivot Detail",
+                    23: "Product Line by Destination Country",
+                    24: "ICP Payables by Ledger",
+                    25: "Product Line by Manufacturing Organization",
+                    30: "Multi-Leg Serials"
+                  };
+                  if (!root || !link || pageId === 9998 || pageId === 9999) {
+                    return;
+                  }
+                  var pageName = pageNames[pageId] || document.title || ("Page " + pageId);
+                  var subject = "[App 300 Support] Page " + pageId + " - " + pageName;
+                  var body = "User: " + appUser + "\r\n" +
+                             "Application: App 300 - AWP Alpine IC Inventory Reconciliation\r\n" +
+                             "Page: " + pageId + " - " + pageName + "\r\n\r\n" +
+                             "Please describe the issue:";
+                  link.href = "mailto:artur.rushevich@terex.com?subject=" + encodeURIComponent(subject) +
+                              "&body=" + encodeURIComponent(body);
+                  root.classList.remove("u-hidden");
+                }());
+                </script>
+                ```
+        }
+        layout {
+            sequence: 9999
+            slot: body
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+            cssClasses: [
+                u-hidden
+                t-Region--hideHeader
+            ]
+        }
+    )
+
+    region appearance-actions (
+        name: Appearance actions
+        type: staticContent
+        source {
+            htmlCode: <script defer src="#APP_FILES#appearance.js?v=43c9527a4f"></script>
+        }
+        layout {
+            sequence: 9998
+            slot: beforeFooter
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: userIsAuthenticated
+        }
+    )
+
+)
+

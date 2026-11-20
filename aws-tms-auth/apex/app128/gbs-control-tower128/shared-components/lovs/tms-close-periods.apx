@@ -1,0 +1,23 @@
+lov tms-close-periods (
+    name: TMS_CLOSE_PERIODS
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select upper(to_char(period_start, 'MON-YYYY', 'NLS_DATE_LANGUAGE=English')) as display_value,
+                   upper(to_char(period_start, 'MON-YYYY', 'NLS_DATE_LANGUAGE=English')) as return_value,
+                   sort_seq
+              from (
+                select add_months(trunc(sysdate, 'MM'), 2 - level) as period_start,
+                       level as sort_seq
+                  from dual
+                connect by level <= 6
+              )
+            ```
+    }
+    columnMapping {
+        return: RETURN_VALUE
+        display: DISPLAY_VALUE
+        defaultSort: SORT_SEQ
+    }
+)

@@ -1,0 +1,781 @@
+page 10 (
+    name: User Maintenance
+    alias: USER-MAINTENANCE
+    title: User Maintenance
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @workspace-administrator-only
+    }
+
+    region provision-ebs-user (
+        name: Provision or Update TMS (EBS) User
+        title: Provision or Update TMS (EBS) User
+        type: staticContent
+        source {
+            htmlCode: <p>Add or update an Oracle EBS (TMS) user in the unified TMS directory. Existing @terex.com bridge accounts continue working for legacy apps (115 and 300) during transition. Console Administrators can sign in to App 400 and access all registered apps.</p>
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region apply-account-actions (
+        name: Legacy Local Account Actions
+        title: Legacy Local Account Actions
+        type: staticContent
+        source {
+            htmlCode: <p>Select Reset Password, Lock, or Unlock for legacy @terex.com bridge workspace accounts (Apps 115 and 300), then click Save. To disable an EBS user globally across all apps, update the user in Provision or Update TMS (EBS) User.</p>
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region create-new-user (
+        name: Create Legacy Bridge User (@terex.com)
+        title: Create Legacy Bridge User (@terex.com)
+        type: staticContent
+        source {
+            htmlCode: <p>Optional transition helper: create an @terex.com workspace account for legacy apps (115 and 300) and auto-link it in the TMS directory. There is no permanent delete action.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region workspace-users (
+        name: Workspace Users
+        title: Workspace Users
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select coalesce(x.local_user_email, lower(u.user_name)) user_name,
+                       coalesce(x.full_name, trim(u.first_name || ' ' || u.last_name)) full_name,
+                       (select max(l.access_date)
+                          from apex_workspace_access_log l
+                         where l.authentication_result = 'AUTH_SUCCESS'
+                           and (
+                             (x.ebs_user_name is not null and upper(l.user_name) = x.ebs_user_name)
+                             or (u.user_name is not null and lower(l.user_name) = lower(u.user_name))
+                           )) last_successful_login,
+                       case when u.user_name is not null
+                                 and regexp_like(u.user_name, '@terex[.]com$', 'i')
+                                 and upper(nvl(u.is_admin, 'NO')) <> 'YES'
+                                 and upper(nvl(u.is_application_developer, 'NO')) <> 'YES'
+                            then apex_item.checkbox2(3, lower(u.user_name), null, null, null,
+                                   'reset_' || ora_hash(coalesce(x.ebs_user_name, lower(u.user_name))),
+                                   'Reset password for ' || lower(u.user_name)) end reset_password,
+                       case when u.user_name is not null
+                                 and regexp_like(u.user_name, '@terex[.]com$', 'i')
+                                 and upper(nvl(u.is_admin, 'NO')) <> 'YES'
+                                 and upper(nvl(u.is_application_developer, 'NO')) <> 'YES'
+                                 and upper(nvl(u.account_locked, 'NO')) <> 'YES'
+                            then apex_item.checkbox2(4, lower(u.user_name), null, null, null,
+                                   'lock_' || ora_hash(coalesce(x.ebs_user_name, lower(u.user_name))),
+                                   'Lock ' || lower(u.user_name)) end lock_account,
+                       case when u.user_name is not null
+                                 and regexp_like(u.user_name, '@terex[.]com$', 'i')
+                                 and upper(nvl(u.is_admin, 'NO')) <> 'YES'
+                                 and upper(nvl(u.is_application_developer, 'NO')) <> 'YES'
+                                 and upper(nvl(u.account_locked, 'NO')) = 'YES'
+                            then apex_item.checkbox2(5, lower(u.user_name), null, null, null,
+                                   'unlock_' || ora_hash(coalesce(x.ebs_user_name, lower(u.user_name))),
+                                   'Unlock ' || lower(u.user_name)) end unlock_account,
+                       case when x.ebs_user_name is not null then
+                              case when x.enabled_yn = 'Y' then 'TMS Enabled' else 'TMS Disabled' end ||
+                              case when u.user_name is not null then
+                                     case when upper(nvl(u.account_locked, 'NO')) = 'YES'
+                                          then ' / Local Locked' else ' / Local Active' end
+                                   else '' end
+                            when upper(nvl(u.account_locked, 'NO')) = 'YES' then 'Local Locked'
+                            else 'Local Active' end account_status,
+                       case when x.is_console_admin_yn = 'Y' then 'Console Administrator'
+                            when x.ebs_user_name is not null and u.user_name is not null then 'TMS EBS + Local Bridge'
+                            when x.ebs_user_name is not null then 'TMS EBS Only'
+                            when upper(nvl(u.is_admin, 'NO')) = 'YES' then 'Workspace Administrator'
+                            when upper(nvl(u.is_application_developer, 'NO')) = 'YES' then 'Application Developer'
+                            when not regexp_like(u.user_name, '@terex[.]com$', 'i') then 'Service/System Account'
+                            else 'Legacy Local End User' end account_type,
+                       x.ebs_user_name ebs_user_name
+                  from xx_tms_users x
+                  full outer join apex_workspace_apex_users u
+                    on lower(u.user_name) = x.local_user_email
+                 order by x.ebs_user_name nulls last, lower(u.user_name)
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 500
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column ACCOUNT_STATUS (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Status
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ACCOUNT_TYPE (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Account Type
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column EBS_USER_NAME (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: EBS User
+                alignment: center
+            }
+            layout {
+                sequence: 5
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FULL_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Name
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LAST_SUCCESSFUL_LOGIN (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Latest Successful Login
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LOCK_ACCOUNT (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Lock
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column RESET_PASSWORD (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Reset Password
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column UNLOCK_ACCOUNT (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Unlock
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column USER_NAME (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Local Bridge Account
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    pageItem P10_EBS_USER_NAME (
+        type: textField
+        label {
+            label: EBS Username
+            alignment: left
+        }
+        settings {
+            textCase: upper
+        }
+        layout {
+            sequence: 10
+            region: @provision-ebs-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            width: 30
+            valuePlaceholder: FIRST.LAST
+        }
+        validation {
+            maxLength: 100
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_EBS_FULL_NAME (
+        type: textField
+        label {
+            label: Full Name
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @provision-ebs-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+            valuePlaceholder: Full Name
+        }
+        validation {
+            maxLength: 255
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_EBS_LOCAL_EMAIL (
+        type: textField
+        label {
+            label: Local Bridge Email
+            alignment: left
+        }
+        settings {
+            subtype: email
+        }
+        layout {
+            sequence: 30
+            region: @provision-ebs-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 40
+            valuePlaceholder: name@terex.com
+        }
+        validation {
+            maxLength: 255
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_EBS_ENABLED_YN (
+        type: selectList
+        label {
+            label: TMS Status
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Enabled;Y,Disabled;N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 40
+            region: @provision-ebs-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_EBS_ADMIN_YN (
+        type: selectList
+        label {
+            label: Console Role
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:End User;N,Console Administrator;Y
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 50
+            region: @provision-ebs-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_CREATE_TEMP_PASSWORD (
+        type: password
+        label {
+            label: Temporary password
+            alignment: left
+        }
+        settings {
+            submitWhenEnterPressed: false
+        }
+        layout {
+            sequence: 40
+            region: @create-new-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            maxLength: 100
+        }
+        advanced {
+            customAttributes: autocomplete="new-password"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_EMAIL (
+        type: textField
+        label {
+            label: User email
+            alignment: left
+        }
+        settings {
+            subtype: email
+        }
+        layout {
+            sequence: 10
+            region: @create-new-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            width: 40
+            valuePlaceholder: name@terex.com
+        }
+        validation {
+            maxLength: 255
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_FIRST_NAME (
+        type: textField
+        label {
+            label: First name
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @create-new-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            maxLength: 255
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_LAST_NAME (
+        type: textField
+        label {
+            label: Last name
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @create-new-user
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            maxLength: 255
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P10_RESET_TEMP_PASSWORD (
+        type: password
+        label {
+            label: Reset temporary password
+            alignment: left
+        }
+        settings {
+            submitWhenEnterPressed: false
+        }
+        layout {
+            sequence: 10
+            region: @apply-account-actions
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 30
+        }
+        validation {
+            maxLength: 100
+        }
+        advanced {
+            customAttributes: autocomplete="new-password"
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    button save-ebs-user (
+        buttonName: SAVE_EBS_USER
+        label: Save TMS User
+        layout {
+            sequence: 10
+            region: @provision-ebs-user
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-id-badge
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button create-user (
+        buttonName: CREATE_USER
+        label: Create User
+        layout {
+            sequence: 10
+            region: @create-new-user
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-user-plus
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button save-account-actions (
+        buttonName: SAVE_ACCOUNT_ACTIONS
+        label: Save
+        layout {
+            sequence: 20
+            region: @apply-account-actions
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process save-ebs-user (
+        name: Save TMS (EBS) User
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_message varchar2(4000);
+                begin
+                  xx_tms_admin_pkg.save_ebs_user(
+                    p_ebs_user_name       => :P10_EBS_USER_NAME,
+                    p_local_user_email    => :P10_EBS_LOCAL_EMAIL,
+                    p_full_name           => :P10_EBS_FULL_NAME,
+                    p_enabled_yn          => nvl(:P10_EBS_ENABLED_YN, 'Y'),
+                    p_is_console_admin_yn => nvl(:P10_EBS_ADMIN_YN, 'N'),
+                    p_notes               => null,
+                    p_message             => l_message
+                  );
+                  apex_application.g_print_success_message := l_message;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        advanced {
+            executionMappingIdentifier: 4002055
+        }
+        serverSideCondition {
+            type: request=Value
+            value: SAVE_EBS_USER
+        }
+    )
+
+    process create-user (
+        name: Create User
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_message varchar2(4000);
+                begin
+                  xx_tms_admin_pkg.create_user(
+                    p_email => :P10_EMAIL, p_first_name => :P10_FIRST_NAME,
+                    p_last_name => :P10_LAST_NAME, p_temp_password => :P10_CREATE_TEMP_PASSWORD,
+                    p_application_codes => null, p_message => l_message);
+                  apex_application.g_print_success_message := l_message;
+                  apex_util.set_session_state('P10_CREATE_TEMP_PASSWORD', null);
+                exception when others then
+                  apex_util.set_session_state('P10_CREATE_TEMP_PASSWORD', null);
+                  raise;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 4002050
+        }
+        serverSideCondition {
+            type: request=Value
+            value: CREATE_USER
+        }
+    )
+
+    process save-account-actions (
+        name: Save Account Actions
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_message varchar2(4000);
+                  l_action_count pls_integer := 0;
+                begin
+                  for i in 1 .. apex_application.g_f04.count loop
+                    for j in 1 .. apex_application.g_f05.count loop
+                      if apex_application.g_f04(i) = apex_application.g_f05(j) then
+                        raise_application_error(-20822, 'The same account cannot be locked and unlocked.');
+                      end if;
+                    end loop;
+                  end loop;
+                  for i in 1 .. apex_application.g_f03.count loop
+                    xx_tms_admin_pkg.reset_password(apex_application.g_f03(i), :P10_RESET_TEMP_PASSWORD, l_message);
+                    l_action_count := l_action_count + 1;
+                  end loop;
+                  for i in 1 .. apex_application.g_f04.count loop
+                    xx_tms_admin_pkg.set_account_locked(apex_application.g_f04(i), 'Y', l_message);
+                    l_action_count := l_action_count + 1;
+                  end loop;
+                  for i in 1 .. apex_application.g_f05.count loop
+                    xx_tms_admin_pkg.set_account_locked(apex_application.g_f05(i), 'N', l_message);
+                    l_action_count := l_action_count + 1;
+                  end loop;
+                  if l_action_count = 0 then raise_application_error(-20823, 'Select at least one account action.'); end if;
+                  apex_application.g_print_success_message := l_action_count || ' account action(s) saved.';
+                  apex_util.set_session_state('P10_RESET_TEMP_PASSWORD', null);
+                exception when others then
+                  apex_util.set_session_state('P10_RESET_TEMP_PASSWORD', null);
+                  raise;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        advanced {
+            executionMappingIdentifier: 4002051
+        }
+        serverSideCondition {
+            type: request=Value
+            value: SAVE_ACCOUNT_ACTIONS
+        }
+    )
+
+)
+

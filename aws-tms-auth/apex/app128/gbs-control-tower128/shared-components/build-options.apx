@@ -1,0 +1,11 @@
+buildOption commented-out (
+    name: Commented Out
+)
+
+buildOption feature-ai (
+    name: FEATURE_AI
+    comments {
+        comments: AWS POC 120 phase 1: AI pages, controls, and background preparation are installed but disabled.
+    }
+)
+

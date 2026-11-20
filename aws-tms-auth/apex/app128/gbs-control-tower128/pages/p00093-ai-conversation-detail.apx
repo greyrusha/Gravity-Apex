@@ -1,0 +1,84 @@
+page 93 (
+    name: AI Conversation Detail
+    alias: AI-CONVERSATION-DETAIL
+    title: AI Conversation Detail
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/modal-dialog
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 1200
+        height: 760
+        chained: false
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region recorded-conversation-detail (
+        name: Recorded Conversation
+        title: Recorded Conversation
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                
+                declare
+                    procedure outp(p_text varchar2) is begin sys.htp.prn(p_text); end;
+                    procedure out_clob(p_text clob) is
+                        l_pos integer:=1; l_len integer:=dbms_lob.getlength(p_text);
+                    begin
+                        while l_pos<=l_len loop sys.htp.prn(dbms_lob.substr(p_text,240,l_pos)); l_pos:=l_pos+240; end loop;
+                    end;
+                begin
+                    for r in (select * from xxme_ai_p50_bench_log where run_id=:P93_RUN_ID) loop
+                        outp('<div class="t-Alert t-Alert--horizontal t-Alert--defaultIcons t-Alert--info"><div class="t-Alert-wrap"><div class="t-Alert-content"><div class="t-Alert-header"><h2 class="t-Alert-title">Run '||r.run_id||' · '||apex_escape.html(r.provider_name)||' / '||apex_escape.html(r.model_name)||'</h2></div>');
+                        outp('<div class="t-Alert-body">Application '||r.application_id||' · '||apex_escape.html(r.app_user)||' · Period '||apex_escape.html(r.period_name)||' · '||to_char(r.elapsed_ms/1000,'FM9999990D00')||' sec · '||apex_escape.html(r.status)||'</div></div></div></div>');
+                        outp('<h3>Question <small>'||apex_escape.html(to_char(r.question_ts,'YYYY-MM-DD HH24:MI:SS'))||'</small></h3><div class="t-Region-body"><pre style="white-space:pre-wrap;font-family:inherit">');
+                        out_clob(apex_escape.html_clob(r.question_text)); outp('</pre></div>');
+                        if r.status='SUCCESS' then
+                            outp('<h3>AI Response <small>'||apex_escape.html(to_char(r.response_ts,'YYYY-MM-DD HH24:MI:SS'))||'</small></h3><div class="t-Region-body">');
+                            out_clob(apex_markdown.to_html(r.response_text)); outp('</div>');
+                        else
+                            outp('<h3>Error</h3><div class="t-Alert t-Alert--danger"><div class="t-Alert-body">'||apex_escape.html(r.error_code||' - '||r.error_message)||'</div></div>');
+                        end if;
+                        outp('<details><summary>Technical context</summary><dl><dt>Agent</dt><dd>'||apex_escape.html(r.agent_static_id)||'</dd><dt>Database source</dt><dd>'||apex_escape.html(r.db_link_name)||'</dd><dt>APEX session</dt><dd>'||apex_escape.html(r.apex_session_id)||'</dd></dl><pre style="white-space:pre-wrap">');
+                        out_clob(apex_escape.html_clob(r.context_json)); outp('</pre></details>');
+                    end loop;
+                end;
+                
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P93_RUN_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+    )
+
+)
+

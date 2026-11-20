@@ -1,0 +1,804 @@
+page 20 (
+    name: Current Activity
+    alias: CURRENT-ACTIVITY
+    title: Current Activity
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @workspace-administrator-only
+    }
+
+    region activity-filters (
+        name: Activity Filters
+        title: Activity Filters
+        type: staticContent
+        source {
+            htmlCode: <p>Reads current APEX workspace logs directly. This console does not archive APEX activity.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region login-history (
+        name: Login History
+        title: Login History
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select access_date, user_name, authentication_method, authentication_result
+                  from apex_workspace_access_log
+                 where application_id = :P20_APPLICATION_ID
+                   and access_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                 order by access_date desc
+                 fetch first 100 rows only
+                ```
+            pageItemsToSubmit: [
+                P20_APPLICATION_ID
+                P20_DAYS
+            ]
+        }
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 100
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column ACCESS_DATE (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Access Date
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUTHENTICATION_METHOD (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Authentication Method
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUTHENTICATION_RESULT (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Result
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column USER_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: User
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region recent-application-errors (
+        name: Recent Application Errors
+        title: Recent Application Errors
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select view_date, apex_user, page_id, page_name, error_message
+                  from apex_workspace_activity_log
+                 where application_id = :P20_APPLICATION_ID
+                   and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                   and error_message is not null
+                 order by view_date desc
+                 fetch first 100 rows only
+                ```
+            pageItemsToSubmit: [
+                P20_APPLICATION_ID
+                P20_DAYS
+            ]
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 100
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column APEX_USER (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: User
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ERROR_MESSAGE (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Error
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGE_ID (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Page
+                alignment: end
+            }
+            layout {
+                sequence: 30
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGE_NAME (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Page Name
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VIEW_DATE (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Date
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI:SS
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region usage-by-page (
+        name: Usage by Page
+        title: Usage by Page
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select page_id, page_name, count(distinct apex_user) unique_users,
+                       count(*) page_views, round(avg(elapsed_time), 3) average_seconds,
+                       max(view_date) last_activity
+                  from apex_workspace_activity_log
+                 where application_id = :P20_APPLICATION_ID
+                   and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                 group by page_id, page_name
+                 order by page_views desc, page_id
+                ```
+            pageItemsToSubmit: [
+                P20_APPLICATION_ID
+                P20_DAYS
+            ]
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 100
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column AVERAGE_SECONDS (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Average Seconds
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LAST_ACTIVITY (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Last Activity
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGE_ID (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Page
+                alignment: end
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGE_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Page Name
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGE_VIEWS (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Page Views
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column UNIQUE_USERS (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Users
+                alignment: end
+            }
+            layout {
+                sequence: 30
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region usage-by-user (
+        name: Usage by User
+        title: Usage by User
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select apex_user, min(view_date) first_activity, max(view_date) last_activity,
+                       count(*) page_views, count(distinct page_id) pages_used,
+                       sum(case when error_message is not null then 1 else 0 end) errors,
+                       round(avg(elapsed_time), 3) average_seconds
+                  from apex_workspace_activity_log
+                 where application_id = :P20_APPLICATION_ID
+                   and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                 group by apex_user
+                 order by last_activity desc
+                ```
+            pageItemsToSubmit: [
+                P20_APPLICATION_ID
+                P20_DAYS
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 100
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column APEX_USER (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: User
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AVERAGE_SECONDS (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Average Seconds
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ERRORS (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Errors
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FIRST_ACTIVITY (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: First Activity
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LAST_ACTIVITY (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Last Activity
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            appearance {
+                formatMask: DD-MON-YYYY HH24:MI
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGES_USED (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Pages Used
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column PAGE_VIEWS (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Page Views
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    region usage-summary (
+        name: Usage Summary
+        title: Usage Summary
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select metric, value
+                  from (
+                    select 1 metric_order, 'Unique Users' metric,
+                           to_char(count(distinct apex_user)) value
+                      from apex_workspace_activity_log
+                     where application_id = :P20_APPLICATION_ID
+                       and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                    union all
+                    select 2, 'Page Views', to_char(count(*))
+                      from apex_workspace_activity_log
+                     where application_id = :P20_APPLICATION_ID
+                       and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                    union all
+                    select 3, 'Distinct Sessions', to_char(count(distinct apex_session_id))
+                      from apex_workspace_activity_log
+                     where application_id = :P20_APPLICATION_ID
+                       and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                    union all
+                    select 4, 'Application Errors',
+                           to_char(nvl(sum(case when error_message is not null then 1 else 0 end), 0))
+                      from apex_workspace_activity_log
+                     where application_id = :P20_APPLICATION_ID
+                       and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                    union all
+                    select 5, 'Average Response Seconds',
+                           to_char(round(nvl(avg(elapsed_time), 0), 3), 'FM9999990D000')
+                      from apex_workspace_activity_log
+                     where application_id = :P20_APPLICATION_ID
+                       and view_date >= trunc(sysdate) - nvl(to_number(:P20_DAYS), 7) + 1
+                  )
+                 order by metric_order
+                ```
+            pageItemsToSubmit: [
+                P20_APPLICATION_ID
+                P20_DAYS
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 20
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column METRIC (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Measure
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VALUE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Value
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    pageItem P20_APPLICATION_ID (
+        type: selectList
+        label {
+            label: Application
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery: select application_name || ' (' || apex_application_id || ')' d, apex_application_id r from xx_tms_application where enabled_yn = 'Y' order by application_name
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @activity-filters
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: static
+            staticValue: 300
+        }
+    )
+
+    pageItem P20_DAYS (
+        type: selectList
+        label {
+            label: Reporting Window
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Today;1,Last 7 Days;7,Last 30 Days;30,Last 90 Days;90
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @activity-filters
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        default {
+            type: static
+            staticValue: 7
+        }
+    )
+
+    button apply-filter (
+        buttonName: APPLY_FILTER
+        label: Apply Filter
+        layout {
+            sequence: 10
+            region: @activity-filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-refresh
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)
+

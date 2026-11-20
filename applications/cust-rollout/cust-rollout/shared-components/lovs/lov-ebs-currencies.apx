@@ -1,0 +1,19 @@
+lov lov-ebs-currencies (
+    name: EBS_ENABLED_CURRENCIES
+    source {
+        type: sqlQuery
+        sqlQuery:
+            ```sql
+            select display_value, return_value
+              from xxcr_ebs_ref_lovs
+             where domain_code = 'CURRENCY'
+               and active_yn = 'Y'
+            ```
+    }
+    columnMapping {
+        return: RETURN_VALUE
+        display: DISPLAY_VALUE
+        defaultSort: RETURN_VALUE
+    }
+)
+

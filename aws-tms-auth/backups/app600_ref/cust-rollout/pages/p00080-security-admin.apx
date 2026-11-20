@@ -1,0 +1,1728 @@
+page 80 (
+    name: Security, Roles & SoD
+    alias: SECURITY-ADMIN
+    title: 5. Security, EBS Users & Segregation of Duties (SoD)
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @rollout-admin
+    }
+
+    region audit-ig (
+        name: EBS Authentication & SoD Security Audit Log (XXCR_ACCESS_AUDIT)
+        title: EBS Login, Role Provisioning, Project Creation & Finance Sign-Off Audit Trail
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select a.audit_id,
+                       to_char(a.event_ts, 'YYYY-MM-DD HH24:MI:SS') as event_time,
+                       a.actor,
+                       a.event_code,
+                       a.subject_user,
+                       p.project_code,
+                       a.details
+                  from xxcr_access_audit a
+                  left join xxcr_projects p on p.project_id = a.project_id
+                 order by a.audit_id desc
+                ```
+        }
+        layout {
+            sequence: 10
+            parentRegion: @tab-audit
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60008005
+        }
+
+        savedReport 60008006 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @AUDIT_ID
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @EVENT_TIME
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @EVENT_CODE
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @ACTOR
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @SUBJECT_USER
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @PROJECT_CODE
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @DETAILS
+                layout {
+                    sequence: 70
+                }
+            )
+
+        )
+
+        column ACTOR (
+            type: displayOnly
+            heading {
+                heading: Actor (EBS User)
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ACTOR
+                dataType: varchar2
+            }
+        )
+
+        column AUDIT_ID (
+            type: displayOnly
+            heading {
+                heading: Audit ID
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: AUDIT_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column DETAILS (
+            type: displayOnly
+            heading {
+                heading: Event Details
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: DETAILS
+                dataType: varchar2
+            }
+        )
+
+        column EVENT_CODE (
+            type: displayOnly
+            heading {
+                heading: Event Code
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: EVENT_CODE
+                dataType: varchar2
+            }
+        )
+
+        column EVENT_TIME (
+            type: displayOnly
+            heading {
+                heading: Timestamp
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: EVENT_TIME
+                dataType: varchar2
+            }
+        )
+
+        column PROJECT_CODE (
+            type: displayOnly
+            heading {
+                heading: Project
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: PROJECT_CODE
+                dataType: varchar2
+            }
+        )
+
+        column SUBJECT_USER (
+            type: displayOnly
+            heading {
+                heading: Target User
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: SUBJECT_USER
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region origin-form-reg (
+        name: Oracle EBS HTTPS Authentication Endpoint Configuration
+        title: Oracle EBS HTTPS Authentication Endpoint (Borrowed from App 500 Pattern)
+        type: staticContent
+        source {
+            htmlCode: <p style="margin:0 0 .75rem;color:var(--ut-component-text-muted-color);font-size:.9rem;">App 600 verifies EBS credentials via an outbound HTTPS Basic Auth call to <span style="font-family:Consolas,monospace;">&lt;EBS_ORIGIN&gt;/OA_HTML/RF.jsp?function_id=mLogin</span>, verifies HTTP 200 + matching <span style="font-family:Consolas,monospace;">userName</span> + non-<span style="font-family:Consolas,monospace;">-1</span> access token, and <strong>immediately terminates</strong> the remote EBS session via <span style="font-family:Consolas,monospace;">function_id=mLogout</span>. Zero passwords or EBS cookies are ever stored in APEX.</p>
+        }
+        layout {
+            sequence: 10
+            parentRegion: @tab-sod-matrix
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region proj-acc-form-reg (
+        name: Assign Per-Project Role Override (Source OU Isolation)
+        title: Assign Per-Project Role Override (Multi-OU Segregation of Duties)
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p style="margin:0 0 .75rem;color:var(--ut-component-text-muted-color);font-size:.9rem;">Grant a user access to a specific Source OU conversion project (when <span style="font-family:Consolas,monospace;">All Projects = N</span>), or override their global role on a specific project &mdash; for example, a user can be <strong>DATA_STEWARD</strong> on Australia OU 14474 and <strong>VIEWER</strong> (or <strong>Revoked</strong>) on another region's conversion project. <strong>Scope Note:</strong> Per-project role overrides on Tab 2 govern all capabilities inside that Conversion Project (Extract from @ADG, Target OU/BSV, Bulk Remap, Data Editing, and Warning Sign-Off), whereas <strong>Global SoD Role = ROLLOUT_ADMIN</strong> on Tab 1 additionally grants app-wide User/Security Administration (Page 80) and New Project Creation.</p>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  var p = document.getElementById('P80_ACC_PROJECT_ID');
+                  var u = document.getElementById('P80_ACC_USERNAME');
+                  function reloadAcc() {
+                    if (p && u && p.value && u.value) {
+                      apex.submit({ request: 'LOAD_PROJ_ACC', showWait: true });
+                    }
+                  }
+                  if (p && !p.dataset.xxcrBound) { p.dataset.xxcrBound = 'Y'; p.addEventListener('change', reloadAcc); }
+                  if (u && !u.dataset.xxcrBound) { u.dataset.xxcrBound = 'Y'; u.addEventListener('change', reloadAcc); }
+                });
+                </script>
+                ```
+        }
+        layout {
+            sequence: 10
+            parentRegion: @tab-proj-access
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region proj-access-ig (
+        name: Per-Project Role Assignments & Overrides (XXCR_PROJECT_ACCESS)
+        title: Per-Project Role Assignments & Overrides
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select pa.access_id,
+                       pa.project_id,
+                       p.project_code,
+                       p.src_ou_name || ' (' || p.src_org_id || ')' as source_ou,
+                       pa.user_name,
+                       xxcr_security_pkg.role_label(pa.project_role_code) as project_role_display,
+                       pa.enabled_yn,
+                       pa.notes,
+                       pa.updated_by,
+                       to_char(pa.updated_at, 'YYYY-MM-DD HH24:MI') as updated_at_fmt
+                  from xxcr_project_access pa
+                  join xxcr_projects p on p.project_id = pa.project_id
+                 order by p.project_id, pa.user_name
+                ```
+        }
+        layout {
+            sequence: 20
+            parentRegion: @tab-proj-access
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60008003
+        }
+
+        savedReport 60008004 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 20
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @LOAD_ACC_LINK
+                layout {
+                    sequence: 6
+                }
+            )
+
+            displayColumn (
+                column: @PROJECT_CODE
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @SOURCE_OU
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @USER_NAME
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @PROJECT_ROLE_DISPLAY
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @ENABLED_YN
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @NOTES
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @UPDATED_BY
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @UPDATED_AT_FMT
+                layout {
+                    sequence: 80
+                }
+            )
+
+        )
+
+        column ACCESS_ID (
+            type: hidden
+            layout {
+                sequence: 5
+            }
+            source {
+                databaseColumn: ACCESS_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column ENABLED_YN (
+            type: displayOnly
+            heading {
+                heading: Granted (Y/N)
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: ENABLED_YN
+                dataType: varchar2
+            }
+        )
+
+        column LOAD_ACC_LINK (
+            type: link
+            heading {
+                heading: Action
+            }
+            layout {
+                sequence: 6
+            }
+            link {
+                target: {
+                    page: 80
+                    items: {
+                        P80_ACC_PROJECT_ID: &PROJECT_ID.
+                        P80_ACC_USERNAME: &USER_NAME.
+                    }
+                }
+                linkText: Edit Override
+                linkAttributes: class="t-Button t-Button--small t-Button--simple"
+            }
+            source {
+                type: none
+            }
+        )
+
+        column NOTES (
+            type: displayOnly
+            heading {
+                heading: SoD Notes
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: NOTES
+                dataType: varchar2
+            }
+        )
+
+        column PROJECT_CODE (
+            type: displayOnly
+            heading {
+                heading: Project Code
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: PROJECT_CODE
+                dataType: varchar2
+            }
+        )
+
+        column PROJECT_ID (
+            type: hidden
+            layout {
+                sequence: 7
+            }
+            source {
+                databaseColumn: PROJECT_ID
+                dataType: number
+            }
+        )
+
+        column PROJECT_ROLE_DISPLAY (
+            type: displayOnly
+            heading {
+                heading: Effective Project Role
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: PROJECT_ROLE_DISPLAY
+                dataType: varchar2
+            }
+        )
+
+        column SOURCE_OU (
+            type: displayOnly
+            heading {
+                heading: Source Operating Unit
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: SOURCE_OU
+                dataType: varchar2
+            }
+        )
+
+        column UPDATED_AT_FMT (
+            type: displayOnly
+            heading {
+                heading: Updated At
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: UPDATED_AT_FMT
+                dataType: varchar2
+            }
+        )
+
+        column UPDATED_BY (
+            type: displayOnly
+            heading {
+                heading: Updated By
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: UPDATED_BY
+                dataType: varchar2
+            }
+        )
+
+        column USER_NAME (
+            type: displayOnly
+            heading {
+                heading: EBS Username
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: USER_NAME
+                dataType: varchar2
+            }
+        )
+
+    )
+
+    region sec-hero (
+        name: EBS Authentication & Segregation of Duties Administration
+        title: 5. EBS Credentials, Multi-Project Access & Segregation of Duties (SoD)
+        type: staticContent
+        source {
+            htmlCode: Manage Oracle EBS user provisioning, Maker-Checker Segregation of Duties roles (ROLLOUT_ADMIN, FINANCE_APPROVER, DATA_STEWARD, VIEWER), per-project Source OU access overrides, EBS HTTPS authentication origin, and login/audit history.
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/hero
+            templateOptions: #DEFAULT#
+            icon: fa-shield
+        }
+    )
+
+    region sec-tabs (
+        name: Security & SoD Administration Tabs
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/tabs-container
+            templateOptions: [
+                #DEFAULT#
+                js-useLocalStorage
+                t-TabsRegion-mod--simple
+            ]
+        }
+    )
+
+    region sod-matrix-html (
+        name: Segregation of Duties (Maker-Checker) Governance Matrix
+        title: Segregation of Duties (Maker-Checker) Governance Matrix
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <style>
+                  .sod-tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+                  .sod-tbl th { background:#1b365d; color:#fff; padding:9px 12px; text-align:left; border:1px solid #1b365d; }
+                  .sod-tbl td { padding:8px 12px; border:1px solid #dfe3e8; vertical-align:middle; }
+                  .sod-tbl tr:nth-child(even) td { background:#f9fafb; }
+                  .sod-yes { display:inline-block; padding:2px 8px; border-radius:10px; background:#e6f4ea; color:#137333; font-weight:700; font-size:12px; }
+                  .sod-no  { display:inline-block; padding:2px 8px; border-radius:10px; background:#fce8e6; color:#a50e0e; font-weight:700; font-size:12px; }
+                </style>
+                <table class="sod-tbl">
+                  <thead>
+                    <tr>
+                      <th style="width:34%">Workbench Capability / Control Point</th>
+                      <th style="width:16%">ROLLOUT_ADMIN<br><small>(IT / Conv Lead)</small></th>
+                      <th style="width:17%">DATA_STEWARD<br><small>(Maker — AR / OM)</small></th>
+                      <th style="width:17%">FINANCE_APPROVER<br><small>(Checker — Finance)</small></th>
+                      <th style="width:16%">VIEWER<br><small>(Audit / Business)</small></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Switch &amp; View Authorized Conversion Projects</strong> (Page 0 / All Pages)</td>
+                      <td><span class="sod-yes">ALLOWED (All)</span></td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Download Connected 8-Tab Excel Workbook (.xlsx)</strong> (Pages 1, 10, 90)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Create New Conversion Project (Another Source OU)</strong> (Page 1)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Execute Fresh @ADG Extract (Rebuilds Project Staging)</strong> (Page 1)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Edit Customers, Credit Limits, Addresses, Site Uses &amp; Contacts Inline</strong> (Page 10)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED (Maker)</span></td>
+                      <td><span class="sod-no">BLOCKED (SoD)</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Upload Modified Connected 8-Tab Excel Workbook (.xlsx)</strong> (Page 10 Tab 8)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED (Maker)</span></td>
+                      <td><span class="sod-no">BLOCKED (SoD)</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Run Duplicate Scan, Auto-Exclude Dormant Dups &amp; Resolve Duplicates</strong> (Page 40)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-yes">ALLOWED (Maker)</span></td>
+                      <td><span class="sod-no">BLOCKED (SoD)</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Set / Bind Target OU &amp; Target BSV Scope &amp; Bulk GL Remap</strong> (Page 1)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-no">BLOCKED (SoD)</span></td>
+                      <td><span class="sod-yes">ALLOWED (Checker)</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Sign Off / Acknowledge Amber Validation Warnings (ACK_YN = Y)</strong> (Page 50)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-no">BLOCKED (SoD)</span></td>
+                      <td><span class="sod-yes">ALLOWED (Checker)</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Provision EBS Users, Assign SoD Roles &amp; Configure EBS Origin</strong> (Page 80)</td>
+                      <td><span class="sod-yes">ALLOWED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                      <td><span class="sod-no">BLOCKED</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+                ```
+        }
+        layout {
+            sequence: 20
+            parentRegion: @tab-sod-matrix
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region tab-audit (
+        name: 4. Security & Login Audit Trail
+        title: 4. Security & Login Audit Trail
+        type: staticContent
+        layout {
+            sequence: 40
+            parentRegion: @sec-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-proj-access (
+        name: 2. Per-Project Access Overrides
+        title: 2. Per-Project Access Overrides
+        type: staticContent
+        layout {
+            sequence: 20
+            parentRegion: @sec-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-sod-matrix (
+        name: 3. SoD Matrix & EBS Auth Origin
+        title: 3. SoD Matrix & EBS Auth Origin
+        type: staticContent
+        layout {
+            sequence: 30
+            parentRegion: @sec-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-users (
+        name: 1. EBS Users & Global Roles
+        title: 1. EBS Users & Global Roles
+        type: staticContent
+        layout {
+            sequence: 10
+            parentRegion: @sec-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region user-form-reg (
+        name: Provision or Update Oracle EBS User
+        title: Provision or Update Oracle EBS User & Global SoD Role
+        type: staticContent
+        source {
+            htmlCode: <p style="margin:0 0 .75rem;color:var(--ut-component-text-muted-color);font-size:.9rem;">Users sign in on Page 9999 with their live <strong>Oracle EBS username &amp; password</strong> (verified over HTTPS against EBS <span style="font-family:Consolas,monospace;">/OA_HTML/RF.jsp?function_id=mLogin</span>). Leave Full Name / Email blank to auto-populate from <span style="font-family:Consolas,monospace;">FND_USER@ADG</span> when available.</p>
+        }
+        layout {
+            sequence: 10
+            parentRegion: @tab-users
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region users-ig (
+        name: Provisioned Oracle EBS Users (XXCR_APP_USERS)
+        title: Provisioned Oracle EBS Users & Global SoD Roles
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select u.user_name,
+                       u.full_name,
+                       u.email_address,
+                       u.role_code,
+                       xxcr_security_pkg.role_label(u.role_code) as role_display,
+                       u.all_projects_yn,
+                       coalesce(
+                         (select listagg(p.project_code || ': ' || xxcr_security_pkg.role_label(pa.project_role_code)
+                                   || case when pa.enabled_yn = 'N' then ' [REVOKED]' end, ' | ')
+                                   within group (order by p.project_id)
+                            from xxcr_project_access pa
+                            join xxcr_projects p on p.project_id = pa.project_id
+                           where pa.user_name = u.user_name),
+                         case when u.all_projects_yn = 'Y' then 'Inherits Global Role on All Projects' else 'None (No Project Access Yet)' end
+                       ) as project_override_summary,
+                       u.notes,
+                       u.enabled_yn,
+                       u.updated_by,
+                       to_char(u.updated_at, 'YYYY-MM-DD HH24:MI') as updated_at_fmt
+                  from xxcr_app_users u
+                 order by decode(u.role_code, 'ROLLOUT_ADMIN', 1, 'FINANCE_APPROVER', 2, 'DATA_STEWARD', 3, 4), u.user_name
+                ```
+        }
+        layout {
+            sequence: 20
+            parentRegion: @tab-users
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60008001
+        }
+
+        savedReport 60008002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 20
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @LOAD_USER_LINK
+                layout {
+                    sequence: 5
+                }
+            )
+
+            displayColumn (
+                column: @USER_NAME
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @FULL_NAME
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @ROLE_DISPLAY
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @ALL_PROJECTS_YN
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @PROJECT_OVERRIDE_SUMMARY
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @ENABLED_YN
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @EMAIL_ADDRESS
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @NOTES
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @UPDATED_BY
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @UPDATED_AT_FMT
+                layout {
+                    sequence: 100
+                }
+            )
+
+        )
+
+        column ALL_PROJECTS_YN (
+            type: displayOnly
+            heading {
+                heading: All Projects (Y/N)
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ALL_PROJECTS_YN
+                dataType: varchar2
+            }
+        )
+
+        column EMAIL_ADDRESS (
+            type: displayOnly
+            heading {
+                heading: Email
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: EMAIL_ADDRESS
+                dataType: varchar2
+            }
+        )
+
+        column ENABLED_YN (
+            type: displayOnly
+            heading {
+                heading: Enabled (Y/N)
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: ENABLED_YN
+                dataType: varchar2
+            }
+        )
+
+        column FULL_NAME (
+            type: displayOnly
+            heading {
+                heading: Full Name
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: FULL_NAME
+                dataType: varchar2
+            }
+        )
+
+        column LOAD_USER_LINK (
+            type: link
+            heading {
+                heading: Action
+            }
+            layout {
+                sequence: 5
+            }
+            link {
+                target: {
+                    page: 80
+                    items: {
+                        P80_USERNAME: &USER_NAME.
+                    }
+                }
+                linkText: Edit User
+                linkAttributes: class="t-Button t-Button--small t-Button--simple"
+            }
+            source {
+                type: none
+            }
+        )
+
+        column NOTES (
+            type: displayOnly
+            heading {
+                heading: Notes
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: NOTES
+                dataType: varchar2
+            }
+        )
+
+        column PROJECT_OVERRIDE_SUMMARY (
+            type: displayOnly
+            heading {
+                heading: Per-Project Role Overrides (Tab 2)
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: PROJECT_OVERRIDE_SUMMARY
+                dataType: varchar2
+            }
+        )
+
+        column ROLE_CODE (
+            type: hidden
+            layout {
+                sequence: 25
+            }
+            source {
+                databaseColumn: ROLE_CODE
+                dataType: varchar2
+            }
+        )
+
+        column ROLE_DISPLAY (
+            type: displayOnly
+            heading {
+                heading: Global SoD Role
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ROLE_DISPLAY
+                dataType: varchar2
+            }
+        )
+
+        column UPDATED_AT_FMT (
+            type: displayOnly
+            heading {
+                heading: Updated At
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: UPDATED_AT_FMT
+                dataType: varchar2
+            }
+        )
+
+        column UPDATED_BY (
+            type: displayOnly
+            heading {
+                heading: Updated By
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: UPDATED_BY
+                dataType: varchar2
+            }
+        )
+
+        column USER_NAME (
+            type: displayOnly
+            heading {
+                heading: EBS Username
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: USER_NAME
+                dataType: varchar2
+                primaryKey: true
+            }
+        )
+
+    )
+
+    pageItem P80_ACC_ENABLED_YN (
+        type: selectList
+        label {
+            label: Project Access
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Granted (Y);Y,Revoked on This Project (N);N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 40
+            region: @proj-acc-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    pageItem P80_ACC_NOTES (
+        type: textField
+        label {
+            label: Project Assignment Justification / SoD Note (Optional)
+        }
+        layout {
+            sequence: 50
+            region: @proj-acc-form-reg
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_ACC_PROJECT_ID (
+        type: selectList
+        label {
+            label: Conversion Project (Source OU)
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select p.project_code || ' — ' || nvl(p.src_ou_name, 'OU ' || p.src_org_id) || ' (' || p.src_org_id || ')' as d,
+                       p.project_id as r
+                  from xxcr_projects p
+                 order by p.project_id
+                ```
+            displayExtraValues: false
+            nullDisplayValue: — Select Project —
+        }
+        layout {
+            sequence: 10
+            region: @proj-acc-form-reg
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_ACC_ROLE_CODE (
+        type: selectList
+        label {
+            label: Role on This Project
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Data Steward — Maker;DATA_STEWARD,Finance Approver — Checker;FINANCE_APPROVER,Read-Only Viewer;VIEWER,Rollout Administrator;ROLLOUT_ADMIN
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @proj-acc-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: DATA_STEWARD
+        }
+    )
+
+    pageItem P80_ACC_USERNAME (
+        type: selectList
+        label {
+            label: Provisioned EBS User
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select u.user_name
+                       || ' (Global: ' || u.role_code
+                       || coalesce(
+                            (select ' | Overrides: ' || listagg(p.project_code || '=' || pa.project_role_code || case when pa.enabled_yn = 'N' then '[OFF]' end, ', ')
+                                      within group (order by p.project_id)
+                               from xxcr_project_access pa
+                               join xxcr_projects p on p.project_id = pa.project_id
+                              where pa.user_name = u.user_name
+                             having count(*) > 0),
+                            case when u.all_projects_yn = 'N' then ' | Assigned Projects Only' else ' | All Projects' end
+                          )
+                       || ')' as d,
+                       u.user_name as r
+                  from xxcr_app_users u
+                 order by u.user_name
+                ```
+            displayExtraValues: false
+            nullDisplayValue: — Select EBS User —
+        }
+        layout {
+            sequence: 20
+            region: @proj-acc-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_ALL_PROJECTS_YN (
+        type: selectList
+        label {
+            label: Project Scope
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:All Conversion Projects (Y);Y,Assigned Projects Only — Tab 2 (N);N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 30
+            region: @user-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    pageItem P80_AUTH_ENABLED (
+        type: selectList
+        label {
+            label: App 600 Admission Gate
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Enabled (Y);Y,Emergency Maintenance Lock (N);N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @origin-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_EBS_ORIGIN (
+        type: textField
+        label {
+            label: EBS HTTPS Origin URL (Must start with https://)
+        }
+        layout {
+            sequence: 10
+            region: @origin-form-reg
+            slot: regionBody
+            columnSpan: 8
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_EMAIL (
+        type: textField
+        label {
+            label: Email Address (Optional)
+        }
+        layout {
+            sequence: 60
+            region: @user-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_ENABLED_YN (
+        type: selectList
+        label {
+            label: Login Status
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Enabled (Y);Y,Disabled (N);N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 40
+            region: @user-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: Y
+        }
+    )
+
+    pageItem P80_FULL_NAME (
+        type: textField
+        label {
+            label: Full Name (Optional — Auto-Lookup from @ADG)
+        }
+        layout {
+            sequence: 50
+            region: @user-form-reg
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_NOTES (
+        type: textField
+        label {
+            label: Business Team / Approval Notes (Optional)
+        }
+        layout {
+            sequence: 70
+            region: @user-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P80_ROLE_CODE (
+        type: selectList
+        label {
+            label: Global Segregation of Duties (SoD) Role
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Data Steward — Maker (Edit Data, Excel & Duplicates);DATA_STEWARD,Finance Approver — Checker (Target OU/BSV & Sign Off Warnings);FINANCE_APPROVER,Read-Only Viewer (Inspect & Download Excel);VIEWER,Rollout Administrator — IT / Conversion Lead;ROLLOUT_ADMIN
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @user-form-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 5
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: static
+            staticValue: DATA_STEWARD
+        }
+    )
+
+    pageItem P80_USERNAME (
+        type: textField
+        label {
+            label: EBS Username (e.g. FIRST.LAST)
+        }
+        layout {
+            sequence: 10
+            region: @user-form-reg
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: FIRST.LAST
+        }
+    )
+
+    button btn-save-origin (
+        buttonName: SAVE_ORIGIN
+        label: Update EBS Auth Origin
+        layout {
+            sequence: 10
+            region: @origin-form-reg
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-globe
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button btn-save-proj-acc (
+        buttonName: SAVE_PROJ_ACC
+        label: Save Project Access Override
+        layout {
+            sequence: 10
+            region: @proj-acc-form-reg
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-lock
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button btn-save-user (
+        buttonName: SAVE_USER
+        label: Save EBS User & Role
+        layout {
+            sequence: 10
+            region: @user-form-reg
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-user-plus
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process load-origin-defaults (
+        name: Load EBS Authentication Origin Config
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  for r in (
+                    select ebs_origin, enabled_yn
+                      from xxcr_sec_config
+                     where application_id = 600
+                  ) loop
+                    :P80_EBS_ORIGIN   := r.ebs_origin;
+                    :P80_AUTH_ENABLED := r.enabled_yn;
+                  end loop;
+                
+                  if trim(:P80_USERNAME) is not null then
+                    for u in (
+                      select user_name, role_code, all_projects_yn, enabled_yn, full_name, email_address, notes
+                        from xxcr_app_users
+                       where user_name = upper(trim(:P80_USERNAME))
+                    ) loop
+                      :P80_USERNAME        := u.user_name;
+                      :P80_ROLE_CODE       := u.role_code;
+                      :P80_ALL_PROJECTS_YN := u.all_projects_yn;
+                      :P80_ENABLED_YN      := u.enabled_yn;
+                      :P80_FULL_NAME       := u.full_name;
+                      :P80_EMAIL           := u.email_address;
+                      :P80_NOTES           := u.notes;
+                    end loop;
+                  end if;
+                
+                  if trim(:P80_ACC_PROJECT_ID) is null then
+                    :P80_ACC_PROJECT_ID := xxcr_security_pkg.resolve_active_project(
+                      to_number(:P0_PROJECT_ID default null on conversion error)
+                    );
+                  end if;
+                
+                  if trim(:P80_ACC_PROJECT_ID) is not null and trim(:P80_ACC_USERNAME) is not null then
+                    declare
+                      l_found boolean := false;
+                    begin
+                      for pa in (
+                        select project_role_code, enabled_yn, notes
+                          from xxcr_project_access
+                         where project_id = to_number(:P80_ACC_PROJECT_ID default null on conversion error)
+                           and user_name  = upper(trim(:P80_ACC_USERNAME))
+                      ) loop
+                        :P80_ACC_ROLE_CODE  := pa.project_role_code;
+                        :P80_ACC_ENABLED_YN := pa.enabled_yn;
+                        :P80_ACC_NOTES      := pa.notes;
+                        l_found := true;
+                      end loop;
+                      if not l_found then
+                        for u in (
+                          select role_code
+                            from xxcr_app_users
+                           where user_name = upper(trim(:P80_ACC_USERNAME))
+                        ) loop
+                          :P80_ACC_ROLE_CODE  := u.role_code;
+                          :P80_ACC_ENABLED_YN := 'Y';
+                          :P80_ACC_NOTES      := null;
+                        end loop;
+                      end if;
+                    end;
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60008010
+        }
+    )
+
+    process save-ebs-origin-proc (
+        name: Save EBS HTTPS Authentication Origin
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  xxcr_security_pkg.save_ebs_origin(
+                    p_ebs_origin => :P80_EBS_ORIGIN,
+                    p_enabled_yn => :P80_AUTH_ENABLED
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 30
+        }
+        successMessage {
+            successMessage: Oracle EBS HTTPS authentication origin updated!
+        }
+        advanced {
+            executionMappingIdentifier: 60008013
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-origin
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+    process save-ebs-user-proc (
+        name: Provision or Update EBS User
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  xxcr_security_pkg.save_user(
+                    p_username        => :P80_USERNAME,
+                    p_role_code       => :P80_ROLE_CODE,
+                    p_all_projects_yn => :P80_ALL_PROJECTS_YN,
+                    p_enabled_yn      => :P80_ENABLED_YN,
+                    p_full_name       => :P80_FULL_NAME,
+                    p_email_address   => :P80_EMAIL,
+                    p_notes           => :P80_NOTES
+                  );
+                  :P80_USERNAME  := null;
+                  :P80_FULL_NAME := null;
+                  :P80_EMAIL     := null;
+                  :P80_NOTES     := null;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Oracle EBS user and Global Segregation of Duties role saved!
+        }
+        advanced {
+            executionMappingIdentifier: 60008011
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-user
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+    process save-proj-access-proc (
+        name: Save Per-Project Role Override
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  xxcr_security_pkg.save_project_access(
+                    p_project_id        => :P80_ACC_PROJECT_ID,
+                    p_username          => :P80_ACC_USERNAME,
+                    p_project_role_code => :P80_ACC_ROLE_CODE,
+                    p_enabled_yn        => :P80_ACC_ENABLED_YN,
+                    p_notes             => :P80_ACC_NOTES
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        successMessage {
+            successMessage: Per-project role assignment saved!
+        }
+        advanced {
+            executionMappingIdentifier: 60008012
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-proj-acc
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+)
+

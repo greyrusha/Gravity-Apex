@@ -1,0 +1,2588 @@
+page 10 (
+    name: Excel Export
+    alias: EXCEL-EXPORT
+    title: Excel Export
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region excel-export (
+        name: Excel Export
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select *
+                  from xx_ic_markup_user_review_v
+                 where ebs_instance_code = :P10_EBS_INSTANCE
+                   and (:P10_UNIT_STATUS = 'BOTH'
+                        or sold_yes_no = case :P10_UNIT_STATUS
+                                           when 'SOLD' then 'YES'
+                                           when 'UNSOLD' then 'NO'
+                                         end)
+                ```
+            pageItemsToSubmit: [
+                P10_EBS_INSTANCE
+                P10_UNIT_STATUS
+            ]
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        messages {
+            whenNoDataFound: No data found.
+            whenMoreDataFound: The maximum row count for this report is #MAX_ROW_COUNT# rows.  Please apply a filter to reduce the number of records in your query.
+        }
+        advanced {
+            savedReportMappingIdentifier: 32871855436157462
+        }
+
+        column ACCOUNTED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Accounted Amount
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AN
+            }
+        )
+
+        column ACCOUNTED_CR (
+            type: plainText
+            heading {
+                heading: Accounted Cr
+                alignment: end
+            }
+            layout {
+                sequence: 39
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AM
+            }
+        )
+
+        column ACCOUNTED_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Accounted Currency Code
+            }
+            layout {
+                sequence: 34
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AH
+            }
+        )
+
+        column ACCOUNTED_DR (
+            type: plainText
+            heading {
+                heading: Accounted Dr
+                alignment: end
+            }
+            layout {
+                sequence: 38
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AL
+            }
+        )
+
+        column ACCOUNTING_CLASS_CODE (
+            type: plainText
+            heading {
+                heading: Accounting Class Code
+            }
+            layout {
+                sequence: 31
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AE
+            }
+        )
+
+        column ACCOUNTING_DATE (
+            type: plainText
+            heading {
+                heading: Accounting Date
+            }
+            layout {
+                sequence: 11
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column ACTUAL_COST (
+            type: plainText
+            heading {
+                heading: Receiving Actual Cost
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CL
+            }
+        )
+
+        column AE_HEADER_ID (
+            type: plainText
+            heading {
+                heading: Ae Header Id
+                alignment: end
+            }
+            layout {
+                sequence: 2
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: B
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column AE_LINE_NUM (
+            type: plainText
+            heading {
+                heading: Ae Line Num
+                alignment: end
+            }
+            layout {
+                sequence: 3
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column CHART_OF_ACCOUNTS_ID (
+            type: plainText
+            heading {
+                heading: Chart Of Accounts Id
+                alignment: end
+            }
+            layout {
+                sequence: 45
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AS
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column CODE_COMBINATION_ID (
+            type: plainText
+            heading {
+                heading: Code Combination Id
+                alignment: end
+            }
+            layout {
+                sequence: 44
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AR
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column CONCATENATED_SEGMENTS (
+            type: plainText
+            heading {
+                heading: Concatenated Segments
+            }
+            layout {
+                sequence: 46
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AT
+            }
+        )
+
+        column CURRENCY_CONVERSION_DATE (
+            type: plainText
+            heading {
+                heading: Currency Conversion Date
+            }
+            layout {
+                sequence: 42
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: AP
+            }
+        )
+
+        column CURRENCY_CONVERSION_RATE (
+            type: plainText
+            heading {
+                heading: Currency Conversion Rate
+                alignment: end
+            }
+            layout {
+                sequence: 43
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AQ
+            }
+        )
+
+        column CURRENCY_CONVERSION_TYPE (
+            type: plainText
+            heading {
+                heading: Currency Conversion Type
+            }
+            layout {
+                sequence: 41
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AO
+            }
+        )
+
+        column DATE_SOLD (
+            type: plainText
+            heading {
+                heading: Date Sold
+            }
+            layout {
+                sequence: 23
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: W
+            }
+        )
+
+        column DESTINATION_COUNTRY (
+            type: plainText
+            heading {
+                heading: Destination Country
+            }
+            layout {
+                sequence: 64
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BL
+            }
+        )
+
+        column DETAIL_FIRST_LOADED_DATE (
+            type: plainText
+            heading {
+                heading: Detail First Loaded Date
+            }
+            layout {
+                sequence: 74
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: BV
+            }
+        )
+
+        column EBS_INSTANCE_CODE (
+            type: plainText
+            heading {
+                heading: Ebs Instance Code
+            }
+            layout {
+                sequence: 1
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column ENTERED_CR (
+            type: plainText
+            heading {
+                heading: Entered Cr
+                alignment: end
+            }
+            layout {
+                sequence: 36
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AJ
+            }
+        )
+
+        column ENTERED_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Entered Currency Code
+            }
+            layout {
+                sequence: 33
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AG
+            }
+        )
+
+        column ENTERED_DR (
+            type: plainText
+            heading {
+                heading: Entered Dr
+                alignment: end
+            }
+            layout {
+                sequence: 35
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AI
+            }
+        )
+
+        column ENTITY_ID (
+            type: plainText
+            heading {
+                heading: Entity Id
+                alignment: end
+            }
+            layout {
+                sequence: 17
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Q
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column EVENT_ID (
+            type: plainText
+            heading {
+                heading: Event Id
+                alignment: end
+            }
+            layout {
+                sequence: 18
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: R
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column EVENT_STATUS_CODE (
+            type: plainText
+            heading {
+                heading: Event Status Code
+            }
+            layout {
+                sequence: 19
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column FACTORY_ORG (
+            type: plainText
+            heading {
+                heading: Factory Org
+            }
+            layout {
+                sequence: 7
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column GL_EFFECTIVE_DATE (
+            type: plainText
+            heading {
+                heading: Gl Effective Date
+            }
+            layout {
+                sequence: 72
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: BT
+            }
+        )
+
+        column GL_JE_BATCH_ID (
+            type: plainText
+            heading {
+                heading: Gl Je Batch Id
+                alignment: end
+            }
+            layout {
+                sequence: 67
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: BO
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column GL_JE_BATCH_NAME (
+            type: plainText
+            heading {
+                heading: Gl Je Batch Name
+            }
+            layout {
+                sequence: 68
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BP
+            }
+        )
+
+        column GL_JE_HEADER_ID (
+            type: plainText
+            heading {
+                heading: Gl Je Header Id
+                alignment: end
+            }
+            layout {
+                sequence: 69
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: BQ
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column GL_JE_LINE_NUM (
+            type: plainText
+            heading {
+                heading: Gl Je Line Num
+                alignment: end
+            }
+            layout {
+                sequence: 71
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: BS
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column GL_JE_NAME (
+            type: plainText
+            heading {
+                heading: Gl Je Name
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BR
+            }
+        )
+
+        column GL_POSTED_DATE (
+            type: plainText
+            heading {
+                heading: Gl Posted Date
+            }
+            layout {
+                sequence: 73
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: BU
+            }
+        )
+
+        column GL_SL_LINK_ID (
+            type: plainText
+            heading {
+                heading: Gl Sl Link Id
+                alignment: end
+            }
+            layout {
+                sequence: 65
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: BM
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column GL_SL_LINK_TABLE (
+            type: plainText
+            heading {
+                heading: Gl Sl Link Table
+            }
+            layout {
+                sequence: 66
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BN
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column ICP_FROM (
+            type: plainText
+            heading {
+                heading: Icp From
+            }
+            layout {
+                sequence: 63
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BK
+            }
+        )
+
+        column ITEM_NUMBER (
+            type: plainText
+            heading {
+                heading: Item Number
+            }
+            layout {
+                sequence: 88
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CJ
+            }
+        )
+
+        column JE_CATEGORY_NAME (
+            type: plainText
+            heading {
+                heading: Je Category Name
+            }
+            layout {
+                sequence: 21
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: U
+            }
+        )
+
+        column LAST_CHECKED_DATE (
+            type: plainText
+            heading {
+                heading: Last Checked Date
+            }
+            layout {
+                sequence: 29
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: AC
+            }
+        )
+
+        column LAST_UPDATED_DATE (
+            type: plainText
+            heading {
+                heading: Last Updated Date
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: AD
+            }
+        )
+
+        column LEDGER_ID (
+            type: plainText
+            heading {
+                heading: Ledger Id
+                alignment: end
+            }
+            layout {
+                sequence: 15
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 16
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column LINE_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Line Description
+            }
+            layout {
+                sequence: 32
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AF
+            }
+        )
+
+        column MASTER_FIRST_LOADED_DATE (
+            type: plainText
+            heading {
+                heading: Master First Loaded Date
+            }
+            layout {
+                sequence: 28
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: AB
+            }
+        )
+
+        column MMT_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Receiving Currency
+            }
+            layout {
+                sequence: 94
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CP
+            }
+        )
+
+        column MMT_CURRENCY_CONVERSION_RATE (
+            type: plainText
+            heading {
+                heading: Receiving Currency Conversion Rate
+                alignment: end
+            }
+            layout {
+                sequence: 95
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CQ
+            }
+        )
+
+        column MMT_CURRENCY_CONVERSION_TYPE (
+            type: plainText
+            heading {
+                heading: Receiving Currency Conversion Type
+            }
+            layout {
+                sequence: 96
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CR
+            }
+        )
+
+        column MMT_TRANSACTION_DATE (
+            type: plainText
+            heading {
+                heading: Receiving Transaction Date
+            }
+            layout {
+                sequence: 89
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: CK
+            }
+        )
+
+        column MODEL_NAME (
+            type: plainText
+            heading {
+                heading: Model Name
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column NEW_COST (
+            type: plainText
+            heading {
+                heading: Receiving New Cost
+                alignment: end
+            }
+            layout {
+                sequence: 93
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CO
+            }
+        )
+
+        column ORDER_NUMBER (
+            type: plainText
+            heading {
+                heading: Order Number
+            }
+            layout {
+                sequence: 14
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column PERIOD_NAME (
+            type: plainText
+            heading {
+                heading: Period Name
+            }
+            layout {
+                sequence: 12
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column PRIOR_COST (
+            type: plainText
+            heading {
+                heading: Receiving Prior Cost
+                alignment: end
+            }
+            layout {
+                sequence: 92
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CN
+            }
+        )
+
+        column PROCESS_STATUS_CODE (
+            type: plainText
+            heading {
+                heading: Process Status Code
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column PROD_LINE (
+            type: plainText
+            heading {
+                heading: Prod Line
+            }
+            layout {
+                sequence: 62
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BJ
+            }
+        )
+
+        column RECEIVING_INVENTORY_ITEM_ID (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Item ID
+                alignment: end
+            }
+            layout {
+                sequence: 87
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CI
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column RECEIVING_INVENTORY_ORG (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Organization
+            }
+            layout {
+                sequence: 86
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CH
+            }
+        )
+
+        column RECEIVING_INVENTORY_ORG_CODE (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Org Code
+            }
+            layout {
+                sequence: 84
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CF
+            }
+        )
+
+        column RECEIVING_INVENTORY_ORG_ID (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Org ID
+                alignment: end
+            }
+            layout {
+                sequence: 83
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CE
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column RECEIVING_INVENTORY_ORG_NAME (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Org Name
+            }
+            layout {
+                sequence: 85
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CG
+            }
+        )
+
+        column RECEIVING_ORG_ID (
+            type: plainText
+            heading {
+                heading: Receiving Org ID
+                alignment: end
+            }
+            layout {
+                sequence: 79
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CA
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column REC_ORG_LOCATION (
+            type: plainText
+            heading {
+                heading: Rec Org Location
+            }
+            layout {
+                sequence: 61
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BI
+            }
+        )
+
+        column REVERSAL_DATE (
+            type: plainText
+            heading {
+                heading: Reversal Date
+            }
+            layout {
+                sequence: 25
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: Y
+            }
+        )
+
+        column REVERSAL_JE_HEADER_ID (
+            type: plainText
+            heading {
+                heading: Reversal Je Header Id
+                alignment: end
+            }
+            layout {
+                sequence: 26
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Z
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column REVERSAL_JE_NAME (
+            type: plainText
+            heading {
+                heading: Reversal Je Name
+            }
+            layout {
+                sequence: 27
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AA
+            }
+        )
+
+        column REVERSED_YES_NO (
+            type: plainText
+            heading {
+                heading: Reversed Yes No
+            }
+            layout {
+                sequence: 24
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: X
+            }
+        )
+
+        column SEGMENT1 (
+            type: plainText
+            heading {
+                heading: Segment1
+            }
+            layout {
+                sequence: 47
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AU
+            }
+        )
+
+        column SEGMENT1_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment1 Description
+            }
+            layout {
+                sequence: 56
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BD
+            }
+        )
+
+        column SEGMENT2 (
+            type: plainText
+            heading {
+                heading: Segment2
+            }
+            layout {
+                sequence: 48
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AV
+            }
+        )
+
+        column SEGMENT2_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment2 Description
+            }
+            layout {
+                sequence: 57
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BE
+            }
+        )
+
+        column SEGMENT3 (
+            type: plainText
+            heading {
+                heading: Segment3
+            }
+            layout {
+                sequence: 49
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AW
+            }
+        )
+
+        column SEGMENT3_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment3 Description
+            }
+            layout {
+                sequence: 75
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BW
+            }
+        )
+
+        column SEGMENT4 (
+            type: plainText
+            heading {
+                heading: Segment4
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AX
+            }
+        )
+
+        column SEGMENT4_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment4 Description
+            }
+            layout {
+                sequence: 76
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BX
+            }
+        )
+
+        column SEGMENT5 (
+            type: plainText
+            heading {
+                heading: Segment5
+            }
+            layout {
+                sequence: 51
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AY
+            }
+        )
+
+        column SEGMENT5_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment5 Description
+            }
+            layout {
+                sequence: 77
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BY
+            }
+        )
+
+        column SEGMENT6 (
+            type: plainText
+            heading {
+                heading: Segment6
+            }
+            layout {
+                sequence: 52
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AZ
+            }
+        )
+
+        column SEGMENT6_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment6 Description
+            }
+            layout {
+                sequence: 78
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BZ
+            }
+        )
+
+        column SEGMENT7 (
+            type: plainText
+            heading {
+                heading: Segment7
+            }
+            layout {
+                sequence: 53
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BA
+            }
+        )
+
+        column SEGMENT7_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment7 Description
+            }
+            layout {
+                sequence: 58
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BF
+            }
+        )
+
+        column SEGMENT7_LABEL (
+            type: plainText
+            heading {
+                heading: Product Line
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CB
+            }
+        )
+
+        column SEGMENT8 (
+            type: plainText
+            heading {
+                heading: Segment8
+            }
+            layout {
+                sequence: 54
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BB
+            }
+        )
+
+        column SEGMENT8_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment8 Description
+            }
+            layout {
+                sequence: 59
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BG
+            }
+        )
+
+        column SEGMENT8_LABEL (
+            type: plainText
+            heading {
+                heading: Intercompany From
+            }
+            layout {
+                sequence: 81
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CC
+            }
+        )
+
+        column SEGMENT9 (
+            type: plainText
+            heading {
+                heading: Segment9
+            }
+            layout {
+                sequence: 55
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BC
+            }
+        )
+
+        column SEGMENT9_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Segment9 Description
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: BH
+            }
+        )
+
+        column SEGMENT9_LABEL (
+            type: plainText
+            heading {
+                heading: Destination Country
+            }
+            layout {
+                sequence: 82
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CD
+            }
+        )
+
+        column SERIAL_NUMBER (
+            type: plainText
+            heading {
+                heading: Serial Number
+            }
+            layout {
+                sequence: 4
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column SHIPPING_ACTUAL_COST (
+            type: plainText
+            heading {
+                heading: Shipping Actual Cost
+                alignment: end
+            }
+            layout {
+                sequence: 105
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: DA
+            }
+        )
+
+        column SHIPPING_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Shipping Currency
+            }
+            layout {
+                sequence: 109
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: DE
+            }
+        )
+
+        column SHIPPING_CURRENCY_CONVERSION_RATE (
+            type: plainText
+            heading {
+                heading: Shipping Currency Conversion Rate
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: DF
+            }
+        )
+
+        column SHIPPING_CURRENCY_CONVERSION_TYPE (
+            type: plainText
+            heading {
+                heading: Shipping Currency Conversion Type
+            }
+            layout {
+                sequence: 111
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: DG
+            }
+        )
+
+        column SHIPPING_INVENTORY_ITEM_ID (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Item ID
+                alignment: end
+            }
+            layout {
+                sequence: 103
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CY
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column SHIPPING_INVENTORY_ORG (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Organization
+            }
+            layout {
+                sequence: 102
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CX
+            }
+        )
+
+        column SHIPPING_INVENTORY_ORG_CODE (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Org Code
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CV
+            }
+        )
+
+        column SHIPPING_INVENTORY_ORG_ID (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Org ID
+                alignment: end
+            }
+            layout {
+                sequence: 99
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CU
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column SHIPPING_INVENTORY_ORG_NAME (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Org Name
+            }
+            layout {
+                sequence: 101
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: CW
+            }
+        )
+
+        column SHIPPING_NEW_COST (
+            type: plainText
+            heading {
+                heading: Shipping New Cost
+                alignment: end
+            }
+            layout {
+                sequence: 108
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: DD
+            }
+        )
+
+        column SHIPPING_ORG (
+            type: plainText
+            heading {
+                heading: Shipping Org
+            }
+            layout {
+                sequence: 6
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column SHIPPING_ORG_ID (
+            type: plainText
+            heading {
+                heading: Shipping Org Id
+                alignment: end
+            }
+            layout {
+                sequence: 9
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column SHIPPING_PRIOR_COST (
+            type: plainText
+            heading {
+                heading: Shipping Prior Cost
+                alignment: end
+            }
+            layout {
+                sequence: 107
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: DC
+            }
+        )
+
+        column SHIPPING_TRANSACTION_COST (
+            type: plainText
+            heading {
+                heading: Shipping Transaction Cost
+                alignment: end
+            }
+            layout {
+                sequence: 106
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: DB
+            }
+        )
+
+        column SHIPPING_TRANSACTION_DATE (
+            type: plainText
+            heading {
+                heading: Shipping Transaction Date
+            }
+            layout {
+                sequence: 104
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: CZ
+            }
+        )
+
+        column SHIPPING_TRANSACTION_ID (
+            type: plainText
+            heading {
+                heading: Shipping Transaction ID
+                alignment: end
+            }
+            layout {
+                sequence: 98
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CT
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column SHIPPING_TRANSFER_PRICE (
+            type: plainText
+            heading {
+                heading: Shipping Transfer Price
+                alignment: end
+            }
+            layout {
+                sequence: 112
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: DH
+            }
+        )
+
+        column SOLD_YES_NO (
+            type: plainText
+            heading {
+                heading: Sold Yes No
+            }
+            layout {
+                sequence: 22
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column TRADE_FLOW (
+            type: plainText
+            heading {
+                heading: Trade Flow
+            }
+            layout {
+                sequence: 13
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column TRANSACTION_COST (
+            type: plainText
+            heading {
+                heading: Receiving Transaction Cost
+                alignment: end
+            }
+            layout {
+                sequence: 91
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CM
+            }
+        )
+
+        column TRANSACTION_DATE (
+            type: plainText
+            heading {
+                heading: Transaction Date
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column TRANSACTION_ID (
+            type: plainText
+            heading {
+                heading: Transaction Id
+                alignment: end
+            }
+            layout {
+                sequence: 8
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+            security {
+                authorizationScheme: @workspace-administrator
+            }
+        )
+
+        column TRANSFER_PRICE (
+            type: plainText
+            heading {
+                heading: Receiving Transfer Price
+                alignment: end
+            }
+            layout {
+                sequence: 97
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: CS
+            }
+        )
+
+        column USD_AMOUNT (
+            type: plainText
+            heading {
+                heading: Usd Amount
+                alignment: end
+            }
+            layout {
+                sequence: 37
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AK
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCOUNTED_AMOUNT (
+                sequence: 40
+            )
+
+            displayColumn ACCOUNTED_CR (
+                sequence: 39
+            )
+
+            displayColumn ACCOUNTED_CURRENCY_CODE (
+                sequence: 34
+            )
+
+            displayColumn ACCOUNTED_DR (
+                sequence: 38
+            )
+
+            displayColumn ACCOUNTING_CLASS_CODE (
+                sequence: 31
+            )
+
+            displayColumn ACCOUNTING_DATE (
+                sequence: 11
+            )
+
+            displayColumn ACTUAL_COST (
+                sequence: 90
+            )
+
+            displayColumn AE_HEADER_ID (
+                sequence: 2
+            )
+
+            displayColumn AE_LINE_NUM (
+                sequence: 3
+            )
+
+            displayColumn CHART_OF_ACCOUNTS_ID (
+                sequence: 45
+            )
+
+            displayColumn CODE_COMBINATION_ID (
+                sequence: 44
+            )
+
+            displayColumn CONCATENATED_SEGMENTS (
+                sequence: 46
+            )
+
+            displayColumn CURRENCY_CONVERSION_DATE (
+                sequence: 42
+            )
+
+            displayColumn CURRENCY_CONVERSION_RATE (
+                sequence: 43
+            )
+
+            displayColumn CURRENCY_CONVERSION_TYPE (
+                sequence: 41
+            )
+
+            displayColumn DATE_SOLD (
+                sequence: 23
+            )
+
+            displayColumn DESTINATION_COUNTRY (
+                sequence: 64
+            )
+
+            displayColumn DETAIL_FIRST_LOADED_DATE (
+                sequence: 74
+            )
+
+            displayColumn EBS_INSTANCE_CODE (
+                sequence: 1
+            )
+
+            displayColumn ENTERED_CR (
+                sequence: 36
+            )
+
+            displayColumn ENTERED_CURRENCY_CODE (
+                sequence: 33
+            )
+
+            displayColumn ENTERED_DR (
+                sequence: 35
+            )
+
+            displayColumn ENTITY_ID (
+                sequence: 17
+            )
+
+            displayColumn EVENT_ID (
+                sequence: 18
+            )
+
+            displayColumn EVENT_STATUS_CODE (
+                sequence: 19
+            )
+
+            displayColumn FACTORY_ORG (
+                sequence: 7
+            )
+
+            displayColumn GL_EFFECTIVE_DATE (
+                sequence: 72
+            )
+
+            displayColumn GL_JE_BATCH_ID (
+                sequence: 67
+            )
+
+            displayColumn GL_JE_BATCH_NAME (
+                sequence: 68
+            )
+
+            displayColumn GL_JE_HEADER_ID (
+                sequence: 69
+            )
+
+            displayColumn GL_JE_LINE_NUM (
+                sequence: 71
+            )
+
+            displayColumn GL_JE_NAME (
+                sequence: 70
+            )
+
+            displayColumn GL_POSTED_DATE (
+                sequence: 73
+            )
+
+            displayColumn GL_SL_LINK_ID (
+                sequence: 65
+            )
+
+            displayColumn GL_SL_LINK_TABLE (
+                sequence: 66
+            )
+
+            displayColumn ICP_FROM (
+                sequence: 63
+            )
+
+            displayColumn ITEM_NUMBER (
+                sequence: 88
+            )
+
+            displayColumn JE_CATEGORY_NAME (
+                sequence: 21
+            )
+
+            displayColumn LAST_CHECKED_DATE (
+                sequence: 29
+            )
+
+            displayColumn LAST_UPDATED_DATE (
+                sequence: 30
+            )
+
+            displayColumn LEDGER_ID (
+                sequence: 15
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 16
+            )
+
+            displayColumn LINE_DESCRIPTION (
+                sequence: 32
+            )
+
+            displayColumn MASTER_FIRST_LOADED_DATE (
+                sequence: 28
+            )
+
+            displayColumn MMT_CURRENCY_CODE (
+                sequence: 94
+            )
+
+            displayColumn MMT_CURRENCY_CONVERSION_RATE (
+                sequence: 95
+            )
+
+            displayColumn MMT_CURRENCY_CONVERSION_TYPE (
+                sequence: 96
+            )
+
+            displayColumn MMT_TRANSACTION_DATE (
+                sequence: 89
+            )
+
+            displayColumn MODEL_NAME (
+                sequence: 5
+            )
+
+            displayColumn NEW_COST (
+                sequence: 93
+            )
+
+            displayColumn ORDER_NUMBER (
+                sequence: 14
+            )
+
+            displayColumn PERIOD_NAME (
+                sequence: 12
+            )
+
+            displayColumn PRIOR_COST (
+                sequence: 92
+            )
+
+            displayColumn PROCESS_STATUS_CODE (
+                sequence: 20
+            )
+
+            displayColumn PROD_LINE (
+                sequence: 62
+            )
+
+            displayColumn RECEIVING_INVENTORY_ITEM_ID (
+                sequence: 87
+            )
+
+            displayColumn RECEIVING_INVENTORY_ORG (
+                sequence: 86
+            )
+
+            displayColumn RECEIVING_INVENTORY_ORG_CODE (
+                sequence: 84
+            )
+
+            displayColumn RECEIVING_INVENTORY_ORG_ID (
+                sequence: 83
+            )
+
+            displayColumn RECEIVING_INVENTORY_ORG_NAME (
+                sequence: 85
+            )
+
+            displayColumn RECEIVING_ORG_ID (
+                sequence: 79
+            )
+
+            displayColumn REC_ORG_LOCATION (
+                sequence: 61
+            )
+
+            displayColumn REVERSAL_DATE (
+                sequence: 25
+            )
+
+            displayColumn REVERSAL_JE_HEADER_ID (
+                sequence: 26
+            )
+
+            displayColumn REVERSAL_JE_NAME (
+                sequence: 27
+            )
+
+            displayColumn REVERSED_YES_NO (
+                sequence: 24
+            )
+
+            displayColumn SEGMENT1 (
+                sequence: 47
+            )
+
+            displayColumn SEGMENT1_DESCRIPTION (
+                sequence: 56
+            )
+
+            displayColumn SEGMENT2 (
+                sequence: 48
+            )
+
+            displayColumn SEGMENT2_DESCRIPTION (
+                sequence: 57
+            )
+
+            displayColumn SEGMENT3 (
+                sequence: 49
+            )
+
+            displayColumn SEGMENT3_DESCRIPTION (
+                sequence: 75
+            )
+
+            displayColumn SEGMENT4 (
+                sequence: 50
+            )
+
+            displayColumn SEGMENT4_DESCRIPTION (
+                sequence: 76
+            )
+
+            displayColumn SEGMENT5 (
+                sequence: 51
+            )
+
+            displayColumn SEGMENT5_DESCRIPTION (
+                sequence: 77
+            )
+
+            displayColumn SEGMENT6 (
+                sequence: 52
+            )
+
+            displayColumn SEGMENT6_DESCRIPTION (
+                sequence: 78
+            )
+
+            displayColumn SEGMENT7 (
+                sequence: 53
+            )
+
+            displayColumn SEGMENT7_DESCRIPTION (
+                sequence: 58
+            )
+
+            displayColumn SEGMENT7_LABEL (
+                sequence: 80
+            )
+
+            displayColumn SEGMENT8 (
+                sequence: 54
+            )
+
+            displayColumn SEGMENT8_DESCRIPTION (
+                sequence: 59
+            )
+
+            displayColumn SEGMENT8_LABEL (
+                sequence: 81
+            )
+
+            displayColumn SEGMENT9 (
+                sequence: 55
+            )
+
+            displayColumn SEGMENT9_DESCRIPTION (
+                sequence: 60
+            )
+
+            displayColumn SEGMENT9_LABEL (
+                sequence: 82
+            )
+
+            displayColumn SERIAL_NUMBER (
+                sequence: 4
+            )
+
+            displayColumn SHIPPING_ACTUAL_COST (
+                sequence: 105
+            )
+
+            displayColumn SHIPPING_CURRENCY_CODE (
+                sequence: 109
+            )
+
+            displayColumn SHIPPING_CURRENCY_CONVERSION_RATE (
+                sequence: 110
+            )
+
+            displayColumn SHIPPING_CURRENCY_CONVERSION_TYPE (
+                sequence: 111
+            )
+
+            displayColumn SHIPPING_INVENTORY_ITEM_ID (
+                sequence: 103
+            )
+
+            displayColumn SHIPPING_INVENTORY_ORG (
+                sequence: 102
+            )
+
+            displayColumn SHIPPING_INVENTORY_ORG_CODE (
+                sequence: 100
+            )
+
+            displayColumn SHIPPING_INVENTORY_ORG_ID (
+                sequence: 99
+            )
+
+            displayColumn SHIPPING_INVENTORY_ORG_NAME (
+                sequence: 101
+            )
+
+            displayColumn SHIPPING_NEW_COST (
+                sequence: 108
+            )
+
+            displayColumn SHIPPING_ORG (
+                sequence: 6
+            )
+
+            displayColumn SHIPPING_ORG_ID (
+                sequence: 9
+            )
+
+            displayColumn SHIPPING_PRIOR_COST (
+                sequence: 107
+            )
+
+            displayColumn SHIPPING_TRANSACTION_COST (
+                sequence: 106
+            )
+
+            displayColumn SHIPPING_TRANSACTION_DATE (
+                sequence: 104
+            )
+
+            displayColumn SHIPPING_TRANSACTION_ID (
+                sequence: 98
+            )
+
+            displayColumn SHIPPING_TRANSFER_PRICE (
+                sequence: 112
+            )
+
+            displayColumn SOLD_YES_NO (
+                sequence: 22
+            )
+
+            displayColumn TRADE_FLOW (
+                sequence: 13
+            )
+
+            displayColumn TRANSACTION_COST (
+                sequence: 91
+            )
+
+            displayColumn TRANSACTION_DATE (
+                sequence: 10
+            )
+
+            displayColumn TRANSACTION_ID (
+                sequence: 8
+            )
+
+            displayColumn TRANSFER_PRICE (
+                sequence: 97
+            )
+
+            displayColumn USD_AMOUNT (
+                sequence: 37
+            )
+
+        )
+
+    )
+
+    pageItem P10_EBS_INSTANCE (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @excel-export
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: PTRXI
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P10_UNIT_STATUS (
+        type: selectList
+        label {
+            label: Units
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Unsold;UNSOLD,Sold;SOLD,Both;BOTH
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @excel-export
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: UNSOLD
+        }
+    )
+
+    button apply-filters (
+        buttonName: APPLY_FILTERS
+        label: Apply Filters
+        layout {
+            sequence: 30
+            region: @excel-export
+            slot: rightOfInteractiveReportSearchBar
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button export-excel (
+        buttonName: EXPORT_EXCEL
+        label: Export to Excel
+        layout {
+            sequence: 30
+            region: @excel-export
+            slot: rightOfInteractiveReportSearchBar
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction open-excel-download (
+        name: Open Excel Download
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @export-excel
+        }
+
+        action native-invoke-ir-dialog (
+            action: invokeInteractiveReportDialog
+            settings {
+                action: download
+            }
+            affectedElements {
+                selectionType: region
+                region: @excel-export
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)
+

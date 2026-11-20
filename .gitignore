@@ -1,0 +1,16 @@
+# OS / Editor junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temporary, log, and backup files
+*.log
+*.tmp
+*.bak
+
+# Environment & credentials
+.env
+.env.*
+
+# Agent scratch files
+scratch/

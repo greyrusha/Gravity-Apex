@@ -1,0 +1,698 @@
+page 30 (
+    name: Multi-Leg Serials
+    alias: MULTI-LEG-SERIALS
+    title: Multi-Leg Serials
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    javaScript {
+        executeWhenPageLoads:
+            ```javascript-browser
+            if ($v("P30_SERIAL_NUMBER")) {
+                window.setTimeout(function () {
+                    var detailRegion = document.getElementById("multi-leg-detail");
+                    if (detailRegion) {
+                        detailRegion.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                }, 100);
+            }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region multi-leg-detail (
+        name: Selected Serial Leg Details
+        title: Selected Serial Leg Details
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select trade_flow,
+                       factory_org as manufacturing_organization,
+                       shipping_inventory_org as shipping_organization,
+                       receiving_inventory_org as receiving_organization,
+                       transaction_date,
+                       usd_amount,
+                       line_description
+                  from xx_ic_markup_user_review_v
+                 where ebs_instance_code = :P30_EBS_INSTANCE
+                   and serial_number = :P30_SERIAL_NUMBER
+                   and (:P30_UNIT_STATUS = 'BOTH'
+                        or sold_yes_no = case :P30_UNIT_STATUS
+                                           when 'SOLD' then 'YES'
+                                           when 'UNSOLD' then 'NO'
+                                         end)
+                 order by accounting_date, ae_header_id, ae_line_num
+                ```
+            pageItemsToSubmit: [
+                P30_EBS_INSTANCE
+                P30_UNIT_STATUS
+                P30_SERIAL_NUMBER
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        messages {
+            whenNoDataFound: No leg details match the selected serial and filters.
+        }
+        advanced {
+            savedReportMappingIdentifier: 300030502
+        }
+
+        column LINE_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Line Description
+            }
+            layout {
+                sequence: 7
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column MANUFACTURING_ORGANIZATION (
+            type: plainText
+            heading {
+                heading: Manufacturing Organization
+            }
+            layout {
+                sequence: 2
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column RECEIVING_ORGANIZATION (
+            type: plainText
+            heading {
+                heading: Receiving Organization
+            }
+            layout {
+                sequence: 4
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column SHIPPING_ORGANIZATION (
+            type: plainText
+            heading {
+                heading: Shipping Organization
+            }
+            layout {
+                sequence: 3
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column TRADE_FLOW (
+            type: plainText
+            heading {
+                heading: Trade Flow
+            }
+            layout {
+                sequence: 1
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column TRANSACTION_DATE (
+            type: plainText
+            heading {
+                heading: Transaction Date
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column USD_AMOUNT (
+            type: plainText
+            heading {
+                heading: USD Amount
+                alignment: end
+            }
+            layout {
+                sequence: 6
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn LINE_DESCRIPTION (
+                sequence: 7
+            )
+
+            displayColumn MANUFACTURING_ORGANIZATION (
+                sequence: 2
+            )
+
+            displayColumn RECEIVING_ORGANIZATION (
+                sequence: 4
+            )
+
+            displayColumn SHIPPING_ORGANIZATION (
+                sequence: 3
+            )
+
+            displayColumn TRADE_FLOW (
+                sequence: 1
+            )
+
+            displayColumn TRANSACTION_DATE (
+                sequence: 5
+            )
+
+            displayColumn USD_AMOUNT (
+                sequence: 6
+            )
+
+        )
+
+    )
+
+    region multi-leg-summary (
+        name: Multi-Leg Serial Summary
+        title: Serial Numbers with More Than One Leg
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                with filtered as (
+                    select r.*
+                      from xx_ic_markup_user_review_v r
+                     where r.ebs_instance_code = :P30_EBS_INSTANCE
+                       and (:P30_UNIT_STATUS = 'BOTH'
+                            or r.sold_yes_no = case :P30_UNIT_STATUS
+                                                 when 'SOLD' then 'YES'
+                                                 when 'UNSOLD' then 'NO'
+                                               end)
+                ), serial_summary as (
+                    select serial_number,
+                           count(*) as leg_count,
+                           listagg(distinct model_name, ', ') within group (order by model_name) as model_name,
+                           listagg(distinct prod_line, ', ') within group (order by prod_line) as prod_line,
+                           case max(sold_yes_no) when 'YES' then 'Sold' else 'Unsold' end as sold_status,
+                           min(date_sold) as date_sold,
+                           sum(usd_amount) as total_usd_amount
+                      from filtered
+                     where serial_number is not null
+                     group by serial_number
+                    having count(*) > 1
+                )
+                select s.serial_number,
+                       s.leg_count,
+                       s.model_name,
+                       s.prod_line,
+                       s.sold_status,
+                       s.date_sold,
+                       s.total_usd_amount,
+                       apex_page.get_url(
+                           p_page        => 30,
+                           p_clear_cache => '30',
+                           p_items       => 'P30_EBS_INSTANCE,P30_UNIT_STATUS,P30_SERIAL_NUMBER',
+                           p_values      => :P30_EBS_INSTANCE || ',' || :P30_UNIT_STATUS || ',' || s.serial_number
+                       ) as detail_url
+                  from serial_summary s
+                ```
+            pageItemsToSubmit: [
+                P30_EBS_INSTANCE
+                P30_UNIT_STATUS
+            ]
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        messages {
+            whenNoDataFound: No multi-leg serial numbers match the selected filters.
+        }
+        advanced {
+            savedReportMappingIdentifier: 300030002
+        }
+
+        column DATE_SOLD (
+            type: plainText
+            heading {
+                heading: Date Sold
+            }
+            layout {
+                sequence: 6
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column DETAIL_URL (
+            type: hidden
+            heading {
+                heading: Detail URL
+            }
+            layout {
+                sequence: 8
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column LEG_COUNT (
+            type: plainText
+            heading {
+                heading: Number of Legs
+                alignment: end
+            }
+            layout {
+                sequence: 2
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column MODEL_NAME (
+            type: plainText
+            heading {
+                heading: Model
+            }
+            layout {
+                sequence: 3
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column PROD_LINE (
+            type: plainText
+            heading {
+                heading: Product Line
+            }
+            layout {
+                sequence: 4
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column SERIAL_NUMBER (
+            type: link
+            heading {
+                heading: Serial Number
+            }
+            layout {
+                sequence: 1
+            }
+            link {
+                target: {
+                    type: url
+                    url: #DETAIL_URL#
+                }
+                linkText: #SERIAL_NUMBER#
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column SOLD_STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column TOTAL_USD_AMOUNT (
+            type: plainText
+            heading {
+                heading: Total USD Markup
+                alignment: end
+            }
+            layout {
+                sequence: 7
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 10
+            }
+
+            displayColumn DATE_SOLD (
+                sequence: 6
+            )
+
+            displayColumn LEG_COUNT (
+                sequence: 2
+            )
+
+            displayColumn MODEL_NAME (
+                sequence: 3
+            )
+
+            displayColumn PROD_LINE (
+                sequence: 4
+            )
+
+            displayColumn SERIAL_NUMBER (
+                sequence: 1
+            )
+
+            displayColumn SOLD_STATUS (
+                sequence: 5
+            )
+
+            displayColumn TOTAL_USD_AMOUNT (
+                sequence: 7
+            )
+
+        )
+
+    )
+
+    pageItem P30_EBS_INSTANCE (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @multi-leg-summary
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: PTRXI
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P30_SERIAL_NUMBER (
+        type: hidden
+        layout {
+            sequence: 30
+            region: @multi-leg-summary
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P30_UNIT_STATUS (
+        type: selectList
+        label {
+            label: Units
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC:Unsold;UNSOLD,Sold;SOLD,Both;BOTH
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @multi-leg-summary
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        validation {
+            valueRequired: true
+        }
+        default {
+            type: static
+            staticValue: UNSOLD
+        }
+    )
+
+    button apply-filters (
+        buttonName: APPLY_FILTERS
+        label: Apply Filters
+        layout {
+            sequence: 10
+            region: @multi-leg-summary
+            slot: rightOfInteractiveReportSearchBar
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button export-xlsx (
+        buttonName: EXPORT_XLSX
+        label: Export to Excel
+        layout {
+            sequence: 20
+            region: @multi-leg-summary
+            slot: rightOfInteractiveReportSearchBar
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process clear-selected-serial (
+        name: Clear Selected Serial
+        type: executeCode
+        source {
+            plsqlCode: :P30_SERIAL_NUMBER := null;
+        }
+        execution {
+            sequence: 10
+        }
+        error {
+            displayLocation: onErrorPage
+        }
+        advanced {
+            executionMappingIdentifier: 300030801
+        }
+        serverSideCondition {
+            whenButtonPressed: @apply-filters
+        }
+    )
+
+    process export-all-multi-leg-details (
+        name: Export All Multi-Leg Details
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                    l_context     apex_exec.t_context;
+                    l_export      apex_data_export.t_export;
+                    l_column_list varchar2(32767);
+                    l_sql         varchar2(32767);
+                begin
+                    select listagg('r.' || dbms_assert.enquote_name(c.column_name, false), ',')
+                               within group (order by c.column_id)
+                      into l_column_list
+                      from user_tab_columns c
+                     where c.table_name = 'XX_IC_MARKUP_USER_REVIEW_V'
+                       and exists (
+                               select 1
+                                 from apex_application_page_ir_col p
+                                where p.application_id = :APP_ID
+                                  and p.page_id = 10
+                                  and p.column_alias = c.column_name
+                                  and p.authorization_scheme is null
+                           );
+                
+                    if l_column_list is null then
+                        raise_application_error(-20030, 'No authorized export columns are available.');
+                    end if;
+                
+                    l_sql :=
+                        'with filtered as (' ||
+                        ' select ' || l_column_list ||
+                        ' from xx_ic_markup_user_review_v r' ||
+                        ' where r.ebs_instance_code = :P30_EBS_INSTANCE' ||
+                        ' and (:P30_UNIT_STATUS = ''BOTH''' ||
+                        ' or r.sold_yes_no = case :P30_UNIT_STATUS' ||
+                        ' when ''SOLD'' then ''YES''' ||
+                        ' when ''UNSOLD'' then ''NO'' end))' ||
+                        ', multi_leg as (' ||
+                        ' select serial_number from filtered' ||
+                        ' where serial_number is not null' ||
+                        ' group by serial_number having count(*) > 1)' ||
+                        ' select f.* from filtered f' ||
+                        ' join multi_leg m on m.serial_number = f.serial_number';
+                
+                    l_context := apex_exec.open_query_context(
+                        p_location        => apex_exec.c_location_local_db,
+                        p_sql_query       => l_sql,
+                        p_auto_bind_items => true,
+                        p_max_rows        => null
+                    );
+                
+                    l_export := apex_data_export.export(
+                        p_context   => l_context,
+                        p_format    => apex_data_export.c_format_xlsx,
+                        p_file_name => 'multi_leg_serials_' || lower(:P30_EBS_INSTANCE)
+                    );
+                
+                    apex_exec.close(l_context);
+                    apex_data_export.download(l_export);
+                exception
+                    when others then
+                        begin
+                            apex_exec.close(l_context);
+                        exception
+                            when others then null;
+                        end;
+                        raise;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        advanced {
+            executionMappingIdentifier: 300030802
+        }
+        serverSideCondition {
+            whenButtonPressed: @export-xlsx
+        }
+    )
+
+)
+

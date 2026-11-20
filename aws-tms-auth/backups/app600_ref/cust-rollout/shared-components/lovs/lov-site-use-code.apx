@@ -1,0 +1,38 @@
+lov lov-site-use-code (
+    name: EBS_SITE_USE_CODE
+    source {
+        location: staticValues
+    }
+
+    entry su-bt (
+        sequence: 10
+        display: BILL_TO
+        return: BILL_TO
+    )
+
+    entry su-dun (
+        sequence: 40
+        display: DUN
+        return: DUN
+    )
+
+    entry su-legal (
+        sequence: 50
+        display: LEGAL
+        return: LEGAL
+    )
+
+    entry su-st (
+        sequence: 20
+        display: SHIP_TO
+        return: SHIP_TO
+    )
+
+    entry su-stmts (
+        sequence: 30
+        display: STMTS
+        return: STMTS
+    )
+
+)
+

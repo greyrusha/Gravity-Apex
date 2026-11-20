@@ -1,0 +1,27 @@
+authentication ebs-credentials (
+    name: EBS Credentials
+    type: custom
+    settings {
+        authFunctionName: xx_tms_security_pkg.authenticate_ebs
+    }
+    postLogout {
+        redirectTo: url
+        url: f?p=&APP_ID.:9999:0
+    }
+    sessionSharing {
+        type: custom
+        cookieName: TMS_APP128
+        cookiePath: /ords/
+        secure: true
+    }
+)
+
+authentication oracle-apex-accounts (
+    name: Oracle APEX Accounts
+    type: oracleApexAccounts
+    sessionSharing {
+        type: custom
+        secure: true
+    }
+)
+

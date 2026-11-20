@@ -1,0 +1,655 @@
+page 31 (
+    name: AR Unapplied Receipts — Current
+    alias: AR-UNAPPLIED-RECEIPTS-CURRENT
+    title: AR Unapplied Receipts — Current
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region filters (
+        name: Current State
+        title: Current State
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      This report shows the current open unapplied and unidentified receipt
+                      position. It is not a historical period-end snapshot.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region gl-readiness (
+        name: AR Unapplied Receipts
+        title: Receivables Exceptions
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                SELECT r.ledger_id,
+                       r.ledger_name,
+                       r.org_id,
+                       r.operating_unit,
+                       r.receipt_number,
+                       r.receipt_date,
+                       r.receipt_type,
+                       r.receipt_status,
+                       r.customer_number,
+                       r.customer_name,
+                       r.currency_code,
+                       r.original_receipt_amount,
+                       r.applied_amount,
+                       r.unapplied_amount,
+                       r.ledger_currency_code,
+                       r.accounted_unapplied_amount,
+                       r.receipt_age_days,
+                       r.cash_receipt_id,
+                       r.refresh_timestamp
+                FROM TABLE(xxme_ar_unapplied_pkg.get_receipts(:P31_DB_LINK)) r
+                ```
+            pageItemsToSubmit: P31_DB_LINK
+        }
+        layout {
+            sequence: 20
+            slot: body
+            columnSpan: 12
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound:
+                ```
+                <div class="t-Alert t-Alert--success t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-check-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">No unapplied receipts found</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        No material open unapplied or unidentified receipts were found within
+                        the approved ledger scope.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        searchBar {
+            rowsPerPageSelector: true
+        }
+        advanced {
+            savedReportMappingIdentifier: 32591070133405977
+        }
+
+        column ACCOUNTED_UNAPPLIED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Accounted Unapplied Amount
+                alignment: end
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Z
+            }
+        )
+
+        column APPLIED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Applied Amount
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: W
+            }
+        )
+
+        column CASH_RECEIPT_ID (
+            type: hidden
+            heading {
+                heading: Cash Receipt Id
+            }
+            layout {
+                sequence: 200
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Currency Code
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: U
+            }
+        )
+
+        column CUSTOMER_NAME (
+            type: plainText
+            heading {
+                heading: Customer Name
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column CUSTOMER_NUMBER (
+            type: plainText
+            heading {
+                heading: Customer Number
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column LEDGER_CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Ledger Currency Code
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Y
+            }
+        )
+
+        column LEDGER_ID (
+            type: hidden
+            heading {
+                heading: Ledger Id
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger Name
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column OPERATING_UNIT (
+            type: plainText
+            heading {
+                heading: Operating Unit
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Org Id
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column ORIGINAL_RECEIPT_AMOUNT (
+            type: plainText
+            heading {
+                heading: Original Receipt Amount
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column RECEIPT_AGE_DAYS (
+            type: plainText
+            heading {
+                heading: Receipt Age Days
+                alignment: end
+            }
+            layout {
+                sequence: 160
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: AA
+            }
+        )
+
+        column RECEIPT_DATE (
+            type: plainText
+            heading {
+                heading: Receipt Date
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column RECEIPT_NUMBER (
+            type: plainText
+            heading {
+                heading: Receipt Number
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column RECEIPT_STATUS (
+            type: plainText
+            heading {
+                heading: Receipt Status
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column RECEIPT_TYPE (
+            type: plainText
+            heading {
+                heading: Receipt Type
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column REFRESH_TIMESTAMP (
+            type: hidden
+            heading {
+                heading: Refresh Timestamp
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column UNAPPLIED_AMOUNT (
+            type: plainText
+            heading {
+                heading: Unapplied Amount
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: X
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Receivables Exceptions
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 100
+            }
+
+            displayColumn ACCOUNTED_UNAPPLIED_AMOUNT (
+                sequence: 14
+            )
+
+            displayColumn APPLIED_AMOUNT (
+                sequence: 11
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 7
+            )
+
+            displayColumn CUSTOMER_NAME (
+                sequence: 9
+            )
+
+            displayColumn CUSTOMER_NUMBER (
+                sequence: 8
+            )
+
+            displayColumn LEDGER_CURRENCY_CODE (
+                sequence: 13
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 1
+            )
+
+            displayColumn OPERATING_UNIT (
+                sequence: 2
+            )
+
+            displayColumn ORIGINAL_RECEIPT_AMOUNT (
+                sequence: 10
+            )
+
+            displayColumn RECEIPT_AGE_DAYS (
+                sequence: 15
+            )
+
+            displayColumn RECEIPT_DATE (
+                sequence: 4
+            )
+
+            displayColumn RECEIPT_NUMBER (
+                sequence: 3
+            )
+
+            displayColumn RECEIPT_STATUS (
+                sequence: 6
+            )
+
+            displayColumn RECEIPT_TYPE (
+                sequence: 5
+            )
+
+            displayColumn UNAPPLIED_AMOUNT (
+                sequence: 12
+            )
+
+        )
+
+    )
+
+    pageItem P31_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    button back-to-dashboard (
+        buttonName: BACK_TO_DASHBOARD
+        label: Close
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button refresh-gl (
+        buttonName: REFRESH_AR
+        label: Refresh
+        layout {
+            sequence: 20
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction close (
+        name: Close
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @back-to-dashboard
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: window.close();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction refresh-ar-report (
+        name: Refresh AR Report
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @refresh-gl
+        }
+
+        action native-refresh (
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @gl-readiness
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+)
+

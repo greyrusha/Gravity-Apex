@@ -1,0 +1,11 @@
+authorization workspace-administrator-only (
+    name: Workspace Administrator Only
+    type: plSqlFunctionBody
+    settings {
+        plsqlFunctionBody: return xx_tms_security_pkg.is_workspace_admin(:APP_USER);
+    }
+    error {
+        errorMessage: This application is available only to an authorized TMS Console Administrator.
+    }
+)
+

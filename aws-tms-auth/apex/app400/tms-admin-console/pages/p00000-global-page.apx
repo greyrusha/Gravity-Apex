@@ -1,0 +1,24 @@
+page 0 (
+    name: Global Page
+
+    region appearance-actions (
+        name: Appearance actions
+        type: staticContent
+        source {
+            htmlCode: <script defer src="#APP_FILES#appearance.js?v=7305356ec2"></script>
+        }
+        layout {
+            sequence: 9998
+            slot: beforeFooter
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: userIsAuthenticated
+        }
+    )
+
+)
+

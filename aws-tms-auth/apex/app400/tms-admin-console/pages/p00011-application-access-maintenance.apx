@@ -1,0 +1,333 @@
+page 11 (
+    name: Application Access Maintenance
+    alias: APPLICATION-ACCESS-MAINTENANCE
+    title: Application Access Maintenance
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @workspace-administrator-only
+    }
+
+    region application-selection (
+        name: Application Selection
+        title: Application Selection
+        type: staticContent
+        source {
+            htmlCode: <p>Select one enabled centrally managed application. The grid shows unified TMS (EBS) users and any linked @terex.com local accounts. Console Administrators always have access and are omitted.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region apply-access-changes (
+        name: Apply Access Changes
+        title: Apply Access Changes
+        type: staticContent
+        source {
+            htmlCode: <p>Access Enabled represents the desired final state for the selected application. Save applies only rows whose state changed.</p>
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region eligible-users (
+        name: Eligible Users
+        title: Eligible Users
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select apex_item.hidden(1, u.ebs_user_name) ||
+                       apex_escape.html(
+                         u.ebs_user_name ||
+                         case when u.local_user_email is not null then ' (' || u.local_user_email || ')' end
+                       ) user_name,
+                       u.full_name full_name,
+                       case when u.enabled_yn = 'N' then 'Disabled (TMS)'
+                            when upper(nvl(w.account_locked, 'NO')) = 'YES' then 'Enabled (Local Locked)'
+                            else 'Enabled' end account_status,
+                       case when exists (
+                              select 1
+                                from xx_tms_user_access x
+                               where x.application_code = :P11_APPLICATION_CODE
+                                 and x.user_name in (lower(u.ebs_user_name), nvl(u.local_user_email, lower(u.ebs_user_name)))
+                            ) then 'Yes' else 'No' end currently_enabled,
+                       apex_item.checkbox2(
+                         2,
+                         u.ebs_user_name,
+                         case when exists (
+                                select 1
+                                  from xx_tms_user_access x
+                                 where x.application_code = :P11_APPLICATION_CODE
+                                   and x.user_name in (lower(u.ebs_user_name), nvl(u.local_user_email, lower(u.ebs_user_name)))
+                              ) then 'checked="checked"' end,
+                         null,
+                         null,
+                         'access_' || ora_hash(u.ebs_user_name),
+                         'Access enabled for ' || u.ebs_user_name
+                       ) access_enabled
+                  from xx_tms_users u
+                  left join apex_workspace_apex_users w
+                    on lower(w.user_name) = u.local_user_email
+                 where :P11_APPLICATION_CODE is not null
+                   and u.is_console_admin_yn = 'N'
+                 order by u.ebs_user_name
+                ```
+            pageItemsToSubmit: P11_APPLICATION_CODE
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 500
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column ACCESS_ENABLED (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Access Enabled
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column ACCOUNT_STATUS (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: Status
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column CURRENTLY_ENABLED (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Current Access
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column FULL_NAME (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Name
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column USER_NAME (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: User
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+    )
+
+    pageItem P11_APPLICATION_CODE (
+        type: selectList
+        label {
+            label: Application
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select a.application_name || ' [' || nvl(x.authentication_scheme, 'Unlinked') || ']' d,
+                       a.application_code r
+                  from xx_tms_application a
+                  left join apex_applications x
+                    on x.application_id = a.apex_application_id
+                   and x.workspace = 'GL_ACCOUNTS'
+                 where a.access_mode = 'CENTRAL'
+                   and a.enabled_yn = 'Y'
+                 order by a.application_name
+                ```
+            displayExtraValues: false
+            nullDisplayValue: - Select Application -
+        }
+        layout {
+            sequence: 10
+            region: @application-selection
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    button save-access-changes (
+        buttonName: SAVE_ACCESS_CHANGES
+        label: Save
+        layout {
+            sequence: 10
+            region: @apply-access-changes
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction refresh-eligible-users (
+        name: Refresh Eligible Users
+        execution {
+            sequence: 10
+        }
+        when {
+            selectionType: items
+            items: P11_APPLICATION_CODE
+        }
+
+        action refresh-eligible-users-report (
+            name: Refresh Eligible Users Report
+            action: refresh
+            affectedElements {
+                selectionType: region
+                region: @eligible-users
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process save-application-access (
+        name: Save Application Access
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_message varchar2(4000);
+                begin
+                  xx_tms_admin_pkg.save_application_access_grid(
+                    p_application_code => :P11_APPLICATION_CODE,
+                    p_all_users        => apex_application.g_f01,
+                    p_checked_users    => apex_application.g_f02,
+                    p_message          => l_message
+                  );
+                  apex_application.g_print_success_message := l_message;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 4002350
+        }
+        serverSideCondition {
+            type: request=Value
+            value: SAVE_ACCESS_CHANGES
+        }
+    )
+
+)
+

@@ -1,0 +1,10 @@
+file appearance.css (
+    mimeType: text/css
+    charSet: utf-8
+)
+
+file appearance.js (
+    mimeType: application/javascript
+    charSet: utf-8
+)
+

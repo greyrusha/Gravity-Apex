@@ -1,0 +1,1279 @@
+page 90 (
+    name: About This App
+    alias: ABOUT
+    title: About This App — Complete Functional, Business & Technical Guide
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+
+    region about-hero (
+        name: About EBS Customer OU Rollout Workbench
+        title: About This App — EBS Customer OU Rollout Workbench
+        type: staticContent
+        source {
+            htmlCode: Complete onboarding guide, business rules, Oracle EBS R12 Public API coverage & scope boundaries, Connected 8-Tab Excel mechanics, deduplication logic, 4-stage validation rulebook, and APEX 26.2 technical architecture.
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/hero
+            templateOptions: #DEFAULT#
+        }
+        image {
+            fileUrl: #APP_FILES#icons/app-icon-512.png
+        }
+    )
+
+    region about-tabs (
+        name: Documentation & Architecture Sections
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/tabs-container
+            templateOptions: [
+                #DEFAULT#
+                js-useLocalStorage
+                t-TabsRegion-mod--simple
+            ]
+        }
+    )
+
+    region live-dict-ig (
+        name: Live Staging & Control Tables Inventory
+        title: Live Database Objects & Real-Time Staging Row Counts (XXCR_*)
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select 1 as seq_no, 'XXCR_PROJECTS' as table_name, 'Rollout Project Scope, Source OU & Optional Target OU/BSV' as purpose,
+                       'HR_OPERATING_UNITS / GL_LEDGERS / XLE_ENTITY_PROFILES' as ebs_mapping,
+                       (select count(*) from xxcr_projects) as total_rows,
+                       (select count(*) from xxcr_projects) as included_rows,
+                       0 as excluded_rows
+                  from dual
+                union all
+                select 2, 'XXCR_EBS_OU_CACHE', 'Cached EBS Operating Units, Legal Entities & Ledgers from @ADG',
+                       'HR_OPERATING_UNITS@ADG',
+                       (select count(*) from xxcr_ebs_ou_cache),
+                       (select count(*) from xxcr_ebs_ou_cache),
+                       0
+                  from dual
+                union all
+                select 3, 'XXCR_EBS_REF_LOVS', 'Cached EBS Reference LOVs (Terms, Collectors, Cycles, AutoCash, Grouping, Receipt Methods)',
+                       'RA_TERMS / AR_COLLECTORS / AR_STATEMENT_CYCLES / AR_RECEIPT_METHODS@ADG',
+                       (select count(*) from xxcr_ebs_ref_lovs),
+                       (select count(*) from xxcr_ebs_ref_lovs where active_yn = 'Y'),
+                       (select count(*) from xxcr_ebs_ref_lovs where active_yn <> 'Y')
+                  from dual
+                union all
+                select 4, 'XXCR_STG_CUSTOMERS', 'Tab 1: Staged Customer Accounts & Rolled-Up Credit Profiles',
+                       'HZ_PARTIES / HZ_CUST_ACCOUNTS / HZ_CUSTOMER_PROFILES',
+                       (select count(*) from xxcr_stg_customers),
+                       (select count(*) from xxcr_stg_customers where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_customers where include_yn = 'N')
+                  from dual
+                union all
+                select 5, 'XXCR_STG_SITES', 'Tab 2: Staged Locations, Account Sites & RA_ADDRESSES_HZ DFFs',
+                       'HZ_LOCATIONS / HZ_PARTY_SITES / HZ_CUST_ACCT_SITES_ALL',
+                       (select count(*) from xxcr_stg_sites),
+                       (select count(*) from xxcr_stg_sites where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_sites where include_yn = 'N')
+                  from dual
+                union all
+                select 6, 'XXCR_STG_SITE_USES', 'Tab 3: Staged Site Uses, GL, Tax Reg, AWP-GENIE Rep & Bill-To AR Controls',
+                       'HZ_CUST_SITE_USES_ALL / HZ_CUSTOMER_PROFILES / GL_CODE_COMBINATIONS',
+                       (select count(*) from xxcr_stg_site_uses),
+                       (select count(*) from xxcr_stg_site_uses where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_site_uses where include_yn = 'N')
+                  from dual
+                union all
+                select 7, 'XXCR_STG_CONTACTS', 'Tab 4: Staged Customer & Site Contact Roles, Email, Phone, Mobile & Fax',
+                       'HZ_CUST_ACCOUNT_ROLES / HZ_ORG_CONTACTS / HZ_CONTACT_POINTS',
+                       (select count(*) from xxcr_stg_contacts),
+                       (select count(*) from xxcr_stg_contacts where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_contacts where include_yn = 'N')
+                  from dual
+                union all
+                select 8, 'XXCR_STG_PROFILE_AMTS', 'Tab 5: Multi-Currency Bill-To Credit Limits (AUD, USD, NZD, EUR)',
+                       'HZ_CUST_PROFILE_AMTS (HZ_CUSTOMER_PROFILE_V2PUB)',
+                       (select count(*) from xxcr_stg_profile_amts),
+                       (select count(*) from xxcr_stg_profile_amts where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_profile_amts where include_yn = 'N')
+                  from dual
+                union all
+                select 9, 'XXCR_STG_ACCT_RELATES', 'Tab 6: OU-Striped Cross-Account Relationships (Bill-To / Ship-To / Reciprocal)',
+                       'HZ_CUST_ACCT_RELATE_ALL (HZ_CUST_ACCOUNT_V2PUB)',
+                       (select count(*) from xxcr_stg_acct_relates),
+                       (select count(*) from xxcr_stg_acct_relates where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_acct_relates where include_yn = 'N')
+                  from dual
+                union all
+                select 10, 'XXCR_STG_PAYMENT_INSTR', 'Tab 7: OU Masked Payment Instruments & AR Receipt Methods (Zero Raw PII)',
+                       'IBY_EXTERNAL_PAYERS_ALL / IBY_PMT_INSTR_USES_ALL / RA_CUST_RECEIPT_METHODS',
+                       (select count(*) from xxcr_stg_payment_instr),
+                       (select count(*) from xxcr_stg_payment_instr where include_yn = 'Y'),
+                       (select count(*) from xxcr_stg_payment_instr where include_yn = 'N')
+                  from dual
+                union all
+                select 11, 'XXCR_DUPLICATES', 'Activity-Ranked Duplicate Pairs (Customer, Site, Site Use & Contact)',
+                       'UTL_MATCH + AR_PAYMENT_SCHEDULES_ALL + OE_ORDER_LINES_ALL',
+                       (select count(*) from xxcr_duplicates),
+                       (select count(*) from xxcr_duplicates where resolution_action = 'OPEN'),
+                       (select count(*) from xxcr_duplicates where resolution_action <> 'OPEN')
+                  from dual
+                union all
+                select 12, 'XXCR_VAL_ERRORS', '4-Stage Pre-API Validation Errors & Warnings',
+                       'Stages 1..4 Structural, Hierarchy, Target BSV & TCA Guard',
+                       (select count(*) from xxcr_val_errors),
+                       (select count(*) from xxcr_val_errors where severity = 'ERROR'),
+                       (select count(*) from xxcr_val_errors where severity = 'WARNING')
+                  from dual
+                union all
+                select 13, 'XXCR_XLS_IMPORTS', 'Connected 8-Tab Excel Upload Sessions & BLOB Archive',
+                       'APEX_DATA_PARSER Workbook Upload Audit',
+                       (select count(*) from xxcr_xls_imports),
+                       (select count(*) from xxcr_xls_imports where status = 'APPLIED'),
+                       0
+                  from dual
+                union all
+                select 14, 'XXCR_XLS_DELTAS', 'Cell-by-Cell Excel Edits & Cascaded Exclusion Audit Trail',
+                       'Old Value vs. New Value & CASCADE_EXCLUDE Log',
+                       (select count(*) from xxcr_xls_deltas),
+                       (select count(*) from xxcr_xls_deltas where applied_yn = 'Y'),
+                       0
+                  from dual
+                ```
+        }
+        layout {
+            sequence: 10
+            parentRegion: @tab-tech-arch
+            slot: subRegions
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchField
+                resetButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60009001
+        }
+
+        savedReport 60009002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 15
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @SEQ_NO
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @TABLE_NAME
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @PURPOSE
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @EBS_MAPPING
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @TOTAL_ROWS
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDED_ROWS
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @EXCLUDED_ROWS
+                layout {
+                    sequence: 70
+                }
+            )
+
+        )
+
+        column EBS_MAPPING (
+            type: displayOnly
+            heading {
+                heading: EBS R12 Source / Engine Mapping
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: EBS_MAPPING
+                dataType: varchar2
+            }
+        )
+
+        column EXCLUDED_ROWS (
+            type: displayOnly
+            heading {
+                heading: Excluded / Warnings / Resolved
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: EXCLUDED_ROWS
+                dataType: number
+            }
+        )
+
+        column INCLUDED_ROWS (
+            type: displayOnly
+            heading {
+                heading: Active / Included / Open
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: INCLUDED_ROWS
+                dataType: number
+            }
+        )
+
+        column PURPOSE (
+            type: displayOnly
+            heading {
+                heading: Functional Role in Workbench
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: PURPOSE
+                dataType: varchar2
+            }
+        )
+
+        column SEQ_NO (
+            type: displayOnly
+            heading {
+                heading: #
+                alignment: end
+            }
+            layout {
+                sequence: 10
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SEQ_NO
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column TABLE_NAME (
+            type: displayOnly
+            heading {
+                heading: Staging / Control Table
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: TABLE_NAME
+                dataType: varchar2
+            }
+        )
+
+        column TOTAL_ROWS (
+            type: displayOnly
+            heading {
+                heading: Total Rows
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: TOTAL_ROWS
+                dataType: number
+            }
+        )
+
+    )
+
+    region quick-actions (
+        name: Quick Launch Bar
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: [
+                #DEFAULT#
+                t-ButtonRegion--noPadding
+                t-ButtonRegion--noUI
+            ]
+        }
+    )
+
+    region tab-dedup-guide (
+        name: 4. Deduplication & Survivor Engine
+        title: 4. Deduplication & Survivor Engine
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="xxcr-doc">
+                  <h2>How Duplicate Detection &amp; Activity-Ranked Survivorship Work</h2>
+                  <p>
+                    In Oracle EBS, most real-world master data duplication is <strong>not</strong> at the Customer Account header — it is concentrated in <strong>Addresses/Sites</strong>, <strong>Site Uses (<span class="xxcr-code">BILL_TO</span> / <span class="xxcr-code">SHIP_TO</span>)</strong>, and <strong>Site Contacts</strong>. Every staging row on Tabs 1, 2, 3, and 4 is stamped with an explicit <strong><span class="xxcr-code">Dup Role</span></strong> so reviewers can see the Golden record immediately:
+                  </p>
+                  <ul>
+                    <li><span class="xxcr-badge xxcr-b-green">UNIQUE</span> — No open duplicate exists for this record.</li>
+                    <li><span class="xxcr-badge xxcr-b-blue">SURVIVOR (N dup)</span> — Ranked #1 active "Golden" record in a duplicate cluster (keep <span class="xxcr-code">Include = Y</span>).</li>
+                    <li><span class="xxcr-badge xxcr-b-amber">DUPLICATE -&gt; SITE-xxxxx</span> — Redundant record pointing directly to its Golden Survivor (candidate for <span class="xxcr-code">Include = N</span>).</li>
+                  </ul>
+                
+                  <h3>Mandatory Business Rule: <span class="xxcr-code">MACHINES</span> vs. <span class="xxcr-code">AFTERMARKET</span> Split Protection</h3>
+                  <p>
+                    In Terex Australia, customers frequently have two separate Customer Accounts — one with <span class="xxcr-code">ACCOUNT_NAME = 'MACHINES'</span> (Capital Equipment sales) and one with <span class="xxcr-code">ACCOUNT_NAME = 'AFTERMARKET'</span> (Parts &amp; Service), sometimes even under separate <span class="xxcr-code">PARTY_ID</span>s. The deduplication engine enforces <span class="xxcr-code">UPPER(TRIM(c1.TGT_ACCOUNT_NAME)) = UPPER(TRIM(c2.TGT_ACCOUNT_NAME))</span> so <strong><span class="xxcr-code">MACHINES</span> and <span class="xxcr-code">AFTERMARKET</span> accounts are NEVER flagged or collapsed as duplicates</strong>.
+                  </p>
+                
+                  <h3>Mathematical Survivor Ranking Priority (Highest Priority Wins <span class="xxcr-code">SURVIVOR</span>)</h3>
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th>Entity Level</th>
+                        <th>Matching Criteria</th>
+                        <th>Survivor Ranking Order (<span class="xxcr-code">#1 = SURVIVOR</span>)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>1. Address / Site</strong><br><span class="xxcr-code">ADDRESS_SITE</span></td>
+                        <td>Same Customer Account + same Country, City &amp; Postcode + exact normalized street key OR Jaro-Winkler street similarity &ge; 92%.</td>
+                        <td>
+                          1) Highest absolute <strong>Site Open AR</strong> (<span class="xxcr-code">SRC_OPEN_AR_AMT</span>)<br>
+                          2) Highest <strong>24m AR Invoices + Open Sales Orders</strong> (<span class="xxcr-code">SRC_TRX_CNT_RECENT + SRC_OPEN_SO_CNT</span>)<br>
+                          3) Has <span class="xxcr-code">Primary = Y</span> child Site Use<br>
+                          4) Most recent <strong>Last Activity Date</strong> (<span class="xxcr-code">SRC_LAST_TRX_DATE</span>)
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>2. Site Use</strong><br><span class="xxcr-code">SITE_USE</span></td>
+                        <td>Same Customer Account + same <span class="xxcr-code">SITE_USE_CODE</span> (<span class="xxcr-code">BILL_TO</span> or <span class="xxcr-code">SHIP_TO</span>) on the same Site OR across duplicate Sites at the same physical address.</td>
+                        <td>
+                          1) Highest absolute <strong>Site-Use Open AR</strong><br>
+                          2) Highest <strong>24m Invoices + Open Sales Orders</strong> on that Site Use<br>
+                          3) <span class="xxcr-code">TGT_PRIMARY_FLAG = 'Y'</span><br>
+                          4) Highest <strong>Overall Credit Limit</strong> &amp; latest Activity Date
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>3. Contact on Site</strong><br><span class="xxcr-code">CONTACT</span></td>
+                        <td>Same Customer Account + same Site + identical normalized Email Address or First/Last Name.</td>
+                        <td>
+                          1) <span class="xxcr-code">TGT_PRIMARY_FLAG = 'Y'</span><br>
+                          2) Has Email Address populated<br>
+                          3) Has Phone Number populated
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>4. Customer Account</strong><br><span class="xxcr-code">CUSTOMER</span></td>
+                        <td>Same <span class="xxcr-code">TGT_ACCOUNT_NAME</span> business stream + exact Tax Reference OR Jaro-Winkler normalized Party Name similarity &ge; 88%.</td>
+                        <td>
+                          1) Highest absolute <strong>Account Open AR</strong><br>
+                          2) Highest <strong>24m AR Invoice Count</strong><br>
+                          3) Highest <strong>Overall Credit Limit</strong> &amp; latest Invoice Date
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                
+                  <h3>How the 1-Click <span class="xxcr-code">Auto-Exclude $0-AR / 0-Open-SO Duplicates</span> Button Works</h3>
+                  <p>
+                    Available on both <strong>Page 10</strong> and <strong>Page 40</strong>, this action safely auto-excludes open <span class="xxcr-code">ADDRESS_SITE</span>, <span class="xxcr-code">SITE_USE</span>, and <span class="xxcr-code">CONTACT</span> duplicates <strong>only when <span class="xxcr-code">Open AR = $0.00</span> AND <span class="xxcr-code">Open Sales Orders = 0</span></strong>, cascading site exclusions automatically. Any duplicate carrying non-zero Open AR or an open in-flight Sales Order (and all Customer-level duplicates) remains untouched for manual business decision (<span class="xxcr-code">EXCLUDE_DUPLICATE</span>, <span class="xxcr-code">REUSE_EXISTING</span>, or <span class="xxcr-code">KEEP_BOTH_OVERRIDE</span>).
+                  </p>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 40
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-ebs-tca (
+        name: 2. EBS R12 TCA & Extract Scope
+        title: 2. EBS R12 TCA & Extract Scope
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="xxcr-doc">
+                  <h2>Oracle EBS R12 Trading Community Architecture (TCA) Hierarchy</h2>
+                  <p>
+                    In Oracle EBS R12, Customer Master data is split between <strong>Global Registry tables</strong> (shared across every Operating Unit worldwide) and <strong>Operating-Unit-striped tables</strong> (specific to one <span class="xxcr-code">ORG_ID</span>). Understanding this split is critical when rolling customers into a new Operating Unit:
+                  </p>
+                
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th>Workbench Entity</th>
+                        <th>EBS R12 Source Tables (<span class="xxcr-code">@ADG</span>) &amp; Public API</th>
+                        <th>EBS Scope Level</th>
+                        <th>Rollout Behavior &amp; API Data Elements Captured</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Tab 1: Customers &amp; Credit Profiles</strong><br><span class="xxcr-code">XXCR_STG_CUSTOMERS</span></td>
+                        <td>
+                          <span class="xxcr-code">HZ_PARTIES</span><br>
+                          <span class="xxcr-code">HZ_CUST_ACCOUNTS</span><br>
+                          <span class="xxcr-code">HZ_CUSTOMER_PROFILES</span><br>
+                          <em>API: <span class="xxcr-code">HZ_CUST_ACCOUNT_V2PUB</span></em>
+                        </td>
+                        <td>Global Party &amp; Account + OU-Level Credit Rollup</td>
+                        <td>
+                          Default action is <span class="xxcr-code">EXTEND_OU</span> (reuses existing <span class="xxcr-code">PARTY_ID</span> and <span class="xxcr-code">CUST_ACCOUNT_ID</span> so customer account numbers stay consistent across OUs, unless switched to <span class="xxcr-code">NEW_ACCT</span>).
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Tab 2: Addresses &amp; Sites (+ <span class="xxcr-code">RA_ADDRESSES_HZ</span> DFFs)</strong><br><span class="xxcr-code">XXCR_STG_SITES</span></td>
+                        <td>
+                          <span class="xxcr-code">HZ_LOCATIONS</span> (Global)<br>
+                          <span class="xxcr-code">HZ_PARTY_SITES</span> (Global)<br>
+                          <span class="xxcr-code">HZ_CUST_ACCT_SITES_ALL</span> (OU)<br>
+                          <em>API: <span class="xxcr-code">HZ_CUST_ACCOUNT_SITE_V2PUB.create_cust_acct_site</span></em>
+                        </td>
+                        <td>Global Physical Location + New <span class="xxcr-code">ORG_ID</span> Account Site</td>
+                        <td>
+                          <strong>Shared-Address Guard:</strong> Starts in <span class="xxcr-code">REUSE_PARTY_SITE</span> mode; switches automatically to <span class="xxcr-code">NEW_ADDRESS</span> if physical address fields change. Captures OU Account-Site DFFs: <strong>Sales Currency</strong> (<span class="xxcr-code">ATTRIBUTE20</span>), <strong>Denied Party Hold / RPS</strong> (<span class="xxcr-code">ATTRIBUTE11</span>), <strong>3rd Party Customer Name</strong> (<span class="xxcr-code">ATTRIBUTE12</span>), Pricing Category (<span class="xxcr-code">ATTRIBUTE1</span>), Vertex Geocode (<span class="xxcr-code">ATTRIBUTE7</span>), and UPS/FedEx/Freight Terms (<span class="xxcr-code">ATTRIBUTE8–10</span>).
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Tab 3: Site Uses, GL, Tax &amp; Bill-To Controls</strong><br><span class="xxcr-code">XXCR_STG_SITE_USES</span></td>
+                        <td>
+                          <span class="xxcr-code">HZ_CUST_SITE_USES_ALL</span><br>
+                          <span class="xxcr-code">HZ_CUSTOMER_PROFILES</span> (<span class="xxcr-code">SITE_USE_ID</span>)<br>
+                          <span class="xxcr-code">GL_CODE_COMBINATIONS_KFV</span><br>
+                          <em>API: <span class="xxcr-code">create_cust_site_use</span> &amp; <span class="xxcr-code">HZ_CUSTOMER_PROFILE_V2PUB</span></em>
+                        </td>
+                        <td>Operating-Unit Specific (<span class="xxcr-code">ORG_ID</span>)</td>
+                        <td>
+                          Creates primary &amp; secondary OU site uses (<span class="xxcr-code">BILL_TO</span>, <span class="xxcr-code">SHIP_TO</span>, plus sibling <span class="xxcr-code">DELIVER_TO</span>, <span class="xxcr-code">SOLD_TO</span>, <span class="xxcr-code">INV</span>, <span class="xxcr-code">ACK</span>, <span class="xxcr-code">STMTS</span>, <span class="xxcr-code">DUN</span>). Captures 9-segment GL Accounts, <strong>Site-Use Tax Reg / ABN</strong> (<span class="xxcr-code">TAX_REFERENCE</span>), <strong>AWP - GENIE Sales Rep DFF</strong> (<span class="xxcr-code">ATTRIBUTE10</span>), <span class="xxcr-code">SHIP_VIA</span>, <span class="xxcr-code">GSA_INDICATOR</span>, and full Bill-To AR Controls (<strong>Send Statements</strong>, <strong>Statement Cycle</strong>, <strong>AutoCash Rule</strong>, <strong>Grouping Rule</strong>, <strong>Discount / Override Terms</strong>, <strong>Dunning Set</strong>, Credit Rating, Risk Code &amp; Tolerance).
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Tab 4: Contacts, Roles &amp; Mobile/Fax</strong><br><span class="xxcr-code">XXCR_STG_CONTACTS</span></td>
+                        <td>
+                          <span class="xxcr-code">HZ_CUST_ACCOUNT_ROLES</span><br>
+                          <span class="xxcr-code">HZ_ORG_CONTACTS</span><br>
+                          <span class="xxcr-code">HZ_CONTACT_POINTS</span><br>
+                          <em>API: <span class="xxcr-code">HZ_CUST_ACCOUNT_ROLE_V2PUB</span> &amp; <span class="xxcr-code">HZ_CONTACT_POINT_V2PUB</span></em>
+                        </td>
+                        <td>Account-Level &amp; New-OU Site-Level Contact Roles</td>
+                        <td>
+                          Reuses existing person relationships (<span class="xxcr-code">REUSE_PERSON</span>) or creates <span class="xxcr-code">NEW_PERSON</span> if First/Last Name is modified. Captures Email, Landline (<span class="xxcr-code">GEN</span>), <strong>Mobile Number</strong> (<span class="xxcr-code">MOBILE</span>), and <strong>Fax Number</strong> (<span class="xxcr-code">FAX</span>) contact points.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Tab 5: Multi-Currency Credit Limits</strong><br><span class="xxcr-code">XXCR_STG_PROFILE_AMTS</span></td>
+                        <td>
+                          <span class="xxcr-code">HZ_CUST_PROFILE_AMTS</span><br>
+                          <em>API: <span class="xxcr-code">HZ_CUSTOMER_PROFILE_V2PUB.create_cust_profile_amt</span></em>
+                        </td>
+                        <td>Bill-To Site-Use Multi-Currency Rows</td>
+                        <td>
+                          Stages every currency row (<span class="xxcr-code">AUD</span>, <span class="xxcr-code">USD</span>, <span class="xxcr-code">NZD</span>, <span class="xxcr-code">EUR</span>, <span class="xxcr-code">GBP</span>) attached to an OU <span class="xxcr-code">BILL_TO</span> profile so dual-currency AWP customers retain both local and USD credit limits in the Target OU.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Tab 6: OU Account Relationships</strong><br><span class="xxcr-code">XXCR_STG_ACCT_RELATES</span></td>
+                        <td>
+                          <span class="xxcr-code">HZ_CUST_ACCT_RELATE_ALL</span><br>
+                          <em>API: <span class="xxcr-code">HZ_CUST_ACCOUNT_V2PUB.create_cust_acct_relate</span></em>
+                        </td>
+                        <td>Operating-Unit Specific (<span class="xxcr-code">ORG_ID</span>)</td>
+                        <td>
+                          Stages OU-striped cross-account relationships (<span class="xxcr-code">BILL_TO_FLAG</span>, <span class="xxcr-code">SHIP_TO_FLAG</span>, <span class="xxcr-code">CUSTOMER_RECIPROCAL_FLAG</span>) required when an Equipment/Machines or National Head-Office account bills for branch/aftermarket accounts.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Tab 7: Payment &amp; Receipt Instruments</strong><br><span class="xxcr-code">XXCR_STG_PAYMENT_INSTR</span></td>
+                        <td>
+                          <span class="xxcr-code">IBY_EXTERNAL_PAYERS_ALL</span><br>
+                          <span class="xxcr-code">IBY_PMT_INSTR_USES_ALL</span><br>
+                          <span class="xxcr-code">RA_CUST_RECEIPT_METHODS</span><br>
+                          <em>API: <span class="xxcr-code">IBY_FNDCPT_SETUP_PUB</span> &amp; <span class="xxcr-code">ARP_CUST_ALT_MATCH_PKG</span></em>
+                        </td>
+                        <td>OU-Striped External Payer &amp; Receipt Method Assignments</td>
+                        <td>
+                          Stages OU-level bank/card assignment references (<span class="xxcr-code">INSTRUMENT_ID</span>, preference order, primary flag) and AR Receipt Methods using <strong>strictly masked account/IBAN/card display strings</strong> (<span class="xxcr-code">MASKED_BANK_ACCOUNT_NUM</span> / <span class="xxcr-code">MASKED_CC_NUMBER</span> — zero raw PII stored).
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                
+                  <h2>Architectural Scope Boundary: Intentional Exclusion of Global TCA &amp; E-Business Tax (<span class="xxcr-code">ZX</span>) Objects</h2>
+                  <div class="xxcr-card amber" style="margin-bottom: 18px;">
+                    <h4>Why Global Party/Account Header Attributes &amp; E-Business Tax (<span class="xxcr-code">ZX_*</span>) Are Not Staged</h4>
+                    <p>
+                      By explicit architectural design, this workbench stages <strong>100% of Operating-Unit-striped (<span class="xxcr-code">ORG_ID</span>) Customer Master &amp; Public API entities (Tiers 1 &amp; 2)</strong> while <strong>intentionally excluding Global TCA &amp; E-Business Tax Registry tables (Tier 3)</strong>:
+                    </p>
+                    <ul>
+                      <li><strong>Excluded Global Objects:</strong> <span class="xxcr-code">ZX_PARTY_TAX_PROFILE</span>, <span class="xxcr-code">ZX_REGISTRATIONS</span>, <span class="xxcr-code">ZX_EXEMPTIONS</span>, global Party Classification Assignments (<span class="xxcr-code">HZ_CODE_ASSIGNMENTS</span>), and global Customer Account Header DFFs (<span class="xxcr-code">HZ_CUST_ACCOUNTS.ATTRIBUTE*</span> / <span class="xxcr-code">RA_CUSTOMERS_HZ</span>).</li>
+                      <li><strong>Why Excluded During Standard OU Rollout (<span class="xxcr-code">EXTEND_OU</span> + <span class="xxcr-code">REUSE_PARTY_SITE</span>):</strong> In Oracle EBS R12, those records attach to the global <span class="xxcr-code">PARTY_ID</span>, <span class="xxcr-code">PARTY_SITE_ID</span>, and <span class="xxcr-code">CUST_ACCOUNT_ID</span> — <strong>not</strong> to <span class="xxcr-code">ORG_ID</span>. When extending an existing customer and reusing its <span class="xxcr-code">HZ_PARTY_SITE</span> into a new Operating Unit, Oracle E-Business Tax and TCA automatically inherit the existing Party/Party-Site tax profiles, registrations, and account-header attributes with zero API duplication and zero risk of mutating live settings used by the legacy OU. (Meanwhile, the OU-specific site-use tax registration in <span class="xxcr-code">HZ_CUST_SITE_USES_ALL.TAX_REFERENCE</span> and <span class="xxcr-code">TAX_CODE</span> <strong>are</strong> extracted and staged on Tab 3.)</li>
+                      <li><strong>Cutover Governance Note for <span class="xxcr-code">NEW_ACCT</span> or <span class="xxcr-code">NEW_ADDRESS</span> Exceptions:</strong> If a steward intentionally creates a brand-new Customer Account (<span class="xxcr-code">ACTION_CODE = 'NEW_ACCT'</span>) or modifies a street address so a brand-new <span class="xxcr-code">HZ_PARTY_SITE</span> is generated (<span class="xxcr-code">SITE_MODE = 'NEW_ADDRESS'</span>), Tax/Finance must verify any required E-Business Tax <span class="xxcr-code">ZX_REGISTRATIONS</span> or global <span class="xxcr-code">RA_CUSTOMERS_HZ</span> header DFFs in EBS Tax / Customers Standard form as part of cutover sign-off.</li>
+                    </ul>
+                  </div>
+                
+                  <h2>How the AWP (<span class="xxcr-code">Segment 7</span>) Scope Discovery Works</h2>
+                  <p>
+                    During extraction (<span class="xxcr-code">XXCR_ROLLOUT_PKG.EXTRACT_PROJECT_DATA</span>), a single remote <span class="xxcr-code">/*+ DRIVING_SITE(su) */</span> query executes directly on <span class="xxcr-code">@ADG</span> to discover every Customer, Site, and Site Use in the Source OU with activity matching the Product Line Segment 7 regex (default <span class="xxcr-code">^1[0-9]{3}$</span> for AWP / Aerials <span class="xxcr-code">1000–1999</span>) across <strong>three live EBS transaction streams</strong>:
+                  </p>
+                  <div class="xxcr-grid">
+                    <div class="xxcr-card">
+                      <h4>Stream 1: AR Invoices &amp; Open AR</h4>
+                      <p>Scans <span class="xxcr-code">RA_CUSTOMER_TRX_ALL</span> + <span class="xxcr-code">RA_CUST_TRX_LINE_GL_DIST_ALL</span> (<span class="xxcr-code">REV</span> distributions) for invoices within the configured window (default 24 months) <strong>or</strong> with open unpaid balances in <span class="xxcr-code">AR_PAYMENT_SCHEDULES_ALL</span> (<span class="xxcr-code">STATUS = 'OP'</span>). Captures both <span class="xxcr-code">BILL_TO_SITE_USE_ID</span> and <span class="xxcr-code">SHIP_TO_SITE_USE_ID</span>, plus any linked Bill-To site use.</p>
+                    </div>
+                    <div class="xxcr-card">
+                      <h4>Stream 2: Open Sales Orders</h4>
+                      <p>Scans <span class="xxcr-code">OE_ORDER_LINES_ALL</span> (<span class="xxcr-code">OPEN_FLAG = 'Y'</span>, uncancelled) joined to <span class="xxcr-code">MTL_SYSTEM_ITEMS_B</span> Sales &amp; COGS GL accounts where <span class="xxcr-code">SEGMENT7</span> matches AWP, capturing both <span class="xxcr-code">INVOICE_TO_ORG_ID</span> and <span class="xxcr-code">SHIP_TO_ORG_ID</span>.</p>
+                    </div>
+                    <div class="xxcr-card">
+                      <h4>Stream 3: Active Service &amp; Warranty Contracts</h4>
+                      <p>Scans <span class="xxcr-code">OKC_K_HEADERS_ALL_B</span> (<span class="xxcr-code">SERVICE</span> / <span class="xxcr-code">WARRANTY</span> in <span class="xxcr-code">ACTIVE</span>, <span class="xxcr-code">SIGNED</span>, <span class="xxcr-code">ENTERED</span>, or <span class="xxcr-code">HOLD</span> status) linked via <span class="xxcr-code">CSI_ITEM_INSTANCES</span> install base items whose COGS <span class="xxcr-code">SEGMENT7</span> matches AWP.</p>
+                    </div>
+                  </div>
+                
+                  <h3>Scope Classification Tags (<span class="xxcr-code">SCOPE_CLASS</span>) &amp; Multi-OU Credit Limits</h3>
+                  <ul>
+                    <li><strong><span class="xxcr-code">AERIALS_ONLY</span> vs. <span class="xxcr-code">SHARED</span>:</strong> If an account/site-use only transacts AWP (<span class="xxcr-code">1000–1999</span>), it is tagged <span class="xxcr-code">AERIALS_ONLY</span>. If it also carries non-AWP revenue/orders (<span class="xxcr-code">SEGMENT7</span> starting with <span class="xxcr-code">2–9</span>, such as MP/Materials Processing), it is tagged <span class="xxcr-code">SHARED</span> so reviewers know the customer remains active in the legacy OU as well. Intercompany parties matching <span class="xxcr-code">TEREX</span> or <span class="xxcr-code">GENIE</span> are suffixed <span class="xxcr-code">/ TEREX IC</span>.</li>
+                    <li><strong>Terex Multi-OU Credit Limits Live on <span class="xxcr-code">BILL_TO</span> Site Uses:</strong> In Terex's Multi-OU EBS setup, global account-level <span class="xxcr-code">HZ_CUST_PROFILE_AMTS</span> (<span class="xxcr-code">SITE_USE_ID IS NULL</span>) holds global defaults or <span class="xxcr-code">0.01</span> / <span class="xxcr-code">1</span> placeholders, whereas true Operating-Unit Credit Limits, Collectors, Profile Classes (<span class="xxcr-code">AU Default</span>), and Standard Payment Terms live on <strong><span class="xxcr-code">BILL_TO</span> Site-Use profiles (<span class="xxcr-code">SITE_USE_ID = HZ_CUST_SITE_USES_ALL.SITE_USE_ID</span>)</strong>. This workbench extracts them directly onto Tab 3 (<span class="xxcr-code">BILL_TO</span> rows) and rolls the primary <span class="xxcr-code">BILL_TO</span> credit profile up onto Tab 1 (<span class="xxcr-code">Customers</span>).</li>
+                  </ul>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 20
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-excel-guide (
+        name: 3. Connected Excel & Cascading
+        title: 3. Connected Excel & Cascading
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="xxcr-doc">
+                  <h2>Why There Is Only ONE Connected 8-Tab Excel Workbook</h2>
+                  <p>
+                    Individual single-grid Excel downloads are intentionally disabled across all Interactive Grids so business reviewers never circulate disconnected single-table spreadsheets. Instead, clicking <strong>Download Connected 8-Tab Workbook (.xlsx)</strong> streams a native ECMA-376 OpenXML workbook containing an Executive Summary plus all 7 customer master &amp; API child hierarchy levels linked together by live Excel formulas and validated EBS dropdowns (backed by hidden sheet <span class="xxcr-code">9_EBS_LOVs</span>).
+                  </p>
+                
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th>Worksheet Tab</th>
+                        <th>Contents &amp; Purpose</th>
+                        <th>Live Formula &amp; Dropdown Connections</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong><span class="xxcr-code">0_Rollout_Summary</span></strong></td>
+                        <td>Executive KPI scorecard &amp; instructions showing Total Extracted, Effective Included (<span class="xxcr-code">Y</span>), Effective Excluded (<span class="xxcr-code">N</span>), and % Included across all 7 entities.</td>
+                        <td>Live <span class="xxcr-code">COUNTA</span> / <span class="xxcr-code">COUNTIF</span> formulas recalculate instantly as you exclude rows on Tabs 1–7.</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">1_Customers</span></strong></td>
+                        <td>Customer Accounts, Party/Account Names (<span class="xxcr-code">MACHINES</span> / <span class="xxcr-code">AFTERMARKET</span>), Tax ID, Collector, Payment Term, Credit Currency, Overall &amp; Order Credit Limits, Open AR, 24m Trx Count, and Dup Role.</td>
+                        <td>Master parent sheet. Setting <span class="xxcr-code">Include (Y/N) = N</span> in Column B cascades to all 6 child sheets below.</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">2_Addresses_Sites</span></strong></td>
+                        <td>Physical Addresses &amp; Account Sites, Dup Role (<span class="xxcr-code">SURVIVOR</span> vs. <span class="xxcr-code">DUPLICATE</span>), Site Activity, Country, Street, City, State, Postcode, plus DFFs (<strong>Sales Currency</strong>, <strong>Denied Party Hold</strong>, <strong>3rd Party Name</strong>).</td>
+                        <td><span class="xxcr-code">INDEX/MATCH</span> pulls parent Customer <span class="xxcr-code">Include (Y/N)</span> &amp; Party Name from <span class="xxcr-code">1_Customers</span>. Setting <span class="xxcr-code">Site Include = N</span> cascades to Tabs 3, 4, 5 &amp; 7.</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">3_Site_Uses_GL</span></strong></td>
+                        <td>Primary &amp; secondary Site Uses, Location Codes, Primary Flag, Credit Limits, Order Type, Price List, Warehouse, 9-segment GL Accounts, <strong>Site Tax Reg</strong>, <strong>AWP - GENIE Rep</strong>, <span class="xxcr-code">Ship Via</span>, and Bill-To Statement/AutoCash/Grouping controls.</td>
+                        <td><span class="xxcr-code">INDEX/MATCH</span> links to both <span class="xxcr-code">1_Customers</span> and <span class="xxcr-code">2_Addresses_Sites</span>; EBS LOV dropdowns validate Terms, Warehouses, Price Lists, Cycles &amp; Rules.</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">4_Contacts</span></strong></td>
+                        <td>Customer &amp; Site Contact Persons, First/Last Name, Job Title, Department, Primary Flag, Email Address, Phone Number, <strong>Mobile Number</strong>, and <strong>Fax Number</strong>.</td>
+                        <td><span class="xxcr-code">INDEX/MATCH</span> links to parent Customer and optional parent Site so excluded accounts/sites automatically exclude their contacts.</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">5_Multi_Curr_Credit</span></strong></td>
+                        <td>Multi-Currency Bill-To Credit Limits (<span class="xxcr-code">HZ_CUST_PROFILE_AMTS</span>) per Currency (<span class="xxcr-code">AUD</span>, <span class="xxcr-code">USD</span>, <span class="xxcr-code">NZD</span>, <span class="xxcr-code">EUR</span>), Overall Limit &amp; Order Limit.</td>
+                        <td><span class="xxcr-code">INDEX/MATCH</span> cascades exclusion from parent Customer and parent <span class="xxcr-code">BILL_TO</span> Site Use (<span class="xxcr-code">3_Site_Uses_GL</span>).</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">6_Acct_Relationships</span></strong></td>
+                        <td>OU-Striped Cross-Account Relationships (<span class="xxcr-code">HZ_CUST_ACCT_RELATE_ALL</span>) with <span class="xxcr-code">Bill-To Y/N</span>, <span class="xxcr-code">Ship-To Y/N</span>, and <span class="xxcr-code">Reciprocal Y/N</span> flags.</td>
+                        <td><span class="xxcr-code">INDEX/MATCH</span> links to <span class="xxcr-code">1_Customers</span>; flags whether the Related Account is also in rollout scope.</td>
+                      </tr>
+                      <tr>
+                        <td><strong><span class="xxcr-code">7_Payment_Instr</span></strong></td>
+                        <td>OU Payment Instruments &amp; Receipt Methods (<span class="xxcr-code">IBY</span> masked bank/card assignments &amp; <span class="xxcr-code">RA_CUST_RECEIPT_METHODS</span>), Primary Flag, Preference Order &amp; Target Receipt Method.</td>
+                        <td><span class="xxcr-code">INDEX/MATCH</span> cascades exclusion from parent Customer and optional Bill-To Site Use; dropdown validates Target Receipt Method.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                
+                  <h2>Visual Cell Color Legend &amp; Cascading Rules</h2>
+                  <div class="xxcr-grid">
+                    <div class="xxcr-card">
+                      <h4><span class="xxcr-badge xxcr-b-gold">Soft Gold Cells (Col B)</span></h4>
+                      <p><strong>Editable <span class="xxcr-code">Include (Y/N)</span> Dropdowns:</strong> Change from <span class="xxcr-code">Y</span> to <span class="xxcr-code">N</span> to exclude an Account, Site, Site Use, or Contact. Conditional formatting automatically turns excluded rows <span class="xxcr-badge xxcr-b-red" style="text-decoration:line-through;">Soft Rose + Strikethrough</span> across all connected worksheets.</p>
+                    </div>
+                    <div class="xxcr-card">
+                      <h4><span class="xxcr-badge xxcr-b-blue">Ice Blue Cells</span></h4>
+                      <p><strong>Live Formula Columns (<span class="xxcr-code">Effective Include</span>, <span class="xxcr-code">Rollout Status</span>, Linked Names):</strong> Calculated automatically by Excel. Do not type over formula columns; on upload, the server recomputes cascading state cleanly.</p>
+                    </div>
+                    <div class="xxcr-card">
+                      <h4>Reversible Auto-Exclusion Tags</h4>
+                      <p>When you upload an edited workbook (or save inline in APEX), <span class="xxcr-code">CASCADE_EXCLUSIONS</span> tags cascaded child rows with <span class="xxcr-code">[AUTO-EXCLUDED: Account]</span> or <span class="xxcr-code">[AUTO-EXCLUDED: Site]</span>. If you later flip the parent back to <span class="xxcr-code">Y</span>, auto-excluded children restore to <span class="xxcr-code">Y</span> while manually excluded children stay <span class="xxcr-code">N</span>!</p>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 30
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-overview (
+        name: 1. Overview & Step-by-Step Guide
+        title: 1. Overview & Step-by-Step Guide
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <style>
+                  .xxcr-doc { font-size: 14px; line-height: 1.6; color: #1f2937; }
+                  .xxcr-doc h2 { color: #1b365d; font-size: 20px; font-weight: 700; margin: 20px 0 10px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; }
+                  .xxcr-doc h2:first-child { margin-top: 4px; }
+                  .xxcr-doc h3 { color: #174ea6; font-size: 16px; font-weight: 700; margin: 16px 0 6px; }
+                  .xxcr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 14px 0; }
+                  .xxcr-card { background: #ffffff; border: 1px solid #dfe3e8; border-left: 4px solid #1b365d; border-radius: 6px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+                  .xxcr-card.green { border-left-color: #137333; background: #f8fdf9; }
+                  .xxcr-card.amber { border-left-color: #b06000; background: #fffdf5; }
+                  .xxcr-card.blue  { border-left-color: #174ea6; background: #f8fbff; }
+                  .xxcr-card h4 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #1b365d; }
+                  .xxcr-card p { margin: 0; font-size: 13.5px; color: #374151; }
+                  .xxcr-tbl { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 13.5px; }
+                  .xxcr-tbl th { background: #1b365d; color: #ffffff; text-align: left; padding: 9px 12px; font-weight: 600; border: 1px solid #1b365d; }
+                  .xxcr-tbl td { padding: 9px 12px; border: 1px solid #dfe3e8; vertical-align: top; background: #ffffff; }
+                  .xxcr-tbl tr:nth-child(even) td { background: #f9fafb; }
+                  .xxcr-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+                  .xxcr-b-red   { background: #fce8e6; color: #a50e0e; }
+                  .xxcr-b-amber { background: #fef7e0; color: #b06000; }
+                  .xxcr-b-green { background: #e6f4ea; color: #137333; }
+                  .xxcr-b-blue  { background: #e8f0fe; color: #174ea6; }
+                  .xxcr-b-gold  { background: #fff8e1; color: #6d4c00; border: 1px solid #f0d078; }
+                  .xxcr-code { font-family: Consolas, Monaco, monospace; font-size: 12.5px; background: #f1f3f4; padding: 1px 5px; border-radius: 4px; color: #111827; }
+                </style>
+                
+                <div class="xxcr-doc">
+                  <h2>What Is This Application &amp; Why Does It Exist?</h2>
+                  <p>
+                    When Terex stands up a <strong>new Legal Entity, Ledger, or Operating Unit (OU)</strong> in Oracle E-Business Suite (EBS R12), simply cloning historical customer master records copies years of duplicate shipping addresses, obsolete contacts, outdated payment terms, and inactive accounts into the new OU.
+                  </p>
+                  <div class="xxcr-grid">
+                    <div class="xxcr-card green">
+                      <h4>100% Safe Sandbox (Zero Production Risk)</h4>
+                      <p>Extracts customer master data from EBS Production Data Guard (<span class="xxcr-code">@ADG</span>) in strictly <strong>read-only</strong> mode into local staging tables. Nothing you edit, exclude, or test in this workbench alters live Oracle EBS.</p>
+                    </div>
+                    <div class="xxcr-card blue">
+                      <h4>Work Online or in One Connected Excel</h4>
+                      <p>Business teams can either edit directly in APEX grids or download a <strong>single Connected 8-Tab Excel Workbook (.xlsx)</strong> where excluding an Account or Site automatically cascades across all child tabs.</p>
+                    </div>
+                    <div class="xxcr-card amber">
+                      <h4>Flexible Early Start (TBD Target OU &amp; BSV)</h4>
+                      <p>Business can extract, deduplicate, and scrub customer master data <strong>months before IT creates the new Operating Unit or BSV in EBS</strong>, then bind the Target OU / BSV later without losing any edits.</p>
+                    </div>
+                    <div class="xxcr-card">
+                      <h4>Multi-Project &amp; EBS SoD Governance</h4>
+                      <p>Run <strong>multiple Source OU conversions concurrently</strong> via the Global Project Switcher, authenticated live against Oracle EBS credentials with strict <strong>Maker-Checker Segregation of Duties</strong>.</p>
+                    </div>
+                  </div>
+                
+                  <h2>Step-by-Step User Journey (For First-Time Users)</h2>
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th style="width:18%">Menu Step</th>
+                        <th style="width:16%">Primary Owner</th>
+                        <th style="width:42%">What You Do</th>
+                        <th style="width:24%">Outcome</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>1. Scope, Extract &amp; Remap</strong><br><span class="xxcr-code">Page 1</span></td>
+                        <td>Project Lead / Finance / IT</td>
+                        <td>
+                          Select the <strong>Source Operating Unit</strong> (e.g., <em>Terex Australia Pty Ltd, OU 14474 / Ledger 17001</em>) and product-line filter (e.g., AWP Segment 7 <span class="xxcr-code">^1[0-9]{3}$</span>). Leave <strong>Target OU</strong> and <strong>Target BSV</strong> empty (<span class="xxcr-code">TBD</span>) if not yet set up in EBS, and click <strong>Extract Customers from @ADG</strong>.
+                        </td>
+                        <td>Active customers, addresses, site uses, credit limits, GL accounts, and contacts are staged locally.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>3. Find Duplicates</strong><br><span class="xxcr-code">Page 40</span><br><em>(Recommended 2nd!)</em></td>
+                        <td>AR / Master Data Lead</td>
+                        <td>
+                          Clean up historical address, site-use, and contact bloat <em>before</em> distributing Excel sheets to reviewers:
+                          <ul style="margin:4px 0 0 18px;padding:0;">
+                            <li>Click <strong>Auto-Exclude $0-AR / 0-Open-SO Duplicates</strong> to automatically exclude dead duplicate sites, site uses, and contacts while protecting the #1 active <strong>SURVIVOR</strong>.</li>
+                            <li>Review the small remaining set of duplicates that carry Open AR or Open Sales Orders and pick <span class="xxcr-code">EXCLUDE_DUPLICATE</span>, <span class="xxcr-code">REUSE_EXISTING</span>, or <span class="xxcr-code">KEEP_BOTH_OVERRIDE</span>.</li>
+                          </ul>
+                        </td>
+                        <td>Hundreds of redundant addresses and thousands of duplicate contact rows are cleanly excluded up front.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>2. Customer Master Workbench</strong><br><span class="xxcr-code">Page 10 (Tabs 1–8)</span></td>
+                        <td>Credit, AR, Sales Ops &amp; Finance</td>
+                        <td>
+                          <strong>Option A (Connected Excel):</strong> Click <strong>Download Connected 8-Tab Workbook (.xlsx)</strong>. Read-only system columns are shaded grey, and editable columns include native Excel dropdowns backed by cached EBS reference lookups (<span class="xxcr-code">9_EBS_LOVs</span>). Flip <span class="xxcr-code">Include (Y/N) = N</span> on any Customer or Site you do not want in the new OU (child rows strike out automatically). Save and drop the file onto <strong>Tab 8</strong>.<br>
+                          <strong>Option B (Guided Edit Form Drawer):</strong> Click <strong>Edit Form</strong> on any Customer, Site, Site Use, or Contact row to open the slide-out drawer (<span class="xxcr-code">Page 15</span>) with a frozen EBS source banner and searchable EBS Popup LOVs.<br>
+                          <strong>Option C (Validated Inline Grid):</strong> Edit allowed cells directly on Tabs 1–7 using Select Lists &amp; EBS Popup LOVs (all system/source columns are hard-locked as <span class="xxcr-code">displayOnly</span>, with pre-save PL/SQL &amp; DB <span class="xxcr-code">CHECK</span> validation).
+                        </td>
+                        <td>All target attributes, credit limits, and cascading exclusions are saved with a full cell-by-cell audit trail.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>4. Validation &amp; Triage</strong><br><span class="xxcr-code">Page 50</span></td>
+                        <td>Master Data &amp; Finance</td>
+                        <td>
+                          Click <strong>Run 4-Stage Validation Engine</strong>. Fix any <span class="xxcr-badge xxcr-b-red">ERROR</span> blockers (e.g., an included customer with zero included sites, or two Primary Bill-Tos) and review or acknowledge <span class="xxcr-badge xxcr-b-amber">WARNING</span> advisories.
+                        </td>
+                        <td>Zero Red Errors (<span class="xxcr-badge xxcr-b-green">VALID</span> readiness across all included records).</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Final Target Binding</strong><br><span class="xxcr-code">Page 1</span></td>
+                        <td>Finance / IT Cutover Lead</td>
+                        <td>
+                          Once the new Operating Unit and/or BSV are defined, return to <strong>Page 1</strong>, populate <strong>Target OU</strong> and/or <strong>Target BSV</strong>, and click <strong>Save Target OU / BSV Scope (Keep Staged Data)</strong> <em>(do NOT re-extract)</em>.
+                        </td>
+                        <td>GL Company BSV segments remap automatically and Stage 3 Target Ledger/BSV rules validate without losing any business edits.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                
+                  <h2>How Flexible Target OU &amp; Target BSV Modes Work</h2>
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th>Rollout Phase</th>
+                        <th>Target OU Setting</th>
+                        <th>Target BSV Setting</th>
+                        <th>Exact System Behavior</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Phase A: Early Data Cleansing</strong></td>
+                        <td><span class="xxcr-code">— TBD — (Empty)</span></td>
+                        <td><span class="xxcr-code">Empty</span></td>
+                        <td>Staged Site Uses keep original Source GL accounts (e.g., <span class="xxcr-code">010</span> / <span class="xxcr-code">310</span>) and Source Warehouses. Target BSV check (<span class="xxcr-code">VAL-302</span>) is paused while structural, hierarchy, and duplicate rules run normally.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Phase B: BSV Known Before EBS OU</strong></td>
+                        <td><span class="xxcr-code">— TBD — (Empty)</span></td>
+                        <td><span class="xxcr-code">Set (e.g. 175)</span></td>
+                        <td>Even without an EBS Target OU, Segment 1 (Company BSV) of Receivable, Revenue, Tax, and Freight GL accounts remaps immediately across all staged Site Uses, and <span class="xxcr-code">VAL-302</span> enforces the new BSV.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Phase C: EBS Target OU Ready</strong></td>
+                        <td><span class="xxcr-code">Selected from LOV</span></td>
+                        <td><span class="xxcr-code">Empty or Set</span></td>
+                        <td>Clicking <strong>Save Target OU / BSV Scope (Keep Staged Data)</strong> binds the Target OU, Legal Entity, and Ledger onto staged records while preserving 100% of business edits and duplicate exclusions.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 10
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-security-sod (
+        name: 7. Multi-Project, EBS Auth & SoD
+        title: 7. Multi-Project, EBS Auth & SoD
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="xxcr-doc">
+                  <h2>1. Running Multiple Concurrent Conversion Projects (Multiple Source OUs)</h2>
+                  <p>
+                    App 600 supports running <strong>multiple Customer OU conversion projects simultaneously</strong> — for example, keeping <strong>AU_AWP_17001_ROLLOUT</strong> (Terex Australia OU 14474 / Ledger 17001) intact while running conversions for North America, UK, or Germany Source OUs in parallel:
+                  </p>
+                  <div class="xxcr-grid">
+                    <div class="xxcr-card blue">
+                      <h4>Global Active Project Switcher (Page 0)</h4>
+                      <p>At the top of Pages <strong>1, 10, 40, and 50</strong>, the Global Context Bar displays your <strong>Active Conversion Project</strong>, its Source OU &rarr; Target OU / BSV, and your effective Segregation of Duties role. Selecting another project switches all grids, duplicate queues, validations, and Excel downloads immediately.</p>
+                    </div>
+                    <div class="xxcr-card green">
+                      <h4>Adding Another Source OU (Page 1)</h4>
+                      <p>Rollout Administrators expand <strong>+ Add Concurrent Conversion Project (Extract Another Source Operating Unit)</strong> on Page 1, pick any Source OU from <span class="xxcr-code">XXCR_EBS_OU_CACHE</span>, choose AWP (<span class="xxcr-code">^1[0-9]{3}$</span>) or All Product Lines (<span class="xxcr-code">.*</span>), and extract without touching any other project.</p>
+                    </div>
+                    <div class="xxcr-card amber">
+                      <h4>Cross-Project Excel Upload Guard</h4>
+                      <p>Every Connected 8-Tab <span class="xxcr-code">.xlsx</span> workbook stamps its <span class="xxcr-code">PROJECT_CODE</span> in <span class="xxcr-code">0_Rollout_Summary!B1</span>. If a user accidentally uploads a workbook exported from Project A while viewing Project B, <span class="xxcr-code">XXCR_ROLLOUT_PKG.PROCESS_EXCEL_UPLOAD</span> blocks the upload with error <span class="xxcr-code">ORA-20401</span>.</p>
+                    </div>
+                  </div>
+                
+                  <h2>2. Oracle EBS URL Authentication (Zero Stored Credentials)</h2>
+                  <p>
+                    App 600 authenticates users with their live <strong>Oracle E-Business Suite username and password</strong> using standalone package <span class="xxcr-code">XXCR_SECURITY_PKG.AUTHENTICATE</span> (modeled on the App 500 EBS authentication pattern):
+                  </p>
+                  <ol>
+                    <li><strong>Pre-Check Admission:</strong> Verifies the user is provisioned and <span class="xxcr-code">ENABLED_YN = 'Y'</span> in <span class="xxcr-code">XXCR_APP_USERS</span> before contacting EBS.</li>
+                    <li><strong>Live HTTPS Verification:</strong> Sends an HTTPS <span class="xxcr-code">GET</span> with HTTP Basic Auth over TLS to <span class="xxcr-code">&lt;EBS_ORIGIN&gt;/OA_HTML/RF.jsp?function_id=mLogin</span> (configured in <span class="xxcr-code">XXCR_SEC_CONFIG</span>, default <span class="xxcr-code">https://erpdev4tex.terex.com</span>).</li>
+                    <li><strong>Token &amp; Identity Validation:</strong> Confirms HTTP <span class="xxcr-code">200</span>, parses XML/JSON <span class="xxcr-code">userName</span> + <span class="xxcr-code">accessToken</span>, verifies exact username match and valid session token (<span class="xxcr-code">&lt;&gt; '-1'</span>).</li>
+                    <li><strong>Immediate EBS Logout &amp; Wipe:</strong> Immediately calls <span class="xxcr-code">/OA_HTML/RF.jsp?function_id=mLogout</span> and wipes all <span class="xxcr-code">APEX_WEB_SERVICE</span> headers/cookies — <strong>zero passwords, hashes, or EBS session tokens are ever stored in APEX</strong>.</li>
+                    <li><strong>Autonomous Audit Log:</strong> Every login attempt (<span class="xxcr-code">LOGIN_OK</span>, <span class="xxcr-code">LOGIN_FAILED</span>, <span class="xxcr-code">LOGIN_DENIED</span>) is recorded in <span class="xxcr-code">XXCR_ACCESS_AUDIT</span>.</li>
+                  </ol>
+                
+                  <h2>3. 4-Role Maker-Checker Segregation of Duties (SoD)</h2>
+                  <p>
+                    Inside App 600, <span class="xxcr-code">XXCR_APP_USERS</span> (global role) and <span class="xxcr-code">XXCR_PROJECT_ACCESS</span> (optional per-Source-OU overrides) enforce strict separation between <strong>Master Data Preparation (Maker)</strong> and <strong>Financial Scope &amp; Exception Sign-Off (Checker)</strong>:
+                  </p>
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th style="width:20%">Role Code</th>
+                        <th style="width:20%">Typical Persona</th>
+                        <th style="width:32%">Authorized Actions</th>
+                        <th style="width:28%">SoD Restrictions (Blocked)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><span class="xxcr-badge xxcr-b-blue">ROLLOUT_ADMIN</span></td>
+                        <td>IT / Conversion Lead</td>
+                        <td>Create concurrent conversion projects, run <span class="xxcr-code">@ADG</span> extracts, provision EBS users &amp; per-project roles (Page 80), configure EBS Origin, full workbench administration.</td>
+                        <td>Anti-lockout guard prevents disabling or demoting the last active administrator.</td>
+                      </tr>
+                      <tr>
+                        <td><span class="xxcr-badge xxcr-b-green">DATA_STEWARD</span><br><em>(Maker)</em></td>
+                        <td>AR / Credit / Sales Ops Master Data Analyst</td>
+                        <td>Edit Customer Accounts, Credit Limits, Addresses, Site Uses &amp; Contacts inline (Page 10), Download &amp; Upload Connected 8-Tab <span class="xxcr-code">.xlsx</span>, scan &amp; resolve Duplicates (Page 40), run 4-Stage Validation (Page 50).</td>
+                        <td><strong>Cannot</strong> change Target OU / Target BSV Ledger scope, <strong>cannot</strong> sign off / waive Amber Validation Warnings (<span class="xxcr-code">ACK_YN</span>), cannot run <span class="xxcr-code">@ADG</span> re-extracts or manage users.</td>
+                      </tr>
+                      <tr>
+                        <td><span class="xxcr-badge xxcr-b-amber">FINANCE_APPROVER</span><br><em>(Checker)</em></td>
+                        <td>Finance Controller / Credit &amp; GL Approver</td>
+                        <td>Set or update <strong>Target OU &amp; Target BSV</strong> (Page 1), apply Bulk GL BSV / Payment Term remapping, review Delta Audit Trail, and <strong>Sign Off / Acknowledge Validation Warnings (<span class="xxcr-code">ACK_YN = Y</span>)</strong> on Page 50.</td>
+                        <td><strong>Cannot</strong> edit individual customer names, credit limits, addresses, or upload modified Excel workbooks on Pages 10/40 (strict Maker-Checker separation).</td>
+                      </tr>
+                      <tr>
+                        <td><span class="xxcr-badge xxcr-b-gold">VIEWER</span></td>
+                        <td>Business Stakeholder / Internal Audit</td>
+                        <td>View KPIs, inspect all staging grids, duplicate clusters, delta audit logs, and validation findings on authorized projects; download Connected 8-Tab <span class="xxcr-code">.xlsx</span> workbooks.</td>
+                        <td>100% Read-Only across all pages and grids.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 70
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-tech-arch (
+        name: 6. Technical Architecture & Live Dictionary
+        title: 6. Technical Architecture & Live Dictionary
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="xxcr-doc">
+                  <h2>System Architecture &amp; Engineering Standards</h2>
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th style="width:24%">Architecture Layer</th>
+                        <th style="width:76%">Implementation Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Platform &amp; Schema</strong></td>
+                        <td>Oracle AI Database 26ai (<span class="xxcr-code">23.26.1.0.0</span>) &bull; Oracle APEX <span class="xxcr-code">26.2.0</span> (Declarative APEXlang source control) &bull; Workspace &amp; Parsing Schema: <span class="xxcr-code">GL_ACCOUNTS</span> &bull; Standalone App ID: <span class="xxcr-code">600</span> (<span class="xxcr-code">CUST-ROLLOUT</span>) &bull; Dedicated <span class="xxcr-code">XXCR_*</span> object namespace.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>EBS Source Connectivity</strong></td>
+                        <td>Read-only database link <span class="xxcr-code">@ADG</span> pointing to EBS R12.2 Production Data Guard (<span class="xxcr-code">APPSREAD</span>). Every remote query enforces <span class="xxcr-code">/*+ DRIVING_SITE(...) */</span> with zero distributed joins between local staging tables and remote <span class="xxcr-code">@ADG</span> tables.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Core PL/SQL Engine</strong></td>
+                        <td>
+                          <strong><span class="xxcr-code">XXCR_ROLLOUT_PKG</span></strong> encapsulates 100% of business logic:<br>
+                          <span class="xxcr-code">refresh_ou_cache</span> &bull; <span class="xxcr-code">sync_project_metadata</span> &bull; <span class="xxcr-code">update_target_scope</span> &bull; <span class="xxcr-code">extract_project_data</span> &bull; <span class="xxcr-code">refresh_site_activity</span> &bull; <span class="xxcr-code">apply_mapping_rules</span> &bull; <span class="xxcr-code">bulk_manipulate_data</span> &bull; <span class="xxcr-code">cascade_exclusions</span> &bull; <span class="xxcr-code">sync_deltas</span> &bull; <span class="xxcr-code">find_duplicates</span> &bull; <span class="xxcr-code">resolve_duplicate</span> &bull; <span class="xxcr-code">auto_exclude_dormant_duplicates</span> &bull; <span class="xxcr-code">validate_project</span> &bull; <span class="xxcr-code">generate_connected_xlsx</span> &bull; <span class="xxcr-code">process_excel_upload</span>.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Connected Excel Engine</strong></td>
+                        <td>Custom streaming ECMA-376 OpenXML generator (<span class="xxcr-code">APEX_ZIP</span> + UTF-8 XML worksheet parts + <span class="xxcr-code">_xlnm._FilterDatabase</span> + <span class="xxcr-code">fullCalcOnLoad="1"</span>) paired with a 45-column header-name-driven <span class="xxcr-code">APEX_DATA_PARSER</span> round-trip importer and cell-level delta logger (<span class="xxcr-code">XXCR_XLS_DELTAS</span>).</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Phase 2 EBS API Target Map</strong><br><em>(Deferred until Validation Sign-off)</em></td>
+                        <td>
+                          Designed for standard Oracle R12.2 Public APIs only (never direct base-table DML):
+                          <span class="xxcr-code">HZ_PARTY_V2PUB</span>, <span class="xxcr-code">HZ_CUST_ACCOUNT_V2PUB</span> (<span class="xxcr-code">create_cust_acct_relate</span>), <span class="xxcr-code">HZ_LOCATION_V2PUB</span>, <span class="xxcr-code">HZ_PARTY_SITE_V2PUB</span>, <span class="xxcr-code">HZ_CUST_ACCOUNT_SITE_V2PUB</span> (<span class="xxcr-code">create_cust_acct_site</span> / <span class="xxcr-code">create_cust_site_use</span> under Target <span class="xxcr-code">ORG_ID</span> MOAC context), <span class="xxcr-code">HZ_CUSTOMER_PROFILE_V2PUB</span> (<span class="xxcr-code">update_customer_profile</span> / <span class="xxcr-code">create_cust_profile_amt</span>), <span class="xxcr-code">HZ_CUST_ACCOUNT_ROLE_V2PUB</span>, <span class="xxcr-code">HZ_CONTACT_POINT_V2PUB</span>, and <span class="xxcr-code">IBY_FNDCPT_SETUP_PUB</span>.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 60
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    region tab-validation-rules (
+        name: 5. 4-Stage Validation Rulebook
+        title: 5. 4-Stage Validation Rulebook
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="xxcr-doc">
+                  <h2>Complete 4-Stage Pre-API Validation Rulebook</h2>
+                  <p>
+                    Every save, Excel upload, bulk remap, or duplicate resolution automatically runs <span class="xxcr-code">XXCR_ROLLOUT_PKG.VALIDATE_PROJECT</span>. Validation status rolls up <strong>bottom-up (All-or-Nothing)</strong> from <span class="xxcr-code">SITE_USE -&gt; SITE -&gt; CUSTOMER</span>: a Customer is only marked <span class="xxcr-badge xxcr-b-green">VALID</span> when the Customer header and every included Site and Site Use underneath it has zero unacknowledged issues.
+                  </p>
+                
+                  <table class="xxcr-tbl">
+                    <thead>
+                      <tr>
+                        <th style="width:16%">Stage</th>
+                        <th style="width:10%">Code</th>
+                        <th style="width:11%">Severity</th>
+                        <th style="width:13%">Entity</th>
+                        <th style="width:27%">Condition Checked</th>
+                        <th style="width:23%">How to Resolve</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Stage 1: Structural</strong><br><span class="xxcr-code">1_STRUCTURAL</span></td>
+                        <td><span class="xxcr-code">VAL-101</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">CUSTOMER</span></td>
+                        <td>Included customer is missing <span class="xxcr-code">TGT_PARTY_NAME</span>.</td>
+                        <td>Populate Target Party Name on Tab 1 or exclude the customer.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 1: Structural</strong><br><span class="xxcr-code">1_STRUCTURAL</span></td>
+                        <td><span class="xxcr-code">VAL-102</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">SITE</span></td>
+                        <td>Included site is missing 2-character ISO <span class="xxcr-code">TGT_COUNTRY</span> or <span class="xxcr-code">TGT_ADDRESS1</span>.</td>
+                        <td>Enter a valid 2-letter Country code (e.g. <span class="xxcr-code">AU</span>, <span class="xxcr-code">NZ</span>) and Address Line 1 on Tab 2.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 2: Hierarchy</strong><br><span class="xxcr-code">2_HIERARCHY</span></td>
+                        <td><span class="xxcr-code">VAL-201</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">CUSTOMER</span></td>
+                        <td>Customer has <span class="xxcr-code">Include = Y</span>, but <strong>0</strong> child Sites have <span class="xxcr-code">Include = Y</span>.</td>
+                        <td>Either re-include at least one Site on Tab 2 or set <span class="xxcr-code">Include = N</span> on the Customer on Tab 1.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 2: Hierarchy</strong><br><span class="xxcr-code">2_HIERARCHY</span></td>
+                        <td><span class="xxcr-code">VAL-202</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">SITE_USE</span></td>
+                        <td>More than one included Site Use of the same <span class="xxcr-code">TGT_SITE_USE_CODE</span> (<span class="xxcr-code">BILL_TO</span> or <span class="xxcr-code">SHIP_TO</span>) has <span class="xxcr-code">Primary = Y</span> under the same Customer.</td>
+                        <td>Keep <span class="xxcr-code">TGT_PRIMARY_FLAG = Y</span> on only one active <span class="xxcr-code">BILL_TO</span> (and one <span class="xxcr-code">SHIP_TO</span>) per customer on Tab 3.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 2: Hierarchy</strong><br><span class="xxcr-code">2_HIERARCHY</span></td>
+                        <td><span class="xxcr-code">VAL-203</span></td>
+                        <td><span class="xxcr-badge xxcr-b-amber">WARNING</span></td>
+                        <td><span class="xxcr-code">SITE_USE</span></td>
+                        <td>Included <span class="xxcr-code">SHIP_TO</span> points to a <span class="xxcr-code">TGT_BILL_TO_LOCATION_CODE</span> whose <span class="xxcr-code">BILL_TO</span> row was excluded or is missing.</td>
+                        <td>Re-point <span class="xxcr-code">Bill-To Location Ref</span> to the customer's survivor <span class="xxcr-code">BILL_TO</span> location, clear it, or re-include the referenced <span class="xxcr-code">BILL_TO</span>.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 3: Target EBS</strong><br><span class="xxcr-code">3_EBS_TARGET_RULES</span></td>
+                        <td><span class="xxcr-code">VAL-301</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">SITE_USE</span></td>
+                        <td>Included <span class="xxcr-code">BILL_TO</span> site use has a blank Receivable GL Account (<span class="xxcr-code">TGT_GL_REC_CONCAT</span>).</td>
+                        <td>Populate a valid 9-segment Receivable GL account on Tab 3.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 3: Target EBS</strong><br><span class="xxcr-code">3_EBS_TARGET_RULES</span></td>
+                        <td><span class="xxcr-code">VAL-302</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">SITE_USE</span></td>
+                        <td><em>(Active only when Target BSV is set)</em> Receivable GL Account Segment 1 does not match the project's <span class="xxcr-code">Target BSV</span>.</td>
+                        <td>Click <strong>Save Target OU / BSV Scope</strong> or run Bulk BSV Remap on Page 1.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 3: Target EBS</strong><br><span class="xxcr-code">3_EBS_TARGET_RULES</span></td>
+                        <td><span class="xxcr-code">VAL-303</span></td>
+                        <td><span class="xxcr-badge xxcr-b-amber">WARNING</span></td>
+                        <td><span class="xxcr-code">SITE_USE</span></td>
+                        <td>Included <span class="xxcr-code">BILL_TO</span> site use has no <span class="xxcr-code">TGT_PAYMENT_TERM_NAME</span> (will inherit from Customer Profile).</td>
+                        <td>Populate Payment Term on Tab 3 or acknowledge if profile inheritance is intended.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 3: Target EBS</strong><br><span class="xxcr-code">3_EBS_TARGET_RULES</span></td>
+                        <td><span class="xxcr-code">VAL-305</span></td>
+                        <td><span class="xxcr-badge xxcr-b-red">ERROR</span></td>
+                        <td><span class="xxcr-code">SITE_USE</span></td>
+                        <td>Included Multi-Currency Credit Limit row on Tab 5 has negative limits or <span class="xxcr-code">Order Credit Limit &gt; Overall Credit Limit</span>.</td>
+                        <td>Correct the Multi-Currency Credit Limit amounts on Tab 5 so Overall Limit &ge; Order Limit.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 4: TCA Guard</strong><br><span class="xxcr-code">4_SHARED_OBJECT_GUARD</span></td>
+                        <td><span class="xxcr-code">VAL-401</span></td>
+                        <td><span class="xxcr-badge xxcr-b-amber">WARNING</span></td>
+                        <td><span class="xxcr-code">SITE</span></td>
+                        <td>Physical address was edited compared to Source Party Site; mode auto-switched to <span class="xxcr-code">NEW_ADDRESS</span> to protect the legacy OU.</td>
+                        <td>Verify the new address is intentional and click <strong>Acknowledge</strong> on Page 50.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 4: TCA Guard</strong><br><span class="xxcr-code">4_SHARED_OBJECT_GUARD</span></td>
+                        <td><span class="xxcr-code">VAL-402</span></td>
+                        <td><span class="xxcr-badge xxcr-b-amber">WARNING</span></td>
+                        <td><span class="xxcr-code">ALL</span></td>
+                        <td>Record still has an unresolved <span class="xxcr-code">OPEN</span> duplicate candidate on Page 40.</td>
+                        <td>Resolve the duplicate on <strong>3. Find Duplicates</strong> (Page 40) or acknowledge.</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Stage 4: TCA Guard</strong><br><span class="xxcr-code">4_SHARED_OBJECT_GUARD</span></td>
+                        <td><span class="xxcr-code">VAL-403</span></td>
+                        <td><span class="xxcr-badge xxcr-b-amber">WARNING</span></td>
+                        <td><span class="xxcr-code">SITE</span></td>
+                        <td>Included Site carries <span class="xxcr-code">Denied Party Hold (TREX_RP_SCREENING = Y)</span> from Source OU.</td>
+                        <td>Confirm with Trade Compliance before extending to Target OU, exclude the site, or click <strong>Acknowledge</strong> on Page 50.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 50
+            parentRegion: @about-tabs
+            slot: tabs
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--noBorder
+            ]
+        }
+    )
+
+    button btn-download-xlsx-about (
+        buttonName: DOWNLOAD_XLSX_ABOUT
+        label: Download Connected 8-Tab Workbook (.xlsx)
+        layout {
+            sequence: 30
+            region: @quick-actions
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-file-excel-o
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 10
+                request: DOWNLOAD_CONNECTED_XLSX
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button btn-go-step1 (
+        buttonName: GO_STEP1
+        label: Go to 1. Scope, Extract & Remap
+        layout {
+            sequence: 10
+            region: @quick-actions
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-database
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 1
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button btn-go-step2 (
+        buttonName: GO_STEP2
+        label: Go to 2. Customer Master Workbench
+        layout {
+            sequence: 20
+            region: @quick-actions
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-table
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 10
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)
+

@@ -1,0 +1,600 @@
+page 40 (
+    name: Find Duplicates
+    alias: FIND-DUPLICATES
+    title: 3. Find Duplicates & Consolidation Workbench
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region buttons (
+        name: Duplicate Scan & Resolution Controls
+        title: Find Duplicates Across Customers, Addresses/Sites, and Contacts
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: [
+                #DEFAULT#
+                t-ButtonRegion--noPadding
+                t-ButtonRegion--noUI
+            ]
+        }
+    )
+
+    region duplicates-ig (
+        name: Candidate Duplicate Clusters (Customer / Address Site / Contact)
+        title: Candidate Duplicates Detected (Set Resolution Action to EXCLUDE_DUPLICATE, REUSE_EXISTING, or KEEP_BOTH_OVERRIDE)
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            tableName: XXCR_DUPLICATES
+            whereClause: project_id = :P0_PROJECT_ID
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        edit {
+            enabled: true
+            allowedOperations: update
+        }
+        editAuthorization {
+            update: @can-edit-data
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchCol
+                searchField
+                actionsMenu
+                resetButton
+                saveButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60004001
+        }
+
+        savedReport 60004002 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 25
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @APEX$ROW_ACTION
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @DUP_ID
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @ENTITY_LEVEL
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @ACCOUNT_NUMBER
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @SITE_REF_CODE
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @MATCH_RULE
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @SIMILARITY_SCORE
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @SOURCE_DISPLAY
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @DUP_OPEN_AR_AMT
+                layout {
+                    sequence: 82
+                }
+            )
+
+            displayColumn (
+                column: @DUP_ACTIVITY_CNT
+                layout {
+                    sequence: 84
+                }
+            )
+
+            displayColumn (
+                column: @MATCHED_DISPLAY
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @SURVIVOR_OPEN_AR_AMT
+                layout {
+                    sequence: 92
+                }
+            )
+
+            displayColumn (
+                column: @SURVIVOR_ACTIVITY_CNT
+                layout {
+                    sequence: 94
+                }
+            )
+
+            displayColumn (
+                column: @RESOLUTION_ACTION
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @RESOLUTION_NOTE
+                layout {
+                    sequence: 110
+                }
+            )
+
+        )
+
+        column ACCOUNT_NUMBER (
+            type: displayOnly
+            heading {
+                heading: Account #
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: ACCOUNT_NUMBER
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column APEX$ROW_ACTION (
+            type: actionsMenu
+            layout {
+                sequence: 10
+            }
+        )
+
+        column APEX$ROW_SELECTOR (
+            type: rowSelector
+            layout {
+                sequence: 5
+            }
+        )
+
+        column DUP_ACTIVITY_CNT (
+            type: displayOnly
+            heading {
+                heading: Duplicate 24m Trx+SO
+                alignment: end
+            }
+            layout {
+                sequence: 84
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: DUP_ACTIVITY_CNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column DUP_ID (
+            type: displayOnly
+            heading {
+                heading: Dup ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: DUP_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column DUP_OPEN_AR_AMT (
+            type: displayOnly
+            heading {
+                heading: Duplicate Open AR
+                alignment: end
+            }
+            layout {
+                sequence: 82
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: DUP_OPEN_AR_AMT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column ENTITY_LEVEL (
+            type: displayOnly
+            heading {
+                heading: Entity Level
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: ENTITY_LEVEL
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column MATCHED_DISPLAY (
+            type: displayOnly
+            heading {
+                heading: Matched Survivor / Golden Record
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                databaseColumn: MATCHED_DISPLAY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column MATCH_RULE (
+            type: displayOnly
+            heading {
+                heading: Match Rule
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: MATCH_RULE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column RESOLUTION_ACTION (
+            type: selectList
+            heading {
+                heading: Resolution Action
+            }
+            lov {
+                type: sharedComponent
+                lov: @lov-dup-resolution
+                displayNullValue: false
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                databaseColumn: RESOLUTION_ACTION
+                dataType: varchar2
+            }
+        )
+
+        column RESOLUTION_NOTE (
+            type: textField
+            heading {
+                heading: Resolution Note
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                databaseColumn: RESOLUTION_NOTE
+                dataType: varchar2
+            }
+        )
+
+        column SIMILARITY_SCORE (
+            type: displayOnly
+            heading {
+                heading: Score (%)
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SIMILARITY_SCORE
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SITE_REF_CODE (
+            type: displayOnly
+            heading {
+                heading: Site Ref
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: SITE_REF_CODE
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SOURCE_DISPLAY (
+            type: displayOnly
+            heading {
+                heading: Candidate Duplicate Record
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                databaseColumn: SOURCE_DISPLAY
+                dataType: varchar2
+                queryOnly: true
+            }
+        )
+
+        column SURVIVOR_ACTIVITY_CNT (
+            type: displayOnly
+            heading {
+                heading: Survivor 24m Trx+SO
+                alignment: end
+            }
+            layout {
+                sequence: 94
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SURVIVOR_ACTIVITY_CNT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+        column SURVIVOR_OPEN_AR_AMT (
+            type: displayOnly
+            heading {
+                heading: Survivor Open AR
+                alignment: end
+            }
+            layout {
+                sequence: 92
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: SURVIVOR_OPEN_AR_AMT
+                dataType: number
+                queryOnly: true
+            }
+        )
+
+    )
+
+    button btn-auto-exclude-p40 (
+        buttonName: AUTO_EXCLUDE_DUPS
+        label: Auto-Exclude $0-AR / 0-Open-SO Duplicates
+        layout {
+            sequence: 15
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-filter
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    button btn-rescan-dups (
+        buttonName: RESCAN_DUPS
+        label: Run Find Duplicates Scan Now
+        layout {
+            sequence: 10
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-search
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    button save (
+        buttonName: SAVE
+        label: Apply Duplicate Resolutions (Exclude / Reuse / Override)
+        layout {
+            sequence: 20
+            region: @buttons
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-check-square-o
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process apply-dup-resolutions (
+        name: Apply Duplicate Resolutions to Staging Tables
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  if l_proj_id is not null then
+                    for r_dup in (
+                      select dup_id, resolution_action, resolution_note
+                        from xxcr_duplicates
+                       where project_id = l_proj_id
+                         and resolution_action in ('EXCLUDE_DUPLICATE', 'REUSE_EXISTING', 'KEEP_BOTH_OVERRIDE')
+                         and resolved_at is null
+                    ) loop
+                      xxcr_rollout_pkg.resolve_duplicate(
+                        p_dup_id => r_dup.dup_id,
+                        p_action => r_dup.resolution_action,
+                        p_note   => r_dup.resolution_note
+                      );
+                    end loop;
+                
+                    if :REQUEST = 'AUTO_EXCLUDE_DUPS' then
+                      declare
+                        l_cnt number := 0;
+                      begin
+                        xxcr_rollout_pkg.auto_exclude_dormant_duplicates(l_proj_id, l_cnt);
+                      end;
+                    elsif :REQUEST = 'RESCAN_DUPS' then
+                      xxcr_rollout_pkg.find_duplicates(l_proj_id);
+                      xxcr_rollout_pkg.validate_project(l_proj_id);
+                    end if;
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        successMessage {
+            successMessage: Duplicate scan and resolution actions applied to active conversion project!
+        }
+        advanced {
+            executionMappingIdentifier: 60004012
+        }
+        serverSideCondition {
+            type: requestIsNotContainedInValue
+            value: SWITCH_PROJECT
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+    process init-active-project-p40 (
+        name: Resolve Active Conversion Project
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  :P0_PROJECT_ID := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 1
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60004010
+        }
+    )
+
+    process save-duplicates-ig (
+        name: Save Duplicate Resolution Grid
+        type: interactiveGridAutoRowProcessing
+        editableRegion: @duplicates-ig
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 60004011
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+)
+

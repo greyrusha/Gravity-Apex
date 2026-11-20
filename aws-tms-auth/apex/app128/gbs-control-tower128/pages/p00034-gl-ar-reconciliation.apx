@@ -1,0 +1,1573 @@
+page 34 (
+    name: GL AR Reconciliation
+    alias: GL-AR-RECONCILIATION
+    title: GL/AR Reconciliation
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    javaScript {
+        functionAndGlobalVariableDeclaration:
+            ```javascript-browser
+            var p34Controller=(function($){
+             'use strict';
+             var busy=false,spinner=null,timerId=null,startedAt=null;
+             function byId(id){return $('#'+id);}
+             function region(id){try{return apex.region(id);}catch(ignore){return null;}}
+             function seconds(){return ((performance.now()-startedAt)/1000).toFixed(1)+' s';}
+             function stop(){if(timerId){clearInterval(timerId);timerId=null;}if(spinner){spinner.remove();spinner=null;}}
+             function setBusy(on){busy=on;byId('run-gl-ar-recon').prop('disabled',on);}
+             function status(kind,title,body,timing){byId('recon-status').show();byId('p34-status-panel').removeAttr('hidden').removeClass('p34-status--info p34-status--success p34-status--error').addClass('p34-status--'+kind);byId('p34-status-title').text(title);byId('p34-status-body').text(body||'');byId('p34-status-timing').text(timing||'');}
+             function refresh(id){var r=region(id);if(r&&typeof r.refresh==='function'){r.refresh();}else{byId(id).trigger('apexrefresh');}}
+             function highlight(){byId('gl-ar-recon-report').find('.a-IRR-table tbody tr').each(function(){$(this).toggleClass('p34-variance-row',$(this).find('.p34-badge--variance').length>0);});}
+             function closeDetail(){apex.item('P34_SELECTED_CCID').setValue('',null,true);byId('recon-detail-context').hide();byId('recon-customer-detail').hide();}
+             function hideResults(){apex.item('P34_REPORT_READY').setValue('N',null,true);byId('analyze-ar-reconciliation-with-ai').hide();byId('recon-kpis').hide();byId('gl-ar-recon-report').hide();closeDetail();}
+             function populateKpis(x){byId('p34-kpi-accounts').text(x.account_count);byId('p34-kpi-ar').text(x.ar_total);byId('p34-kpi-gl').text(x.gl_total);byId('p34-kpi-variance').text(x.variance_total);byId('p34-kpi-out').text(x.out_of_balance);}
+             function run(){if(busy||apex.item('P34_CONTEXT_READY').getValue()!=='Y')return;hideResults();setBusy(true);startedAt=performance.now();status('info','Running GL/AR reconciliation','Retrieving GL balances from TMS. This normally takes approximately 20-30 seconds.','Elapsed: 0.0 s');timerId=setInterval(function(){byId('p34-status-timing').text('Elapsed: '+seconds());},250);try{spinner=apex.util.showSpinner(byId('recon-status'));}catch(ignore){spinner=null;}apex.server.process('P34_RUN_RECON',{pageItems:'#P34_DB_LINK,#P34_PERIOD_NAME,#P34_LEDGER_ID,#P34_COMPANY,#P34_AGING_BUCKET_ID'},{dataType:'json'}).then(function(result){stop();setBusy(false);if(!result||result.ok!==true){status('error','Reconciliation failed',(result&&result.message)||'Unable to run reconciliation.');return;}apex.item('P34_REPORT_READY').setValue('Y',null,true);populateKpis(result.summary);byId('recon-kpis').show();byId('gl-ar-recon-report').show();byId('analyze-ar-reconciliation-with-ai').show();refresh('gl-ar-recon-report');status('success','Reconciliation complete',result.summary.account_count+' receivable accounts evaluated.','Total: '+seconds());},function(error){stop();setBusy(false);status('error','Reconciliation failed',(error&&error.message)||'Unable to run reconciliation.');});}
+             function drill(ccid,account){apex.item('P34_SELECTED_CCID').setValue(String(ccid),null,true);byId('p34-detail-selection').text(account||'Selected receivable account');byId('recon-detail-context').show();byId('recon-customer-detail').show();refresh('recon-customer-detail');$('html, body').animate({scrollTop:byId('recon-detail-context').offset().top-12},200);}
+             function openAi(){if(apex.item('P34_REPORT_READY').getValue()!=='Y')return;var target='ar_recon_ai_'+Date.now(),child=window.open('',target);if(!child){apex.message.showErrors([{type:'error',location:'page',message:'Allow pop-ups to open the AI Analyst in a new tab.',unsafe:false}]);return;}child.document.write('<title>Opening AI Analyst</title><p style="font-family:sans-serif;padding:1rem">Opening AI Analyst...</p>');apex.server.process('P34_GET_AI_URL',{pageItems:'#P34_REPORT_READY,#P34_DB_LINK,#P34_PERIOD_NAME,#P34_LEDGER_ID,#P34_COMPANY,#P34_AGING_BUCKET_ID'},{dataType:'json'}).then(function(result){if(!result||result.ok!==true||!result.url){child.close();apex.message.showErrors([{type:'error',location:'page',message:(result&&result.message)||'Unable to open the AI Analyst.',unsafe:false}]);return;}child.location.replace(result.url);},function(error){child.close();apex.message.showErrors([{type:'error',location:'page',message:(error&&error.message)||'Unable to open the AI Analyst.',unsafe:false}]);});}
+             function closePage(){window.close();setTimeout(function(){if(!window.closed){apex.navigation.redirect(apex.item('P34_BACK_URL').getValue());}},250);}
+             $(function(){hideResults();byId('recon-status').hide();byId('p34-status-panel').attr('hidden','hidden');$(document).on('apexafterrefresh.p34','#gl-ar-recon-report',highlight);});
+             return{run:run,drill:drill,closeDetail:closeDetail,openAi:openAi,closePage:closePage};
+            })(apex.jQuery);
+            ```
+    }
+    css {
+        inline:
+            ```css
+            #analyze-ar-reconciliation-with-ai,#recon-kpis,#gl-ar-recon-report,#recon-detail-context,#recon-customer-detail{display:none;}
+            #recon-status{position:relative;min-height:4rem;}
+            .p34-status{border-left:4px solid #2563eb;border-radius:.25rem;padding:.8rem 1rem;background:#eff6ff;}
+            .p34-status--success{border-left-color:#15803d;background:#f0fdf4;}
+            .p34-status--error{border-left-color:#b91c1c;background:#fef2f2;}
+            #p34-status-title{font-size:1rem;font-weight:700;margin:0 0 .25rem;}#p34-status-body{margin:0;}#p34-status-timing{font-variant-numeric:tabular-nums;font-weight:600;margin-top:.35rem;}
+            .p34-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;padding:.25rem;}
+            .p34-kpi{border:1px solid var(--ut-component-border-color,#d9dce1);border-radius:.5rem;padding:1rem;background:var(--ut-component-background-color,#fff);}
+            .p34-kpi-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:#5f6368;}.p34-kpi-value{font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums;margin-top:.3rem;}
+            .p34-status-badge{display:inline-block;border-radius:999px;padding:.15rem .55rem;font-weight:700;}.p34-badge--balanced{background:#ecfdf3;color:#166534;}.p34-badge--variance{background:#fee2e2;color:#991b1b;}
+            .p34-variance-row>td{background:#fff7ed!important;}.p34-detail-banner{font-weight:600;padding:.35rem 0;}
+            .p34-control-exception{display:inline-block;padding:.15rem .45rem;border-radius:1rem;background:#fee2e2;color:#991b1b;font-weight:700;}.p34-control-ok{display:inline-block;padding:.15rem .45rem;border-radius:1rem;background:#dcfce7;color:#166534;}
+            @media(max-width:900px){.p34-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region gl-ar-recon-report (
+        name: GL AR Reconciliation Report
+        title: GL/AR Reconciliation by Receivable Account
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select n001 receivable_ccid,c001 receivable_account,c002 natural_account,n002 ar_open_accounted_amount,
+                 n003 gl_beginning_balance,n004 gl_period_net,
+                 to_number(c007,'99999999999999999999999999999999999999D99999999999999999999','NLS_NUMERIC_CHARACTERS=''.,''') gl_period_receivables_activity,
+                 to_number(c008,'99999999999999999999999999999999999999D99999999999999999999','NLS_NUMERIC_CHARACTERS=''.,''') gl_period_revaluation_activity,
+                 to_number(c009,'99999999999999999999999999999999999999D99999999999999999999','NLS_NUMERIC_CHARACTERS=''.,''') gl_period_non_receivables_activity,
+                 n005 gl_ending_balance,
+                 to_number(c005,'99999999999999999999999999999999999999D99999999999999999999','NLS_NUMERIC_CHARACTERS=''.,''') variance_amount,c003 ar_loaded_at,c004 gl_retrieved_at,
+                 to_number(c006,'99999999999999999999999999999999999999D99999999999999999999','NLS_NUMERIC_CHARACTERS=''.,''') ar_not_transferred_amount,
+                 case when abs(nvl(to_number(c005,'99999999999999999999999999999999999999D99999999999999999999','NLS_NUMERIC_CHARACTERS=''.,'''),0))<0.01 then '<span class="p34-status-badge p34-badge--balanced">Balanced</span>' else '<span class="p34-status-badge p34-badge--variance">Variance</span>' end status
+                 from apex_collections where collection_name='P34_GL_AR_RECON' and :P34_REPORT_READY='Y'
+                ```
+            pageItemsToSubmit: P34_REPORT_READY
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: gl-ar-recon-report
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No receivable control accounts were returned for this snapshot.
+        }
+        advanced {
+            savedReportMappingIdentifier: 934160000000686645
+        }
+
+        column AR_LOADED_AT (
+            type: plainText
+            heading {
+                heading: AR Snapshot Generated
+                alignment: center
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column AR_NOT_TRANSFERRED_AMOUNT (
+            type: plainText
+            heading {
+                heading: AR Not Transferred
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column AR_OPEN_ACCOUNTED_AMOUNT (
+            type: plainText
+            heading {
+                heading: AR Open Accounted
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column GL_BEGINNING_BALANCE (
+            type: plainText
+            heading {
+                heading: GL Beginning Balance
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column GL_ENDING_BALANCE (
+            type: plainText
+            heading {
+                heading: GL Ending Balance
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column GL_PERIOD_NET (
+            type: hidden
+            heading {
+                heading: GL Period Net
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column GL_PERIOD_NON_RECEIVABLES_ACTIVITY (
+            type: plainText
+            heading {
+                heading: Period Non-Receivables
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column GL_PERIOD_RECEIVABLES_ACTIVITY (
+            type: plainText
+            heading {
+                heading: Period Receivables Activity
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column GL_PERIOD_REVALUATION_ACTIVITY (
+            type: plainText
+            heading {
+                heading: Period Revaluation
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column GL_RETRIEVED_AT (
+            type: plainText
+            heading {
+                heading: GL Retrieved
+                alignment: center
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column NATURAL_ACCOUNT (
+            type: plainText
+            heading {
+                heading: Natural Account
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column RECEIVABLE_ACCOUNT (
+            type: link
+            heading {
+                heading: Receivable Account
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p34Controller.drill(#RECEIVABLE_CCID#,'#RECEIVABLE_ACCOUNT!JS#');
+                }
+                linkText: #RECEIVABLE_ACCOUNT#
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column RECEIVABLE_CCID (
+            type: hidden
+            heading {
+                heading: Receivable CCID
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column STATUS (
+            type: plainText
+            heading {
+                heading: Status
+                alignment: center
+            }
+            layout {
+                sequence: 110
+                columnAlignment: center
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: I
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column VARIANCE_AMOUNT (
+            type: plainText
+            heading {
+                heading: Variance
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        page {
+            width: 12
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: GL AR Reconciliation
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn AR_LOADED_AT (
+                sequence: 12
+            )
+
+            displayColumn AR_NOT_TRANSFERRED_AMOUNT (
+                sequence: 11
+            )
+
+            displayColumn AR_OPEN_ACCOUNTED_AMOUNT (
+                sequence: 3
+            )
+
+            displayColumn GL_BEGINNING_BALANCE (
+                sequence: 4
+            )
+
+            displayColumn GL_ENDING_BALANCE (
+                sequence: 8
+            )
+
+            displayColumn GL_PERIOD_NON_RECEIVABLES_ACTIVITY (
+                sequence: 7
+            )
+
+            displayColumn GL_PERIOD_RECEIVABLES_ACTIVITY (
+                sequence: 5
+            )
+
+            displayColumn GL_PERIOD_REVALUATION_ACTIVITY (
+                sequence: 6
+            )
+
+            displayColumn GL_RETRIEVED_AT (
+                sequence: 13
+            )
+
+            displayColumn NATURAL_ACCOUNT (
+                sequence: 2
+            )
+
+            displayColumn RECEIVABLE_ACCOUNT (
+                sequence: 1
+            )
+
+            displayColumn STATUS (
+                sequence: 10
+            )
+
+            displayColumn VARIANCE_AMOUNT (
+                sequence: 9
+            )
+
+            sort (
+                column: VARIANCE_AMOUNT
+                sort {
+                    direction: desc
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    region recon-context (
+        name: Reconciliation Context
+        title: GL/AR Reconciliation Context
+        type: staticContent
+        source {
+            htmlCode: <p>Reconcile the selected local AR snapshot to TMS GL receivable control-account balances for the same ledger, company, and period.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: recon-context
+        }
+    )
+
+    region recon-customer-detail (
+        name: Receivable Account Detail
+        title: AR Open Items for Selected Receivable Account
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select customer_name,customer_number,class_code,trx_number,trx_date,due_date,days_past_due,bucket_heading,currency_code,entered_balance_asof,accounted_balance_asof,
+                 case control_account_flag when 'Y' then '<span class="p34-control-ok">Control Account</span>' else '<span class="p34-control-exception">Outside Control Account</span>' end control_account_status,
+                 payment_schedule_id,customer_id,customer_trx_id,receivable_ccid,org_id,bucket_sequence,control_account_flag
+                 from xxme_ar_recon_v2_snap where :P34_REPORT_READY='Y' and db_link_name=:P34_DB_LINK and ledger_id=to_number(:P34_LEDGER_ID) and company_segment=:P34_COMPANY and period_name=:P34_PERIOD_NAME and aging_bucket_id=to_number(:P34_AGING_BUCKET_ID) and receivable_ccid=to_number(:P34_SELECTED_CCID)
+                ```
+            pageItemsToSubmit: [
+                P34_REPORT_READY
+                P34_DB_LINK
+                P34_LEDGER_ID
+                P34_COMPANY
+                P34_PERIOD_NAME
+                P34_AGING_BUCKET_ID
+                P34_SELECTED_CCID
+            ]
+        }
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: recon-customer-detail
+        }
+        serverSideCondition {
+            type: item=value
+            item: P34_CONTEXT_READY
+            value: Y
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No AR open items were found for the selected receivable account.
+        }
+        advanced {
+            savedReportMappingIdentifier: 934160000000686655
+        }
+
+        column ACCOUNTED_BALANCE_ASOF (
+            type: plainText
+            heading {
+                heading: Accounted Open Balance
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column BUCKET_HEADING (
+            type: plainText
+            heading {
+                heading: Aging Bucket
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column BUCKET_SEQUENCE (
+            type: hidden
+            heading {
+                heading: Bucket Sequence
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column CLASS_CODE (
+            type: plainText
+            heading {
+                heading: Transaction Class
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column CONTROL_ACCOUNT_FLAG (
+            type: hidden
+            heading {
+                heading: Control Flag
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column CONTROL_ACCOUNT_STATUS (
+            type: plainText
+            heading {
+                heading: Control Account Status
+                alignment: center
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Transaction Currency
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column CUSTOMER_ID (
+            type: hidden
+            heading {
+                heading: Customer ID
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column CUSTOMER_NAME (
+            type: plainText
+            heading {
+                heading: Customer Name
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column CUSTOMER_NUMBER (
+            type: plainText
+            heading {
+                heading: Customer Number
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column CUSTOMER_TRX_ID (
+            type: hidden
+            heading {
+                heading: Customer Transaction ID
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column DAYS_PAST_DUE (
+            type: plainText
+            heading {
+                heading: Days Past Due
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column DUE_DATE (
+            type: plainText
+            heading {
+                heading: Due Date
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column ENTERED_BALANCE_ASOF (
+            type: plainText
+            heading {
+                heading: Entered Open Balance
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Organization ID
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column PAYMENT_SCHEDULE_ID (
+            type: hidden
+            heading {
+                heading: Payment Schedule ID
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column RECEIVABLE_CCID (
+            type: hidden
+            heading {
+                heading: Receivable CCID
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column TRX_DATE (
+            type: plainText
+            heading {
+                heading: Transaction Date
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column TRX_NUMBER (
+            type: plainText
+            heading {
+                heading: Transaction Number
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        page {
+            width: 14
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: AR Open Items by Receivable Account
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCOUNTED_BALANCE_ASOF (
+                sequence: 11
+            )
+
+            displayColumn BUCKET_HEADING (
+                sequence: 8
+            )
+
+            displayColumn CLASS_CODE (
+                sequence: 3
+            )
+
+            displayColumn CONTROL_ACCOUNT_STATUS (
+                sequence: 12
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 9
+            )
+
+            displayColumn CUSTOMER_NAME (
+                sequence: 1
+            )
+
+            displayColumn CUSTOMER_NUMBER (
+                sequence: 2
+            )
+
+            displayColumn DAYS_PAST_DUE (
+                sequence: 7
+            )
+
+            displayColumn DUE_DATE (
+                sequence: 6
+            )
+
+            displayColumn ENTERED_BALANCE_ASOF (
+                sequence: 10
+            )
+
+            displayColumn TRX_DATE (
+                sequence: 5
+            )
+
+            displayColumn TRX_NUMBER (
+                sequence: 4
+            )
+
+            sort (
+                column: DUE_DATE
+                sort {
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region recon-detail-context (
+        name: Reconciliation Detail Context
+        title: Selected Receivable Account
+        type: staticContent
+        source {
+            htmlCode: <div class="p34-detail-banner"><span id="p34-detail-selection"></span></div>
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: recon-detail-context
+        }
+        serverSideCondition {
+            type: item=value
+            item: P34_CONTEXT_READY
+            value: Y
+        }
+    )
+
+    region recon-kpis (
+        name: Reconciliation KPIs
+        title: Reconciliation Summary
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="p34-kpis">
+                <div class="p34-kpi"><div class="p34-kpi-label">Receivable Accounts</div><div id="p34-kpi-accounts" class="p34-kpi-value"></div></div>
+                <div class="p34-kpi"><div class="p34-kpi-label">AR Open Accounted</div><div id="p34-kpi-ar" class="p34-kpi-value"></div></div>
+                <div class="p34-kpi"><div class="p34-kpi-label">GL Ending Balance</div><div id="p34-kpi-gl" class="p34-kpi-value"></div></div>
+                <div class="p34-kpi"><div class="p34-kpi-label">Net Variance</div><div id="p34-kpi-variance" class="p34-kpi-value"></div></div>
+                <div class="p34-kpi"><div class="p34-kpi-label">Accounts With Variance</div><div id="p34-kpi-out" class="p34-kpi-value"></div></div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+    )
+
+    region recon-status (
+        name: Reconciliation Status
+        title: Reconciliation Status
+        type: staticContent
+        source {
+            htmlCode: <div id="p34-status-panel" class="p34-status p34-status--info" role="status" aria-live="polite" hidden><h3 id="p34-status-title"></h3><p id="p34-status-body"></p><div id="p34-status-timing"></div></div>
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+    )
+
+    pageItem P34_AGING_BUCKET_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 100
+            slot: body
+        }
+    )
+
+    pageItem P34_AS_OF_DATE (
+        type: displayOnly
+        label {
+            label: As-of Date
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_BACK_URL (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 104
+            slot: body
+        }
+    )
+
+    pageItem P34_COMPANY (
+        type: displayOnly
+        label {
+            label: Company Code
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_CONTEXT_READY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 101
+            slot: body
+        }
+    )
+
+    pageItem P34_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 10
+            region: @recon-context
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P34_GENERATED_BY (
+        type: displayOnly
+        label {
+            label: Generated By
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_GENERATED_ON (
+        type: displayOnly
+        label {
+            label: Snapshot Generated On
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_LEDGER_ID (
+        type: displayOnly
+        label {
+            label: Ledger ID
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_PERIOD_NAME (
+        type: displayOnly
+        label {
+            label: Receivables Period
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_REPORT_READY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 102
+            slot: body
+        }
+    )
+
+    pageItem P34_ROW_COUNT (
+        type: displayOnly
+        label {
+            label: Rows
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @recon-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 1
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P34_SELECTED_CCID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 103
+            slot: body
+        }
+    )
+
+    button analyze-ar-reconciliation-with-ai (
+        buttonName: ANALYZE_RECON_AI
+        label: Analyze Reconciliation with AI
+        layout {
+            sequence: 20
+            region: @recon-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-sparkles
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: analyze-ar-reconciliation-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    button close-page (
+        buttonName: CLOSE_PAGE
+        label: Close
+        layout {
+            sequence: 30
+            region: @recon-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-times
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: close-page
+        }
+    )
+
+    button close-recon-detail (
+        buttonName: CLOSE_DETAIL
+        label: Close Detail
+        layout {
+            sequence: 10
+            region: @recon-detail-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-times
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: close-recon-detail
+        }
+    )
+
+    button run-gl-ar-recon (
+        buttonName: RUN_RECON
+        label: Run GL/AR Reconciliation
+        layout {
+            sequence: 10
+            region: @recon-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-play
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: run-gl-ar-recon
+        }
+    )
+
+    dynamicAction close-detail (
+        name: Close Detail
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-recon-detail
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p34Controller.closeDetail();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction close-page (
+        name: Close Page
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-page
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p34Controller.closePage();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction open-reconciliation-ai-analyst (
+        name: Open Reconciliation AI Analyst
+        execution {
+            sequence: 40
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @analyze-ar-reconciliation-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p34Controller.openAi();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+            config {
+                buildOption: @feature-ai
+            }
+        )
+
+    )
+
+    dynamicAction run-reconciliation (
+        name: Run Reconciliation
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @run-gl-ar-recon
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p34Controller.run();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process p34-get-ai-url (
+        name: P34_GET_AI_URL
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_count number; l_asof date; l_url varchar2(32767);
+                begin
+                 if :P34_REPORT_READY<>'Y' or :P34_DB_LINK not in ('ADG') or not regexp_like(:P34_PERIOD_NAME,'^[A-Z0-9 _./-]{1,30}$') or not regexp_like(:P34_LEDGER_ID,'^[0-9]{1,18}$') or not regexp_like(:P34_COMPANY,'^[A-Z0-9_.-]{1,25}$') or not regexp_like(:P34_AGING_BUCKET_ID,'^[0-9]{1,18}$') then raise_application_error(-20339,'Invalid GL/AR reconciliation context.'); end if;
+                 if not apex_collection.collection_exists('P34_GL_AR_RECON') then raise_application_error(-20340,'Run GL/AR reconciliation before opening the AI Analyst.'); end if;
+                 select count(*) into l_count from apex_collections where collection_name='P34_GL_AR_RECON';
+                 if l_count=0 then raise_application_error(-20341,'The GL/AR reconciliation has no rows to analyze.'); end if;
+                 select max(as_of_date) into l_asof from xxme_ar_recon_v2_snap where db_link_name=:P34_DB_LINK and ledger_id=to_number(:P34_LEDGER_ID) and company_segment=:P34_COMPANY and period_name=:P34_PERIOD_NAME and aging_bucket_id=to_number(:P34_AGING_BUCKET_ID);
+                 l_url:=apex_page.get_url(p_page=>50,p_clear_cache=>'50',p_items=>'P50_DB_LINK,P50_PERIOD_NAME,P50_AR_SCOPE_AS_OF_DATE,P50_AR_LEDGER_ID,P50_AR_COMPANY,P50_AR_AGING_BUCKET_ID,P50_AR_SOURCE_PAGE,P50_AR_RECON_READY',p_values=>:P34_DB_LINK||','||:P34_PERIOD_NAME||','||to_char(l_asof,'YYYY-MM-DD')||','||:P34_LEDGER_ID||','||:P34_COMPANY||','||:P34_AGING_BUCKET_ID||',34,Y');
+                 apex_json.open_object;apex_json.write('ok',true);apex_json.write('url',l_url);apex_json.close_object;
+                exception when others then apex_json.open_object;apex_json.write('ok',false);apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12) else 'Unable to prepare the AI Analyst URL.' end);apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 30
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 934160000000686107
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    process p34-run-recon (
+        name: P34_RUN_RECON
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_count number:=0;l_out number:=0;l_ar number:=0;l_gl number:=0;l_var number:=0;
+                begin
+                 apex_region.reset(p_page_id=>34,p_static_id=>'gl-ar-recon-report');
+                 if apex_collection.collection_exists('P34_GL_AR_RECON') then apex_collection.truncate_collection('P34_GL_AR_RECON');else apex_collection.create_collection('P34_GL_AR_RECON');end if;
+                 for r in(select * from table(xxme_ar_recon_v2_pkg.get_gl_reconciliation(:P34_DB_LINK,to_number(:P34_LEDGER_ID),:P34_COMPANY,:P34_PERIOD_NAME,to_number(:P34_AGING_BUCKET_ID))) where abs(nvl(ar_open_accounted_amount,0))>=0.005) loop
+                  apex_collection.add_member(p_collection_name=>'P34_GL_AR_RECON',p_c001=>r.account_segments,p_c002=>r.natural_account,p_c003=>to_char(r.ar_loaded_at,'DD-MON-YYYY HH24:MI:SS'),p_c004=>to_char(r.gl_retrieved_at,'DD-MON-YYYY HH24:MI:SS'),p_c005=>to_char(r.variance_amount,'TM9','NLS_NUMERIC_CHARACTERS=''.,'''),p_c006=>to_char(r.ar_not_transferred_amount,'TM9','NLS_NUMERIC_CHARACTERS=''.,'''),p_c007=>to_char(r.gl_period_receivables_activity,'TM9','NLS_NUMERIC_CHARACTERS=''.,'''),p_c008=>to_char(r.gl_period_revaluation_activity,'TM9','NLS_NUMERIC_CHARACTERS=''.,'''),p_c009=>to_char(r.gl_period_non_receivables_activity,'TM9','NLS_NUMERIC_CHARACTERS=''.,'''),p_n001=>r.receivable_ccid,p_n002=>r.ar_open_accounted_amount,p_n003=>r.gl_beginning_balance,p_n004=>r.gl_period_net,p_n005=>r.gl_ending_balance);
+                  l_count:=l_count+1;l_ar:=l_ar+nvl(r.ar_open_accounted_amount,0);l_gl:=l_gl+nvl(r.gl_ending_balance,0);l_var:=l_var+nvl(r.variance_amount,0);if abs(nvl(r.variance_amount,0))>=0.01 then l_out:=l_out+1;end if;
+                 end loop;
+                 apex_json.open_object;apex_json.write('ok',true);apex_json.open_object('summary');apex_json.write('account_count',to_char(l_count,'FM999G999G990'));apex_json.write('out_of_balance',to_char(l_out,'FM999G999G990'));apex_json.write('ar_total',to_char(l_ar,'FM999G999G999G990D00'));apex_json.write('gl_total',to_char(l_gl,'FM999G999G999G990D00'));apex_json.write('variance_total',to_char(l_var,'FM999G999G999G990D00'));apex_json.close_object;apex_json.close_object;
+                exception when others then if apex_collection.collection_exists('P34_GL_AR_RECON') then apex_collection.delete_collection('P34_GL_AR_RECON');end if;apex_json.open_object;apex_json.write('ok',false);apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12) else 'Unable to run GL/AR reconciliation. Check the APEX debug log.' end);apex_json.close_object;end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 934160000000686106
+        }
+    )
+
+    process validate-reconciliation-context (
+        name: Validate Reconciliation Context
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_count number;l_by varchar2(128);l_on timestamp;l_asof date;
+                begin :P34_BACK_URL:=apex_page.get_url(p_page=>32,p_clear_cache=>'32');:P34_CONTEXT_READY:='N';:P34_REPORT_READY:='N';
+                 if apex_collection.collection_exists('P34_GL_AR_RECON') then apex_collection.delete_collection('P34_GL_AR_RECON');end if;
+                 :P34_DB_LINK:=upper(trim(:P34_DB_LINK));:P34_PERIOD_NAME:=upper(trim(:P34_PERIOD_NAME));:P34_COMPANY:=upper(trim(:P34_COMPANY));
+                 if :P34_DB_LINK not in ('ADG') or not regexp_like(:P34_PERIOD_NAME,'^[A-Z0-9 _./-]{1,30}$') or not regexp_like(:P34_LEDGER_ID,'^[0-9]{1,18}$') or not regexp_like(:P34_COMPANY,'^[A-Z0-9_.-]{1,25}$') or not regexp_like(:P34_AGING_BUCKET_ID,'^[0-9]{1,18}$') then apex_error.add_error(p_message=>'Select an available AR snapshot on Page 32 before opening reconciliation.',p_display_location=>apex_error.c_inline_in_notification);return;end if;
+                 select count(*),max(loaded_by),max(loaded_at),max(as_of_date) into l_count,l_by,l_on,l_asof from xxme_ar_recon_v2_snap where db_link_name=:P34_DB_LINK and ledger_id=to_number(:P34_LEDGER_ID) and company_segment=:P34_COMPANY and period_name=:P34_PERIOD_NAME and aging_bucket_id=to_number(:P34_AGING_BUCKET_ID);
+                 :P34_AS_OF_DATE:=to_char(l_asof,'DD-MON-YYYY');:P34_GENERATED_ON:=to_char(l_on,'DD-MON-YYYY HH24:MI:SS');:P34_GENERATED_BY:=l_by;:P34_ROW_COUNT:=to_char(l_count,'FM999G999G999G990');
+                 if l_count>0 then :P34_CONTEXT_READY:='Y';else apex_error.add_error(p_message=>'The selected AR snapshot is no longer available. Return to Page 32 and run it again.',p_display_location=>apex_error.c_inline_in_notification);end if;
+                exception when others then :P34_CONTEXT_READY:='N';apex_error.add_error(p_message=>'Unable to validate the AR snapshot context. Check the APEX debug log.',p_display_location=>apex_error.c_inline_in_notification);end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 934160000000686105
+        }
+    )
+
+)
+

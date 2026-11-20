@@ -1,0 +1,130 @@
+page 1 (
+    name: Dashboard
+    alias: DASHBOARD
+    title: TMS Administration Console
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @workspace-administrator-only
+    }
+
+    region about-this-console (
+        name: About this console
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <p>This console is restricted to authorized TMS Console Administrators authenticating with TMS (Oracle EBS) credentials.</p>
+                <p>Manage TMS (EBS) users, central per-application access across EBS-enabled apps (such as App 128) and legacy @terex.com bridge apps (Apps 115 and 300), and the EBS authentication endpoint.</p>
+                ```
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region administration-summary (
+        name: Administration Summary
+        title: Administration Summary
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select metric, value
+                  from (
+                    select 1 metric_order, 'Registered Applications' metric, to_char(count(*)) value from xx_tms_application
+                    union all
+                    select 2, 'Centrally Managed Applications', to_char(count(*)) from xx_tms_application where access_mode = 'CENTRAL' and enabled_yn = 'Y'
+                    union all
+                    select 3, 'Enabled TMS (EBS) Users', to_char(count(*)) from xx_tms_users where enabled_yn = 'Y'
+                    union all
+                    select 4, 'Console Administrators', to_char(count(*)) from xx_tms_users where enabled_yn = 'Y' and is_console_admin_yn = 'Y'
+                    union all
+                    select 5, 'EBS Local Login URL', nvl(max(ebs_login_url || case when enabled_yn = 'Y' then ' (Enabled)' else ' (Disabled)' end), 'Not Configured') from xx_tms_auth_config where config_code = 'DEFAULT'
+                    union all
+                    select 6, 'Users with Assignments', to_char(count(distinct user_name)) from xx_tms_user_access
+                    union all
+                    select 7, 'Administration Actions (7 Days)', to_char(count(*)) from xx_tms_admin_audit where action_on >= systimestamp - interval '7' day
+                  )
+                 order by metric_order
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 20
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        componentAdvanced {
+            stripHtml: true
+        }
+
+        column METRIC (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Metric
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column VALUE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Value
+                alignment: end
+            }
+            layout {
+                sequence: 20
+                columnAlignment: end
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+)
+

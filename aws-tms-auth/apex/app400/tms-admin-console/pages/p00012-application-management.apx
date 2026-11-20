@@ -1,0 +1,643 @@
+page 12 (
+    name: Application Management
+    alias: APPLICATION-MANAGEMENT
+    title: Application Management
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        authorizationScheme: @workspace-administrator-only
+    }
+
+    region ebs-auth-endpoint (
+        name: TMS (EBS) Authentication Endpoint
+        title: TMS (EBS) Authentication Endpoint
+        type: staticContent
+        source {
+            htmlCode: <p>Configure the non-SSO Oracle E-Business Suite local login URL verified by <strong>EBS Credentials</strong> (<code>https://erptex.terex.com/OA_HTML/AppsLocalLogin.jsp</code>). Root SSO URLs are rejected.</p>
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region application-registry (
+        name: Application Registry
+        title: Application Registry
+        type: staticContent
+        source {
+            htmlCode: <p>Register applications deliberately. Central access can be enabled only after the target application uses TMS Application Access on every business page. Disabling an application preserves its assignments and audit history.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region register-update-application (
+        name: Register or Update Application
+        title: Register or Update Application
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region registered-applications (
+        name: Registered Applications
+        title: Registered Applications
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select '<a class="t-Button t-Button--small" href="' ||
+                       apex_escape.html_attribute(apex_page.get_url(
+                         p_page => 12, p_clear_cache => '12',
+                         p_items => 'P12_APPLICATION_CODE',
+                         p_values => a.application_code)) || '">Edit</a>' edit_application,
+                       a.application_code, a.apex_application_id,
+                       a.application_name registry_name, x.application_name live_name,
+                       x.alias live_alias, a.access_mode, a.enabled_yn,
+                       (select count(*) from xx_tms_user_access u
+                         where u.application_code = a.application_code) assignment_count,
+                       nvl(x.authentication_scheme, 'Not Linked') auth_scheme
+                  from xx_tms_application a
+                  left join apex_applications x
+                    on x.application_id = a.apex_application_id
+                   and x.workspace = 'GL_ACCOUNTS'
+                 order by a.application_name
+                ```
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        reportLayout {
+            numberOfRows: 500
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--altRowsDefault
+                t-Report--rowHighlight
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+        download {
+            csvExportEnabled: true
+        }
+
+        column ACCESS_MODE (
+            reportColumnQueryId: 7
+            derivedColumn: N
+            heading {
+                heading: Access Mode
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column APEX_APPLICATION_ID (
+            reportColumnQueryId: 3
+            derivedColumn: N
+            heading {
+                heading: APEX ID
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column APPLICATION_CODE (
+            reportColumnQueryId: 2
+            derivedColumn: N
+            heading {
+                heading: Application Code
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column ASSIGNMENT_COUNT (
+            reportColumnQueryId: 9
+            derivedColumn: N
+            heading {
+                heading: Assignments
+                alignment: center
+            }
+            layout {
+                sequence: 90
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column AUTH_SCHEME (
+            reportColumnQueryId: 10
+            derivedColumn: N
+            heading {
+                heading: Auth Scheme
+                alignment: center
+            }
+            layout {
+                sequence: 65
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column EDIT_APPLICATION (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                heading: Edit
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column ENABLED_YN (
+            reportColumnQueryId: 8
+            derivedColumn: N
+            heading {
+                heading: Enabled
+                alignment: center
+            }
+            layout {
+                sequence: 80
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LIVE_ALIAS (
+            reportColumnQueryId: 6
+            derivedColumn: N
+            heading {
+                heading: Live Alias
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column LIVE_NAME (
+            reportColumnQueryId: 5
+            derivedColumn: N
+            heading {
+                heading: Live Application
+                alignment: center
+            }
+            layout {
+                sequence: 50
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+        column REGISTRY_NAME (
+            reportColumnQueryId: 4
+            derivedColumn: N
+            heading {
+                heading: Registry Name
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            sorting {
+                sortable: false
+            }
+        )
+
+    )
+
+    pageItem P12_EBS_LOGIN_URL (
+        type: textField
+        label {
+            label: EBS Local Login URL
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @ebs-auth-endpoint
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            width: 80
+            valuePlaceholder: https://erptex.terex.com/OA_HTML/AppsLocalLogin.jsp
+        }
+        validation {
+            maxLength: 500
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P12_EBS_AUTH_ENABLED_YN (
+        type: selectList
+        label {
+            label: EBS Auth Enabled
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Enabled;Y,Disabled;N
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @ebs-auth-endpoint
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P12_ACCESS_MODE (
+        type: selectList
+        label {
+            label: Access Mode
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Central;CENTRAL,Legacy Read Only;LEGACY_READ_ONLY
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 40
+            region: @register-update-application
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P12_APEX_APPLICATION_ID (
+        type: selectList
+        label {
+            label: APEX Application
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery: select application_name || ' (' || application_id || ')' d, application_id r from apex_applications where workspace = 'GL_ACCOUNTS' and owner = 'GL_ACCOUNTS' and application_id <> 400 order by application_name, application_id
+            displayExtraValues: false
+            nullDisplayValue: - Select Application -
+        }
+        layout {
+            sequence: 20
+            region: @register-update-application
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P12_APPLICATION_CODE (
+        type: textField
+        label {
+            label: Application Code
+            alignment: left
+        }
+        settings {
+            textCase: upper
+        }
+        layout {
+            sequence: 10
+            region: @register-update-application
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            width: 30
+            valuePlaceholder: FINANCE_WORKING_COPY
+        }
+        validation {
+            maxLength: 30
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P12_APPLICATION_NAME (
+        type: textField
+        label {
+            label: Registry Display Name
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @register-update-application
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            width: 60
+            valuePlaceholder: Defaults to the live application name
+        }
+        validation {
+            maxLength: 255
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    pageItem P12_ENABLED_YN (
+        type: selectList
+        label {
+            label: Enabled
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:No;N,Yes;Y
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 50
+            region: @register-update-application
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+        sessionState {
+            storage: request
+        }
+    )
+
+    button save-auth-config (
+        buttonName: SAVE_AUTH_CONFIG
+        label: Save Endpoint
+        layout {
+            sequence: 10
+            region: @ebs-auth-endpoint
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button clear-application-form (
+        buttonName: CLEAR_FORM
+        label: Clear
+        layout {
+            sequence: 20
+            region: @register-update-application
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-eraser
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 12
+                clearCache: 12
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button save-application (
+        buttonName: SAVE_APPLICATION
+        label: Save
+        layout {
+            sequence: 10
+            region: @register-update-application
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-save
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    process load-registered-application (
+        name: Load Registered Application
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                begin
+                  begin
+                    select ebs_login_url, enabled_yn
+                      into :P12_EBS_LOGIN_URL, :P12_EBS_AUTH_ENABLED_YN
+                      from xx_tms_auth_config
+                     where config_code = 'DEFAULT';
+                  exception
+                    when no_data_found then
+                      :P12_EBS_LOGIN_URL       := 'https://erptex.terex.com/OA_HTML/AppsLocalLogin.jsp';
+                      :P12_EBS_AUTH_ENABLED_YN := 'Y';
+                  end;
+
+                  if :P12_APPLICATION_CODE is not null then
+                    select apex_application_id, application_name, access_mode, enabled_yn
+                      into :P12_APEX_APPLICATION_ID, :P12_APPLICATION_NAME,
+                           :P12_ACCESS_MODE, :P12_ENABLED_YN
+                      from xx_tms_application
+                     where application_code = upper(:P12_APPLICATION_CODE);
+                  else
+                    :P12_ACCESS_MODE := 'CENTRAL';
+                    :P12_ENABLED_YN  := 'N';
+                  end if;
+                exception
+                  when no_data_found then null;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 4002551
+        }
+    )
+
+    process save-auth-config (
+        name: Save EBS Auth Endpoint
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_message varchar2(4000);
+                begin
+                  xx_tms_admin_pkg.save_auth_config(
+                    p_ebs_login_url => :P12_EBS_LOGIN_URL,
+                    p_enabled_yn    => nvl(:P12_EBS_AUTH_ENABLED_YN, 'Y'),
+                    p_message       => l_message
+                  );
+                  apex_application.g_print_success_message := l_message;
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        advanced {
+            executionMappingIdentifier: 4002555
+        }
+        serverSideCondition {
+            type: request=Value
+            value: SAVE_AUTH_CONFIG
+        }
+    )
+
+    process save-application (
+        name: Save Application
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_message varchar2(4000);
+                begin
+                  xx_tms_admin_pkg.save_application(
+                    p_application_code => :P12_APPLICATION_CODE,
+                    p_apex_application_id => :P12_APEX_APPLICATION_ID,
+                    p_application_name => :P12_APPLICATION_NAME,
+                    p_access_mode => :P12_ACCESS_MODE,
+                    p_enabled_yn => :P12_ENABLED_YN,
+                    p_message => l_message);
+                  apex_application.g_print_success_message := l_message;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        advanced {
+            executionMappingIdentifier: 4002550
+        }
+        serverSideCondition {
+            type: request=Value
+            value: SAVE_APPLICATION
+        }
+    )
+
+)
+

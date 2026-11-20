@@ -1,0 +1,1786 @@
+page 15 (
+    name: Guided Edit Record Drawer
+    alias: EDIT-RECORD
+    title: Edit Staged Customer Master Record
+    appearance {
+        pageMode: modalDialog
+        dialogTemplate: @/drawer
+        templateOptions: #DEFAULT#
+    }
+    dialog {
+        width: 780
+        chained: false
+    }
+    navigation {
+        cursorFocus: firstItemOnPage
+    }
+    security {
+        authorizationScheme: @can-edit-data
+    }
+
+    region cnt-form (
+        name: Contact Person, Email & Phone
+        title: Validated Contact Person & Role
+        type: staticContent
+        layout {
+            sequence: 40
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P15_ENTITY = 'CONTACT'
+        }
+    )
+
+    region cust-form (
+        name: Customer Account & Credit Profile
+        title: Validated Customer Account & Credit Profile
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P15_ENTITY = 'CUSTOMER'
+        }
+    )
+
+    region drawer-buttons (
+        name: Drawer Footer Buttons
+        type: staticContent
+        layout {
+            sequence: 90
+            slot: dialogFooter
+        }
+        appearance {
+            template: @/buttons-container
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region hidden-ctx (
+        name: Drawer Keys
+        type: staticContent
+        layout {
+            sequence: 6
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+        }
+    )
+
+    region site-form (
+        name: Party Address & Customer Site
+        title: Validated Party Address & Customer Site
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P15_ENTITY = 'SITE'
+        }
+    )
+
+    region source-context-banner (
+        name: Frozen EBS Source Snapshot Context
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                  l_html clob;
+                begin
+                  if :P15_ENTITY = 'CUSTOMER' then
+                    for r in (
+                      select src_account_number, src_party_name, scope_class,
+                             nvl(src_open_ar_amt, 0) as open_ar, nvl(src_trx_cnt_recent, 0) as trx_cnt,
+                             nvl(dup_role, 'UNIQUE') as dup_role, val_status
+                        from xxcr_stg_customers
+                       where stg_cust_id = to_number(:P15_ROW_ID default null on conversion error)
+                         and project_id = :P0_PROJECT_ID
+                    ) loop
+                      l_html := '<div style="background:#f8fbff;border:1px solid #d0e0fc;border-left:4px solid #174ea6;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;">'
+                             || '<strong>Customer Account #' || apex_escape.html(r.src_account_number) || '</strong> &mdash; ' || apex_escape.html(r.src_party_name)
+                             || '<br><span style="color:#4b5563;">Scope: <strong>' || apex_escape.html(r.scope_class)
+                             || '</strong> | Open AR: <strong>' || to_char(r.open_ar, 'FM999G999G990D00')
+                             || '</strong> | 24m Trx: <strong>' || r.trx_cnt
+                             || '</strong> | Dup Role: <strong>' || apex_escape.html(r.dup_role)
+                             || '</strong> | Validation: <strong>' || apex_escape.html(r.val_status) || '</strong></span></div>';
+                    end loop;
+                  elsif :P15_ENTITY = 'SITE' then
+                    for r in (
+                      select s.site_ref_code, s.tgt_account_number, c.src_party_name,
+                             nvl(s.src_open_ar_amt, 0) as open_ar, nvl(s.src_open_so_cnt, 0) as so_cnt,
+                             nvl(s.dup_role, 'UNIQUE') as dup_role, s.val_status
+                        from xxcr_stg_sites s
+                        join xxcr_stg_customers c on c.stg_cust_id = s.stg_cust_id
+                       where s.stg_site_id = to_number(:P15_ROW_ID default null on conversion error)
+                         and s.project_id = :P0_PROJECT_ID
+                    ) loop
+                      l_html := '<div style="background:#f8fbff;border:1px solid #d0e0fc;border-left:4px solid #174ea6;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;">'
+                             || '<strong>Address Site ' || apex_escape.html(r.site_ref_code) || '</strong> (Acct #' || apex_escape.html(r.tgt_account_number) || ' &mdash; ' || apex_escape.html(r.src_party_name) || ')'
+                             || '<br><span style="color:#4b5563;">Site Open AR: <strong>' || to_char(r.open_ar, 'FM999G999G990D00')
+                             || '</strong> | Open SOs: <strong>' || r.so_cnt
+                             || '</strong> | Dup Role: <strong>' || apex_escape.html(r.dup_role)
+                             || '</strong> | Validation: <strong>' || apex_escape.html(r.val_status) || '</strong></span></div>';
+                    end loop;
+                  elsif :P15_ENTITY = 'SITE_USE' then
+                    for r in (
+                      select su.tgt_site_use_code, su.site_ref_code, su.tgt_account_number, c.src_party_name,
+                             nvl(su.src_open_ar_amt, 0) as open_ar, nvl(su.src_open_so_cnt, 0) as so_cnt,
+                             nvl(su.dup_role, 'UNIQUE') as dup_role, su.val_status
+                        from xxcr_stg_site_uses su
+                        join xxcr_stg_customers c on c.stg_cust_id = su.stg_cust_id
+                       where su.stg_site_use_id = to_number(:P15_ROW_ID default null on conversion error)
+                         and su.project_id = :P0_PROJECT_ID
+                    ) loop
+                      l_html := '<div style="background:#f8fbff;border:1px solid #d0e0fc;border-left:4px solid #174ea6;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;">'
+                             || '<strong>' || apex_escape.html(r.tgt_site_use_code) || ' Site Use</strong> on ' || apex_escape.html(r.site_ref_code)
+                             || ' (Acct #' || apex_escape.html(r.tgt_account_number) || ' &mdash; ' || apex_escape.html(r.src_party_name) || ')'
+                             || '<br><span style="color:#4b5563;">Open AR: <strong>' || to_char(r.open_ar, 'FM999G999G990D00')
+                             || '</strong> | Open SOs: <strong>' || r.so_cnt
+                             || '</strong> | Dup Role: <strong>' || apex_escape.html(r.dup_role)
+                             || '</strong> | Validation: <strong>' || apex_escape.html(r.val_status) || '</strong></span></div>';
+                    end loop;
+                  elsif :P15_ENTITY = 'CONTACT' then
+                    for r in (
+                      select ct.contact_ref_code, ct.site_ref_code, ct.tgt_account_number, c.src_party_name, ct.val_status
+                        from xxcr_stg_contacts ct
+                        join xxcr_stg_customers c on c.stg_cust_id = ct.stg_cust_id
+                       where ct.stg_contact_id = to_number(:P15_ROW_ID default null on conversion error)
+                         and ct.project_id = :P0_PROJECT_ID
+                    ) loop
+                      l_html := '<div style="background:#f8fbff;border:1px solid #d0e0fc;border-left:4px solid #174ea6;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;">'
+                             || '<strong>Contact ' || apex_escape.html(r.contact_ref_code) || '</strong> (Acct #' || apex_escape.html(r.tgt_account_number)
+                             || case when r.site_ref_code is not null then ' | Site ' || apex_escape.html(r.site_ref_code) end
+                             || ' &mdash; ' || apex_escape.html(r.src_party_name) || ')</div>';
+                    end loop;
+                  end if;
+                  return nvl(l_html, '<p>Select a valid record from Customer Master Workbench.</p>');
+                end;
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: contentBody
+        }
+        appearance {
+            template: @/blank-with-attributes
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region su-form (
+        name: Site Use, Credit Limits & 9-Segment GL Accounts
+        title: Validated Site Use, Credit Limits & GL Accounts
+        type: staticContent
+        layout {
+            sequence: 30
+            slot: contentBody
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P15_ENTITY = 'SITE_USE'
+        }
+    )
+
+    pageItem P15_C_ACCOUNT_NAME (
+        type: textField
+        label {
+            label: Target Account Name (e.g. MACHINES / AFTERMARKET)
+        }
+        layout {
+            sequence: 40
+            region: @cust-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_ACTION_CODE (
+        type: selectList
+        label {
+            label: Rollout Action
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-cust-action
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @cust-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 8
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_COLLECTOR (
+        type: popupLov
+        label {
+            label: EBS Collector
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-collectors
+            nullDisplayValue: — Select Collector —
+        }
+        layout {
+            sequence: 80
+            region: @cust-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_CURRENCY (
+        type: selectList
+        label {
+            label: Credit Currency
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-currencies
+            nullDisplayValue: — Currency —
+        }
+        layout {
+            sequence: 100
+            region: @cust-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_CUST_CLASS (
+        type: popupLov
+        label {
+            label: EBS Customer Class
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-customer-classes
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 60
+            region: @cust-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_INCLUDE_YN (
+        type: selectList
+        label {
+            label: Include in Rollout
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-yn
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_NOTES (
+        type: textField
+        label {
+            label: Steward Notes
+        }
+        layout {
+            sequence: 130
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_OVERALL_LIM (
+        type: numberField
+        label {
+            label: Overall Credit Limit (>= 0)
+        }
+        layout {
+            sequence: 110
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_PARTY_NAME (
+        type: textField
+        label {
+            label: Target Party Name
+        }
+        layout {
+            sequence: 30
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_PAYMENT_TERM (
+        type: popupLov
+        label {
+            label: EBS Payment Term
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-payment-terms
+            nullDisplayValue: — Select Payment Term —
+        }
+        layout {
+            sequence: 90
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 5
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_PROFILE_CLASS (
+        type: popupLov
+        label {
+            label: EBS Profile Class
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-profile-classes
+            nullDisplayValue: — Select Profile Class —
+        }
+        layout {
+            sequence: 70
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_TAX_REF (
+        type: textField
+        label {
+            label: Tax Reference / ABN / VAT
+        }
+        layout {
+            sequence: 50
+            region: @cust-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_C_TRX_LIM (
+        type: numberField
+        label {
+            label: Order Credit Limit (<= Overall)
+        }
+        layout {
+            sequence: 120
+            region: @cust-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_ENTITY (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @hidden-ctx
+            slot: regionBody
+        }
+    )
+
+    pageItem P15_ROW_ID (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @hidden-ctx
+            slot: regionBody
+        }
+    )
+
+    pageItem P15_S_ADDR1 (
+        type: textField
+        label {
+            label: Address Line 1
+        }
+        layout {
+            sequence: 30
+            region: @site-form
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_ADDR2 (
+        type: textField
+        label {
+            label: Address Line 2
+        }
+        layout {
+            sequence: 40
+            region: @site-form
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_CITY (
+        type: textField
+        label {
+            label: City / Suburb
+        }
+        layout {
+            sequence: 50
+            region: @site-form
+            slot: regionBody
+            columnSpan: 5
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_COUNTRY (
+        type: popupLov
+        label {
+            label: Country (EBS Territory Code)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-countries
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @site-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_INCLUDE_YN (
+        type: selectList
+        label {
+            label: Site Include (Cascades to Site Uses & Contacts)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-yn
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @site-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_NOTES (
+        type: textField
+        label {
+            label: Steward Notes
+        }
+        layout {
+            sequence: 80
+            region: @site-form
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_POSTAL (
+        type: textField
+        label {
+            label: Postal Code
+        }
+        layout {
+            sequence: 70
+            region: @site-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_RPS_HOLD (
+        type: selectList
+        label {
+            label: Denied Party Hold (RPS)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-flag-yn
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 74
+            region: @site-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_SALES_CURR (
+        type: selectList
+        label {
+            label: Sales Currency (DFF)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-currencies
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 72
+            region: @site-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_STATE (
+        type: textField
+        label {
+            label: State / Province
+        }
+        layout {
+            sequence: 60
+            region: @site-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_S_THIRD_PARTY (
+        type: textField
+        label {
+            label: 3rd Party Customer Name (DFF)
+        }
+        layout {
+            sequence: 76
+            region: @site-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_EMAIL (
+        type: textField
+        label {
+            label: Email Address (Validated Format)
+        }
+        layout {
+            sequence: 60
+            region: @cnt-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_FAX (
+        type: textField
+        label {
+            label: Fax Number
+        }
+        layout {
+            sequence: 94
+            region: @cnt-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_FIRST_NAME (
+        type: textField
+        label {
+            label: First Name
+        }
+        layout {
+            sequence: 30
+            region: @cnt-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_INCLUDE_YN (
+        type: selectList
+        label {
+            label: Contact Include
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-yn
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @cnt-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_JOB_TITLE (
+        type: textField
+        label {
+            label: Job Title
+        }
+        layout {
+            sequence: 50
+            region: @cnt-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_LAST_NAME (
+        type: textField
+        label {
+            label: Last Name
+        }
+        layout {
+            sequence: 40
+            region: @cnt-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_MOBILE (
+        type: textField
+        label {
+            label: Mobile Number
+        }
+        layout {
+            sequence: 92
+            region: @cnt-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_NOTES (
+        type: textField
+        label {
+            label: Steward Notes
+        }
+        layout {
+            sequence: 100
+            region: @cnt-form
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_PHONE_AREA (
+        type: textField
+        label {
+            label: Area Code
+        }
+        layout {
+            sequence: 80
+            region: @cnt-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_PHONE_CC (
+        type: textField
+        label {
+            label: Country Code
+        }
+        layout {
+            sequence: 70
+            region: @cnt-form
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_PHONE_NUM (
+        type: textField
+        label {
+            label: Phone Number
+        }
+        layout {
+            sequence: 90
+            region: @cnt-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_T_PRIMARY_FLAG (
+        type: selectList
+        label {
+            label: Primary Role Flag
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-flag-yn
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @cnt-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_AUTOCASH (
+        type: selectList
+        label {
+            label: AutoCash Rule
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-autocash-rules
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 166
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_COLLECTOR (
+        type: popupLov
+        label {
+            label: EBS Collector
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-collectors
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 50
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_CURRENCY (
+        type: selectList
+        label {
+            label: Credit Currency
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-currencies
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 70
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_GENIE_REP (
+        type: textField
+        label {
+            label: AWP - Genie Sales Rep (DFF)
+        }
+        layout {
+            sequence: 162
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_GL_REC (
+        type: textField
+        label {
+            label: Receivable GL (9 Dot-Separated Segments)
+        }
+        layout {
+            sequence: 140
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 8
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_GL_REV (
+        type: textField
+        label {
+            label: Revenue GL (9 Dot-Separated Segments)
+        }
+        layout {
+            sequence: 150
+            region: @su-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_GL_TAX (
+        type: textField
+        label {
+            label: Tax GL (9 Dot-Separated Segments)
+        }
+        layout {
+            sequence: 160
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_GROUP_RULE (
+        type: selectList
+        label {
+            label: Grouping Rule
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-grouping-rules
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 167
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_INCLUDE_YN (
+        type: selectList
+        label {
+            label: Site Use Include
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-yn
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @su-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_LOCATION (
+        type: textField
+        label {
+            label: Location Code
+        }
+        layout {
+            sequence: 30
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_NOTES (
+        type: textField
+        label {
+            label: Steward Notes
+        }
+        layout {
+            sequence: 170
+            region: @su-form
+            slot: regionBody
+            columnSpan: 12
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_ORDER_TYPE (
+        type: popupLov
+        label {
+            label: EBS Order Type
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-order-types
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 110
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_OVERALL_LIM (
+        type: numberField
+        label {
+            label: Overall Credit Limit
+        }
+        layout {
+            sequence: 80
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_PAYMENT_TERM (
+        type: popupLov
+        label {
+            label: EBS Payment Term
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-payment-terms
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 60
+            region: @su-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_PRICE_LIST (
+        type: popupLov
+        label {
+            label: EBS Price List
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-price-lists
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 120
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_PRIMARY_FLAG (
+        type: selectList
+        label {
+            label: Primary Flag
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-flag-yn
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_PROFILE_CLASS (
+        type: popupLov
+        label {
+            label: EBS Profile Class
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-profile-classes
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 40
+            region: @su-form
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_SEND_STMTS (
+        type: selectList
+        label {
+            label: Send Statements
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-flag-yn
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 164
+            region: @su-form
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_SHIP_VIA (
+        type: textField
+        label {
+            label: Ship Via / Freight Carrier
+        }
+        layout {
+            sequence: 163
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_STMT_CYCLE (
+        type: selectList
+        label {
+            label: Statement Cycle
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-stmt-cycles
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 165
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_TAX_CODE (
+        type: popupLov
+        label {
+            label: Tax Classification Code
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-tax-codes
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 130
+            region: @su-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_TAX_REF (
+        type: textField
+        label {
+            label: Site Tax Reg / ABN
+        }
+        layout {
+            sequence: 161
+            region: @su-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_TRX_LIM (
+        type: numberField
+        label {
+            label: Order Credit Limit
+        }
+        layout {
+            sequence: 90
+            region: @su-form
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P15_U_WAREHOUSE (
+        type: popupLov
+        label {
+            label: EBS Warehouse
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-warehouses
+            nullDisplayValue: — None —
+        }
+        layout {
+            sequence: 100
+            region: @su-form
+            slot: regionBody
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button btn-cancel-drawer (
+        buttonName: CANCEL
+        label: Cancel
+        layout {
+            sequence: 10
+            region: @drawer-buttons
+            slot: close
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    button btn-save-drawer (
+        buttonName: SAVE_DRAWER
+        label: Validate, Save & Cascade
+        layout {
+            sequence: 20
+            region: @drawer-buttons
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-check
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    dynamicAction da-cancel-drawer (
+        name: Cancel Drawer Dialog
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @btn-cancel-drawer
+        }
+
+        action act-cancel (
+            action: cancelDialog
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    validation val-drawer-fields (
+        name: Pre-Save EBS Lookup & Format Validation
+        execution {
+            sequence: 10
+        }
+        validation {
+            type: functionBody
+            plsqlFunctionBody:
+                ```plsql
+                begin
+                  if :P15_ENTITY = 'CUSTOMER' then
+                    return xxcr_rollout_pkg.validate_cust_row(
+                      p_include_yn         => :P15_C_INCLUDE_YN,
+                      p_action_code        => :P15_C_ACTION_CODE,
+                      p_tgt_party_name     => :P15_C_PARTY_NAME,
+                      p_tgt_account_number => null,
+                      p_cust_class         => :P15_C_CUST_CLASS,
+                      p_profile_class      => :P15_C_PROFILE_CLASS,
+                      p_collector          => :P15_C_COLLECTOR,
+                      p_payment_term       => :P15_C_PAYMENT_TERM,
+                      p_credit_curr        => :P15_C_CURRENCY,
+                      p_overall_limit      => :P15_C_OVERALL_LIM,
+                      p_trx_limit          => :P15_C_TRX_LIM
+                    );
+                  elsif :P15_ENTITY = 'SITE' then
+                    return xxcr_rollout_pkg.validate_site_row(
+                      p_include_yn  => :P15_S_INCLUDE_YN,
+                      p_country     => :P15_S_COUNTRY,
+                      p_address1    => :P15_S_ADDR1,
+                      p_city        => :P15_S_CITY,
+                      p_postal_code => :P15_S_POSTAL,
+                      p_sales_curr  => :P15_S_SALES_CURR,
+                      p_rps_hold    => :P15_S_RPS_HOLD
+                    );
+                  elsif :P15_ENTITY = 'SITE_USE' then
+                    return xxcr_rollout_pkg.validate_site_use_row(
+                      p_include_yn     => :P15_U_INCLUDE_YN,
+                      p_primary_flag   => :P15_U_PRIMARY_FLAG,
+                      p_location_code  => :P15_U_LOCATION,
+                      p_profile_class  => :P15_U_PROFILE_CLASS,
+                      p_collector      => :P15_U_COLLECTOR,
+                      p_payment_term   => :P15_U_PAYMENT_TERM,
+                      p_credit_curr    => :P15_U_CURRENCY,
+                      p_overall_limit  => :P15_U_OVERALL_LIM,
+                      p_trx_limit      => :P15_U_TRX_LIM,
+                      p_warehouse_code => :P15_U_WAREHOUSE,
+                      p_order_type     => :P15_U_ORDER_TYPE,
+                      p_price_list     => :P15_U_PRICE_LIST,
+                      p_tax_code       => :P15_U_TAX_CODE,
+                      p_gl_rec         => :P15_U_GL_REC,
+                      p_gl_rev         => :P15_U_GL_REV,
+                      p_gl_tax         => :P15_U_GL_TAX,
+                      p_stmt_cycle     => :P15_U_STMT_CYCLE,
+                      p_autocash_rule  => :P15_U_AUTOCASH,
+                      p_grouping_rule  => :P15_U_GROUP_RULE
+                    );
+                  elsif :P15_ENTITY = 'CONTACT' then
+                    return xxcr_rollout_pkg.validate_contact_row(
+                      p_include_yn   => :P15_T_INCLUDE_YN,
+                      p_primary_flag => :P15_T_PRIMARY_FLAG,
+                      p_first_name   => :P15_T_FIRST_NAME,
+                      p_last_name    => :P15_T_LAST_NAME,
+                      p_email        => :P15_T_EMAIL
+                    );
+                  end if;
+                  return null;
+                end;
+                ```
+        }
+        error {
+            displayLocation: inlineInNotification
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-drawer
+        }
+    )
+
+    process close-drawer-proc (
+        name: Close Drawer Dialog
+        type: closeDialog
+        execution {
+            sequence: 20
+        }
+        advanced {
+            executionMappingIdentifier: 60001503
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-drawer
+        }
+    )
+
+    process load-drawer-record (
+        name: Load Staged Record Into Drawer
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_id number := to_number(:P15_ROW_ID default null on conversion error);
+                begin
+                  :P0_PROJECT_ID := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                  if :P15_ENTITY = 'CUSTOMER' then
+                    for r in (select * from xxcr_stg_customers where stg_cust_id = l_id and project_id = :P0_PROJECT_ID) loop
+                      :P15_C_INCLUDE_YN    := r.include_yn;
+                      :P15_C_ACTION_CODE   := r.action_code;
+                      :P15_C_PARTY_NAME    := r.tgt_party_name;
+                      :P15_C_ACCOUNT_NAME  := r.tgt_account_name;
+                      :P15_C_TAX_REF       := r.tgt_tax_reference;
+                      :P15_C_CUST_CLASS    := r.tgt_customer_class_code;
+                      :P15_C_PROFILE_CLASS := r.tgt_profile_class_name;
+                      :P15_C_COLLECTOR     := r.tgt_collector_name;
+                      :P15_C_PAYMENT_TERM  := r.tgt_payment_term_name;
+                      :P15_C_CURRENCY      := r.tgt_credit_currency;
+                      :P15_C_OVERALL_LIM   := r.tgt_overall_credit_limit;
+                      :P15_C_TRX_LIM       := r.tgt_trx_credit_limit;
+                      :P15_C_NOTES         := r.user_notes;
+                    end loop;
+                  elsif :P15_ENTITY = 'SITE' then
+                    for r in (select * from xxcr_stg_sites where stg_site_id = l_id and project_id = :P0_PROJECT_ID) loop
+                      :P15_S_INCLUDE_YN  := r.include_yn;
+                      :P15_S_COUNTRY     := r.tgt_country;
+                      :P15_S_ADDR1       := r.tgt_address1;
+                      :P15_S_ADDR2       := r.tgt_address2;
+                      :P15_S_CITY        := r.tgt_city;
+                      :P15_S_STATE       := r.tgt_state;
+                      :P15_S_POSTAL      := r.tgt_postal_code;
+                      :P15_S_SALES_CURR  := r.tgt_sales_currency;
+                      :P15_S_RPS_HOLD    := r.tgt_rps_hold_flag;
+                      :P15_S_THIRD_PARTY := r.tgt_third_party_name;
+                      :P15_S_NOTES       := r.user_notes;
+                    end loop;
+                  elsif :P15_ENTITY = 'SITE_USE' then
+                    for r in (select * from xxcr_stg_site_uses where stg_site_use_id = l_id and project_id = :P0_PROJECT_ID) loop
+                      :P15_U_INCLUDE_YN    := r.include_yn;
+                      :P15_U_PRIMARY_FLAG  := r.tgt_primary_flag;
+                      :P15_U_LOCATION      := r.tgt_location_code;
+                      :P15_U_PROFILE_CLASS := r.tgt_profile_class_name;
+                      :P15_U_COLLECTOR     := r.tgt_collector_name;
+                      :P15_U_PAYMENT_TERM  := r.tgt_payment_term_name;
+                      :P15_U_CURRENCY      := r.tgt_credit_currency;
+                      :P15_U_OVERALL_LIM   := r.tgt_overall_credit_limit;
+                      :P15_U_TRX_LIM       := r.tgt_trx_credit_limit;
+                      :P15_U_WAREHOUSE     := r.tgt_warehouse_code;
+                      :P15_U_ORDER_TYPE    := r.tgt_order_type_name;
+                      :P15_U_PRICE_LIST    := r.tgt_price_list_name;
+                      :P15_U_TAX_CODE      := r.tgt_tax_code;
+                      :P15_U_GL_REC        := r.tgt_gl_rec_concat;
+                      :P15_U_GL_REV        := r.tgt_gl_rev_concat;
+                      :P15_U_GL_TAX        := r.tgt_gl_tax_concat;
+                      :P15_U_TAX_REF       := r.tgt_tax_reference;
+                      :P15_U_GENIE_REP     := r.tgt_awp_genie_rep;
+                      :P15_U_SHIP_VIA      := r.tgt_ship_via;
+                      :P15_U_SEND_STMTS    := r.tgt_send_statements;
+                      :P15_U_STMT_CYCLE    := r.tgt_statement_cycle_name;
+                      :P15_U_AUTOCASH      := r.tgt_autocash_rule_name;
+                      :P15_U_GROUP_RULE    := r.tgt_grouping_rule_name;
+                      :P15_U_NOTES         := r.user_notes;
+                    end loop;
+                  elsif :P15_ENTITY = 'CONTACT' then
+                    for r in (select * from xxcr_stg_contacts where stg_contact_id = l_id and project_id = :P0_PROJECT_ID) loop
+                      :P15_T_INCLUDE_YN   := r.include_yn;
+                      :P15_T_PRIMARY_FLAG := r.tgt_primary_flag;
+                      :P15_T_FIRST_NAME   := r.tgt_first_name;
+                      :P15_T_LAST_NAME    := r.tgt_last_name;
+                      :P15_T_JOB_TITLE    := r.tgt_job_title;
+                      :P15_T_EMAIL        := r.tgt_email_address;
+                      :P15_T_PHONE_CC     := r.tgt_phone_country_code;
+                      :P15_T_PHONE_AREA   := r.tgt_phone_area_code;
+                      :P15_T_PHONE_NUM    := r.tgt_phone_number;
+                      :P15_T_MOBILE       := r.tgt_mobile_number;
+                      :P15_T_FAX          := r.tgt_fax_number;
+                      :P15_T_NOTES        := r.user_notes;
+                    end loop;
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60001501
+        }
+    )
+
+    process save-drawer-record (
+        name: Save Validated Record & Cascade
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_id      number := to_number(:P15_ROW_ID default null on conversion error);
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  if :P15_ENTITY = 'CUSTOMER' then
+                    update xxcr_stg_customers
+                       set include_yn               = :P15_C_INCLUDE_YN,
+                           action_code              = :P15_C_ACTION_CODE,
+                           tgt_party_name           = :P15_C_PARTY_NAME,
+                           tgt_account_name         = :P15_C_ACCOUNT_NAME,
+                           tgt_tax_reference        = :P15_C_TAX_REF,
+                           tgt_customer_class_code  = :P15_C_CUST_CLASS,
+                           tgt_profile_class_name   = :P15_C_PROFILE_CLASS,
+                           tgt_collector_name       = :P15_C_COLLECTOR,
+                           tgt_payment_term_name    = :P15_C_PAYMENT_TERM,
+                           tgt_credit_currency      = :P15_C_CURRENCY,
+                           tgt_overall_credit_limit = to_number(:P15_C_OVERALL_LIM default null on conversion error),
+                           tgt_trx_credit_limit     = to_number(:P15_C_TRX_LIM default null on conversion error),
+                           user_notes               = :P15_C_NOTES,
+                           updated_at               = systimestamp
+                     where stg_cust_id = l_id
+                       and project_id  = l_proj_id;
+                  elsif :P15_ENTITY = 'SITE' then
+                    update xxcr_stg_sites
+                       set include_yn           = :P15_S_INCLUDE_YN,
+                           tgt_country          = :P15_S_COUNTRY,
+                           tgt_address1         = :P15_S_ADDR1,
+                           tgt_address2         = :P15_S_ADDR2,
+                           tgt_city             = :P15_S_CITY,
+                           tgt_state            = :P15_S_STATE,
+                           tgt_postal_code      = :P15_S_POSTAL,
+                           tgt_sales_currency   = :P15_S_SALES_CURR,
+                           tgt_rps_hold_flag    = :P15_S_RPS_HOLD,
+                           tgt_third_party_name = :P15_S_THIRD_PARTY,
+                           user_notes           = :P15_S_NOTES,
+                           updated_at           = systimestamp
+                     where stg_site_id = l_id
+                       and project_id  = l_proj_id;
+                  elsif :P15_ENTITY = 'SITE_USE' then
+                    update xxcr_stg_site_uses
+                       set include_yn               = :P15_U_INCLUDE_YN,
+                           tgt_primary_flag         = :P15_U_PRIMARY_FLAG,
+                           tgt_location_code        = :P15_U_LOCATION,
+                           tgt_profile_class_name   = :P15_U_PROFILE_CLASS,
+                           tgt_collector_name       = :P15_U_COLLECTOR,
+                           tgt_payment_term_name    = :P15_U_PAYMENT_TERM,
+                           tgt_credit_currency      = :P15_U_CURRENCY,
+                           tgt_overall_credit_limit = to_number(:P15_U_OVERALL_LIM default null on conversion error),
+                           tgt_trx_credit_limit     = to_number(:P15_U_TRX_LIM default null on conversion error),
+                           tgt_warehouse_code       = :P15_U_WAREHOUSE,
+                           tgt_order_type_name      = :P15_U_ORDER_TYPE,
+                           tgt_price_list_name      = :P15_U_PRICE_LIST,
+                           tgt_tax_code             = :P15_U_TAX_CODE,
+                           tgt_gl_rec_concat        = :P15_U_GL_REC,
+                           tgt_gl_rev_concat        = :P15_U_GL_REV,
+                           tgt_gl_tax_concat        = :P15_U_GL_TAX,
+                           tgt_tax_reference        = :P15_U_TAX_REF,
+                           tgt_awp_genie_rep    = :P15_U_GENIE_REP,
+                           tgt_ship_via             = :P15_U_SHIP_VIA,
+                           tgt_send_statements      = :P15_U_SEND_STMTS,
+                           tgt_statement_cycle_name = :P15_U_STMT_CYCLE,
+                           tgt_autocash_rule_name   = :P15_U_AUTOCASH,
+                           tgt_grouping_rule_name   = :P15_U_GROUP_RULE,
+                           user_notes               = :P15_U_NOTES,
+                           updated_at               = systimestamp
+                     where stg_site_use_id = l_id
+                       and project_id      = l_proj_id;
+                  elsif :P15_ENTITY = 'CONTACT' then
+                    update xxcr_stg_contacts
+                       set include_yn             = :P15_T_INCLUDE_YN,
+                           tgt_primary_flag       = :P15_T_PRIMARY_FLAG,
+                           tgt_first_name         = :P15_T_FIRST_NAME,
+                           tgt_last_name          = :P15_T_LAST_NAME,
+                           tgt_job_title          = :P15_T_JOB_TITLE,
+                           tgt_email_address      = :P15_T_EMAIL,
+                           tgt_phone_country_code = :P15_T_PHONE_CC,
+                           tgt_phone_area_code    = :P15_T_PHONE_AREA,
+                           tgt_phone_number       = :P15_T_PHONE_NUM,
+                           tgt_mobile_number      = :P15_T_MOBILE,
+                           tgt_fax_number         = :P15_T_FAX,
+                           user_notes             = :P15_T_NOTES,
+                           updated_at             = systimestamp
+                     where stg_contact_id = l_id
+                       and project_id     = l_proj_id;
+                  end if;
+                
+                  xxcr_rollout_pkg.cascade_exclusions(l_proj_id);
+                  xxcr_rollout_pkg.sync_deltas(l_proj_id);
+                  xxcr_rollout_pkg.find_duplicates(l_proj_id);
+                  xxcr_rollout_pkg.validate_project(l_proj_id);
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Record validated, saved, cascaded, and re-validated!
+        }
+        advanced {
+            executionMappingIdentifier: 60001502
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-drawer
+        }
+        security {
+            authorizationScheme: @can-edit-data
+        }
+    )
+
+)
+

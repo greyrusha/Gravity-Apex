@@ -1,0 +1,1135 @@
+page 42 (
+    name: SLA Accounting Errors
+    alias: SLA-ACCOUNTING-ERRORS
+    title: SLA Accounting Errors
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region breadcrumb (
+        name: Breadcrumb
+        title: SLA Accounting Errors
+        type: breadcrumb
+        source {
+            breadcrumb: @breadcrumb
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/title-bar
+            templateOptions: [
+                #DEFAULT#
+                t-BreadcrumbRegion--useBreadcrumbTitle
+            ]
+        }
+        componentAppearance {
+            breadcrumbTemplate: @/breadcrumb
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region filters (
+        name: Filters
+        title: Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    region instructions (
+        name: Instructions
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--horizontal t-Alert--defaultIcons t-Alert--info">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">Select an exception before opening this page</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        Open Page 42 from an exception row on Payables, Receivables, or Cost
+                        Management. The selected period, database source, ledger, organization,
+                        entity, and exception type will be applied automatically.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression:
+                ```plsql
+                NVL(:P42_RUN_SLA, 'N') <> 'Y'
+                OR NVL(:P42_RUN_PERIOD, '#') <> NVL(:P42_PERIOD_NAME, '#')
+                ```
+        }
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    region selected-exception-context (
+        name: Selected Exception Context
+        title: Selected Exception
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--horizontal t-Alert--defaultIcons t-Alert--info" role="status">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon"><span class="t-Icon fa fa-search" aria-hidden="true"></span></div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">Accounting error details</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        Period <strong>&P42_PERIOD_NAME!HTML.</strong> &middot;
+                        Ledger <strong>&P42_LEDGER_ID!HTML.</strong> &middot;
+                        Organization <strong>&P42_ORG_NAME!HTML. (&P42_ORG_ID!HTML.)</strong> &middot;
+                        Entity <strong>&P42_ENTITY_CODE!HTML.</strong> &middot;
+                        Source <strong>&P42_DB_LINK!HTML.</strong> &middot;
+                        Exception <strong>&P42_EXCEPTION_TYPE!HTML.</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 25
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :P42_SOURCE_PAGE IS NOT NULL
+        }
+    )
+
+    region sla-accounting-errors (
+        name: SLA Accounting Errors
+        title: SLA Accounting Errors
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                SELECT accounting_error_id,
+                       application_id,
+                       sla_source,
+                       ledger_id,
+                       ledger_name,
+                       organization_id,
+                       entity_code,
+                       source_transaction_id,
+                       transaction_number,
+                       event_id,
+                       event_type_code,
+                       event_status_code,
+                       process_status_code,
+                       transaction_date,
+                       ae_header_id,
+                       ae_line_num,
+                       accounting_date,
+                       accounting_entry_status_code,
+                       gl_transfer_status_code,
+                       message_number,
+                       error_source_code,
+                       error_message,
+                       error_creation_date,
+                       error_age_days,
+                       exception_type,
+                       severity,
+                       refresh_timestamp
+                FROM TABLE(
+                    xxme_sla_error_drill_pkg.get_errors(
+                        :P42_RUN_PERIOD,
+                        TO_NUMBER(:P42_APPLICATION_ID),
+                        TO_NUMBER(:P42_LEDGER_ID),
+                        TO_NUMBER(:P42_ORG_ID),
+                        :P42_ENTITY_CODE,
+                        :P42_DB_LINK
+                    )
+                ) e
+                WHERE (:P42_EXCEPTION_TYPE IS NULL OR UPPER(e.exception_type) = UPPER(:P42_EXCEPTION_TYPE))
+                ORDER BY sla_source,
+                         ledger_id,
+                         transaction_date,
+                         event_id,
+                         accounting_error_id
+                ```
+            pageItemsToSubmit: [
+                P42_PERIOD_NAME
+                P42_RUN_PERIOD
+                P42_RUN_SLA
+                P42_APPLICATION_ID
+                P42_LEDGER_ID
+                P42_ORG_ID
+                P42_ENTITY_CODE
+                P42_EXCEPTION_TYPE
+                P42_DB_LINK
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression:
+                ```plsql
+                :P42_RUN_SLA = 'Y'
+                AND :P42_RUN_PERIOD = :P42_PERIOD_NAME
+                ```
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound:
+                ```
+                <div class="t-Alert t-Alert--success t-Alert--horizontal">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-check-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      <div class="t-Alert-header">
+                        <h2 class="t-Alert-title">No active SLA accounting errors found</h2>
+                      </div>
+                      <div class="t-Alert-body">
+                        No active processing/accounting errors were found for Payables,
+                        Receivables, or Cost Management for the selected period and approved
+                        ledger scope.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        advanced {
+            savedReportMappingIdentifier: 20646141499248710
+        }
+
+        column ACCOUNTING_DATE (
+            type: plainText
+            heading {
+                heading: Accounting Date
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column ACCOUNTING_ENTRY_STATUS_CODE (
+            type: hidden
+            heading {
+                heading: Accounting Entry Status
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column ACCOUNTING_ERROR_ID (
+            type: hidden
+            heading {
+                heading: Accounting Error ID
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column AE_HEADER_ID (
+            type: hidden
+            heading {
+                heading: Accounting Header ID
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column AE_LINE_NUM (
+            type: hidden
+            heading {
+                heading: Accounting Line Number
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column APPLICATION_ID (
+            type: hidden
+            heading {
+                heading: Application ID
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column ENTITY_CODE (
+            type: plainText
+            heading {
+                heading: Entity
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column ERROR_AGE_DAYS (
+            type: plainText
+            heading {
+                heading: Error Age Days
+                alignment: end
+            }
+            layout {
+                sequence: 240
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Y
+            }
+        )
+
+        column ERROR_CREATION_DATE (
+            type: plainText
+            heading {
+                heading: Error Created
+            }
+            layout {
+                sequence: 230
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: X
+            }
+        )
+
+        column ERROR_MESSAGE (
+            type: plainText
+            heading {
+                heading: Error Message
+            }
+            layout {
+                sequence: 220
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: W
+            }
+        )
+
+        column ERROR_SOURCE_CODE (
+            type: plainText
+            heading {
+                heading: Error Source
+            }
+            layout {
+                sequence: 210
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: V
+            }
+        )
+
+        column EVENT_ID (
+            type: plainText
+            heading {
+                heading: Event ID
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column EVENT_STATUS_CODE (
+            type: hidden
+            heading {
+                heading: Event Status
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column EVENT_TYPE_CODE (
+            type: plainText
+            heading {
+                heading: Event Type
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column EXCEPTION_TYPE (
+            type: hidden
+            heading {
+                heading: Exception Type
+            }
+            layout {
+                sequence: 250
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Z
+            }
+        )
+
+        column GL_TRANSFER_STATUS_CODE (
+            type: hidden
+            heading {
+                heading: GL Transfer Status
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: T
+            }
+        )
+
+        column LEDGER_ID (
+            type: hidden
+            heading {
+                heading: Ledger ID
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column MESSAGE_NUMBER (
+            type: hidden
+            heading {
+                heading: Message Number
+            }
+            layout {
+                sequence: 200
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: U
+            }
+        )
+
+        column ORGANIZATION_ID (
+            type: hidden
+            heading {
+                heading: Organization ID
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column PROCESS_STATUS_CODE (
+            type: hidden
+            heading {
+                heading: Process Status
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column REFRESH_TIMESTAMP (
+            type: hidden
+            heading {
+                heading: Refresh Timestamp
+            }
+            layout {
+                sequence: 270
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: AB
+            }
+        )
+
+        column SEVERITY (
+            type: hidden
+            heading {
+                heading: Severity
+            }
+            layout {
+                sequence: 260
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: AA
+            }
+        )
+
+        column SLA_SOURCE (
+            type: plainText
+            heading {
+                heading: SLA Source
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column SOURCE_TRANSACTION_ID (
+            type: hidden
+            heading {
+                heading: Source Transaction ID
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column TRANSACTION_DATE (
+            type: plainText
+            heading {
+                heading: Transaction Date
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column TRANSACTION_NUMBER (
+            type: plainText
+            heading {
+                heading: Transaction Number
+            }
+            layout {
+                sequence: 90
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCOUNTING_DATE (
+                sequence: 17
+            )
+
+            displayColumn ACCOUNTING_ENTRY_STATUS_CODE (
+                sequence: 18
+            )
+
+            displayColumn ACCOUNTING_ERROR_ID (
+                sequence: 1
+            )
+
+            displayColumn AE_HEADER_ID (
+                sequence: 15
+            )
+
+            displayColumn AE_LINE_NUM (
+                sequence: 16
+            )
+
+            displayColumn APPLICATION_ID (
+                sequence: 2
+            )
+
+            displayColumn ENTITY_CODE (
+                sequence: 7
+            )
+
+            displayColumn ERROR_AGE_DAYS (
+                sequence: 24
+            )
+
+            displayColumn ERROR_CREATION_DATE (
+                sequence: 23
+            )
+
+            displayColumn ERROR_MESSAGE (
+                sequence: 22
+            )
+
+            displayColumn ERROR_SOURCE_CODE (
+                sequence: 21
+            )
+
+            displayColumn EVENT_ID (
+                sequence: 10
+            )
+
+            displayColumn EVENT_STATUS_CODE (
+                sequence: 12
+            )
+
+            displayColumn EVENT_TYPE_CODE (
+                sequence: 11
+            )
+
+            displayColumn EXCEPTION_TYPE (
+                sequence: 25
+            )
+
+            displayColumn GL_TRANSFER_STATUS_CODE (
+                sequence: 19
+            )
+
+            displayColumn LEDGER_ID (
+                sequence: 4
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 5
+            )
+
+            displayColumn MESSAGE_NUMBER (
+                sequence: 20
+            )
+
+            displayColumn ORGANIZATION_ID (
+                sequence: 6
+            )
+
+            displayColumn PROCESS_STATUS_CODE (
+                sequence: 13
+            )
+
+            displayColumn REFRESH_TIMESTAMP (
+                sequence: 27
+            )
+
+            displayColumn SEVERITY (
+                sequence: 26
+            )
+
+            displayColumn SLA_SOURCE (
+                sequence: 3
+            )
+
+            displayColumn SOURCE_TRANSACTION_ID (
+                sequence: 8
+            )
+
+            displayColumn TRANSACTION_DATE (
+                sequence: 14
+            )
+
+            displayColumn TRANSACTION_NUMBER (
+                sequence: 9
+            )
+
+        )
+
+    )
+
+    pageItem P42_APPLICATION_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 80
+            slot: body
+        }
+    )
+
+    pageItem P42_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 120
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P42_ENTITY_CODE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 110
+            slot: body
+        }
+    )
+
+    pageItem P42_EXCEPTION_TYPE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 120
+            slot: body
+        }
+    )
+
+    pageItem P42_LEDGER_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 90
+            slot: body
+        }
+    )
+
+    pageItem P42_ORG_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 100
+            slot: body
+        }
+    )
+
+    pageItem P42_ORG_NAME (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 105
+            slot: body
+        }
+    )
+
+    pageItem P42_PERIOD_NAME (
+        type: displayOnly
+        label {
+            label: Accounting Period
+            alignment: left
+        }
+        layout {
+            sequence: 10
+            region: @filters
+            slot: regionBody
+            alignment: left
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+        default {
+            type: sqlQuerySingleValue
+            sqlQuerySingleValue:
+                ```sql
+                select upper(to_char(trunc(sysdate, 'MM'), 'MON-YYYY', 'NLS_DATE_LANGUAGE=English'))
+                from dual
+                ```
+        }
+    )
+
+    pageItem P42_RETURN_URL (
+        type: hidden
+        layout {
+            sequence: 125
+            slot: body
+        }
+    )
+
+    pageItem P42_RUN_PERIOD (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+    )
+
+    pageItem P42_RUN_SLA (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        default {
+            type: static
+            staticValue: N
+        }
+    )
+
+    pageItem P42_SOURCE_PAGE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 130
+            slot: body
+        }
+    )
+
+    button close-page (
+        buttonName: CLOSE_PAGE
+        label: Back to Exceptions
+        layout {
+            sequence: 30
+            region: @filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-arrow-left
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+    )
+
+    dynamicAction close-page (
+        name: Close Page
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-page
+        }
+
+        action close-window (
+            name: Return to Source Page
+            action: executeJsCode
+            settings {
+                jsCode:
+                    ```javascript-browser
+                    const returnUrl = apex.item("P42_RETURN_URL").getValue();
+                    if (returnUrl) {
+                        apex.navigation.redirect(returnUrl);
+                    } else {
+                        window.close();
+                    }
+                    ```
+            }
+            execution {
+                sequence: 20
+                fireOnInit: false
+            }
+        )
+
+        action generate-return-url (
+            name: Generate Return URL
+            action: executeServerSideCode
+            settings {
+                plsqlCode:
+                    ```plsql
+                    :P42_RETURN_URL :=
+                        case :P42_SOURCE_PAGE
+                            when '41' then apex_page.get_url(
+                                p_page        => 41,
+                                p_clear_cache => '41'
+                            )
+                            when '20' then apex_page.get_url(p_page => 20)
+                            when '30' then apex_page.get_url(p_page => 30)
+                            else null
+                        end;
+                    ```
+                itemsToSubmit: P42_SOURCE_PAGE
+                itemsToReturn: P42_RETURN_URL
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    process resolve-organization-name (
+        name: Resolve Organization Name
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                DECLARE
+                    l_db_link VARCHAR2(30);
+                    l_sql     VARCHAR2(1000);
+                BEGIN
+                    :P42_ORG_NAME := NULL;
+                
+                    IF :P42_ORG_ID IS NOT NULL
+                       AND :P42_DB_LINK IS NOT NULL
+                       AND :P42_APPLICATION_ID IS NOT NULL
+                    THEN
+                        l_db_link := xxme_db_source_pkg.normalize_db_link(:P42_DB_LINK);
+                
+                        IF TO_NUMBER(:P42_APPLICATION_ID) IN (200, 222) THEN
+                            l_sql :=
+                                'SELECT MAX(TRIM(name)) ' ||
+                                'FROM apps.hr_operating_units@' || l_db_link ||
+                                ' WHERE organization_id = :1';
+                        ELSIF TO_NUMBER(:P42_APPLICATION_ID) = 707 THEN
+                            l_sql :=
+                                'SELECT MAX(TRIM(organization_name)) ' ||
+                                'FROM apps.org_organization_definitions@' || l_db_link ||
+                                ' WHERE organization_id = :1';
+                        END IF;
+                
+                        IF l_sql IS NOT NULL THEN
+                            EXECUTE IMMEDIATE l_sql
+                                INTO :P42_ORG_NAME
+                                USING TO_NUMBER(:P42_ORG_ID);
+                        END IF;
+                    END IF;
+                
+                    IF :P42_ORG_ID IS NOT NULL AND :P42_ORG_NAME IS NULL THEN
+                        :P42_ORG_NAME := 'Unknown organization';
+                    END IF;
+                END;
+                ```
+        }
+        execution {
+            sequence: 5
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 120042000000000010
+        }
+    )
+
+)
+

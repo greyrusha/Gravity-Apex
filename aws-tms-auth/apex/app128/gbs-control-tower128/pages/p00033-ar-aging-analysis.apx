@@ -1,0 +1,1753 @@
+page 33 (
+    name: AR Aging Analysis
+    alias: AR-AGING-ANALYSIS
+    title: AR Aging Analysis
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    javaScript {
+        functionAndGlobalVariableDeclaration:
+            ```javascript-browser
+            var p33Controller=(function($){
+              'use strict';
+              function byId(id){return $('#'+id);}
+              function region(id){try{return apex.region(id);}catch(ignore){return null;}}
+              function drill(customerId,bucketSequence,bucketLabel,customerName,customerNumber){
+                apex.item('P33_SELECTED_CUSTOMER_ID').setValue(customerId?String(customerId):'',null,true);
+                apex.item('P33_SELECTED_BUCKET_SEQUENCE').setValue(bucketSequence?String(bucketSequence):'',null,true);
+                var customer=customerName?(customerName+(customerNumber?' ('+customerNumber+')':'')):'All customers';
+                var bucket=bucketLabel||(bucketSequence?apex.item('P33_BUCKET_'+bucketSequence+'_LABEL').getValue():'All aging buckets');
+                byId('p33-detail-selection').text(customer+' • '+bucket);
+                byId('customer-detail-context').show();byId('customer-aging-detail').show();
+                var r=region('customer-aging-detail');if(r&&typeof r.refresh==='function'){r.refresh();}else{byId('customer-aging-detail').trigger('apexrefresh');}
+                $('html, body').animate({scrollTop:byId('customer-detail-context').offset().top-12},200);
+              }
+              function closeDetail(){apex.item('P33_SELECTED_CUSTOMER_ID').setValue('',null,true);apex.item('P33_SELECTED_BUCKET_SEQUENCE').setValue('',null,true);byId('customer-detail-context').hide();byId('customer-aging-detail').hide();}
+              function openAi(){if(apex.item('P33_SNAPSHOT_READY').getValue()!=='Y')return;var target='ar_aging_ai_'+Date.now(),child=window.open('',target);if(!child){apex.message.showErrors([{type:'error',location:'page',message:'Allow pop-ups to open the AI Analyst in a new tab.',unsafe:false}]);return;}child.document.write('<title>Opening AI Analyst</title><p style="font-family:sans-serif;padding:1rem">Opening AI Analyst...</p>');apex.server.process('P33_GET_AI_URL',{pageItems:'#P33_SNAPSHOT_READY,#P33_DB_LINK,#P33_PERIOD_NAME,#P33_LEDGER_ID,#P33_COMPANY,#P33_AGING_BUCKET_ID'},{dataType:'json'}).then(function(result){if(!result||result.ok!==true||!result.url){child.close();apex.message.showErrors([{type:'error',location:'page',message:(result&&result.message)||'Unable to open the AI Analyst.',unsafe:false}]);return;}child.location.replace(result.url);},function(error){child.close();apex.message.showErrors([{type:'error',location:'page',message:(error&&error.message)||'Unable to open the AI Analyst.',unsafe:false}]);});}
+              function closePage(){window.close();setTimeout(function(){if(!window.closed){apex.navigation.redirect(apex.item('P33_BACK_URL').getValue());}},250);}
+              $(function(){closeDetail();$(document).on('click.p33','.p33-aging-drill',function(){drill(null,$(this).attr('data-seq'),$(this).attr('data-label'));});});
+              return{drill:drill,closeDetail:closeDetail,openAi:openAi,closePage:closePage};
+            })(apex.jQuery);
+            ```
+    }
+    css {
+        inline:
+            ```css
+            #customer-detail-context,#customer-aging-detail{display:none;}
+            .p33-context-note{margin:.25rem 0 0;color:var(--ut-component-text-muted-color,#5f6368);}
+            .p33-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;padding:.25rem;}
+            .p33-kpi{border:1px solid var(--ut-component-border-color,#d9dce1);border-radius:.5rem;padding:1rem;background:var(--ut-component-background-color,#fff);}
+            .p33-kpi-label{font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;color:#5f6368;}
+            .p33-kpi-value{font-size:1.42rem;font-weight:700;font-variant-numeric:tabular-nums;margin-top:.3rem;}
+            .p33-kpi--alert{border-left:4px solid #b91c1c;background:#fef2f2;}
+            .p33-aging-row{display:grid;grid-template-columns:12rem 1fr 11rem;gap:.75rem;align-items:center;min-width:38rem;}
+            .p33-aging-track{height:1.1rem;background:#eef0f3;border-radius:.25rem;overflow:hidden;}
+            .p33-aging-bar{display:block;height:100%;min-width:2px;background:#2563eb;border-radius:.25rem;}
+            .p33-aging-amount{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;}
+            .p33-aging-drill{display:block;width:100%;border:0;background:transparent;padding:.45rem .25rem;cursor:pointer;text-align:inherit;border-radius:.3rem;}
+            .p33-aging-drill:hover,.p33-aging-drill:focus{background:#eff6ff;outline:2px solid transparent;}
+            .p33-detail-banner{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.35rem 0;}
+            #p33-detail-selection{font-weight:600;}
+            .p33-control-exception{display:inline-block;padding:.15rem .45rem;border-radius:1rem;background:#fee2e2;color:#991b1b;font-weight:700;}
+            .p33-control-ok{display:inline-block;padding:.15rem .45rem;border-radius:1rem;background:#dcfce7;color:#166534;}
+            @media(max-width:1000px){.p33-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region ar-aging-context (
+        name: Snapshot Context
+        title: Snapshot Context
+        type: staticContent
+        source {
+            htmlCode: <p class="p33-context-note">All summaries use Accounted Open Balance in ledger functional currency. Entered-currency balances are shown only in transaction detail and are never totaled across currencies.</p>
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: ar-aging-context
+        }
+    )
+
+    region ar-aging-distribution (
+        name: Aging Distribution
+        title: Aging Distribution
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                with a as (
+                 select bucket_sequence,bucket_heading,sum(nvl(accounted_balance_asof,0)) amount
+                 from xxme_ar_recon_v2_snap
+                 where :P33_SNAPSHOT_READY='Y' and db_link_name=:P33_DB_LINK and ledger_id=to_number(:P33_LEDGER_ID)
+                   and company_segment=:P33_COMPANY and period_name=:P33_PERIOD_NAME and aging_bucket_id=to_number(:P33_AGING_BUCKET_ID)
+                 group by bucket_sequence,bucket_heading
+                ), b as (select a.*,max(abs(amount)) over() max_amount from a)
+                select '<button type="button" class="p33-aging-drill" data-seq="'||bucket_sequence||'" data-label="'||apex_escape.html_attribute(bucket_heading)||'"><span class="p33-aging-row"><span>'||apex_escape.html(bucket_heading)||'</span>'||
+                 '<span class="p33-aging-track"><span class="p33-aging-bar" style="width:'||to_char(case when max_amount=0 then 0 else round(abs(amount)/max_amount*100,2) end,'FM990D00','NLS_NUMERIC_CHARACTERS=''.,''')||'%"></span></span>'||
+                 '<span class="p33-aging-amount">'||to_char(amount,'FM999G999G999G990D00')||'</span></span></button>' aging_bar
+                 from b order by bucket_sequence
+                ```
+            pageItemsToSubmit: [
+                P33_SNAPSHOT_READY
+                P33_DB_LINK
+                P33_LEDGER_ID
+                P33_COMPANY
+                P33_PERIOD_NAME
+                P33_AGING_BUCKET_ID
+            ]
+        }
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        serverSideCondition {
+            type: item=value
+            item: P33_SNAPSHOT_READY
+            value: Y
+        }
+        reportLayout {
+            numberOfRows: 10
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--noBorders
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+
+        column AGING_BAR (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+    )
+
+    region ar-aging-kpis (
+        name: Snapshot KPIs
+        title: Snapshot Summary
+        type: classicReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                with k as (
+                  select count(distinct customer_id) customer_count, count(*) open_item_count,
+                         nvl(sum(accounted_balance_asof),0) open_amount,
+                         nvl(sum(case when days_past_due > 0 then accounted_balance_asof else 0 end),0) past_due_amount,
+                         nvl(sum(case when control_account_flag = 'N' then accounted_balance_asof else 0 end),0) exception_amount
+                    from xxme_ar_recon_v2_snap
+                   where :P33_SNAPSHOT_READY = 'Y' and db_link_name=:P33_DB_LINK and ledger_id=to_number(:P33_LEDGER_ID)
+                     and company_segment=:P33_COMPANY and period_name=:P33_PERIOD_NAME and aging_bucket_id=to_number(:P33_AGING_BUCKET_ID)
+                )
+                select '<div class="p33-kpis">'||
+                 '<div class="p33-kpi"><div class="p33-kpi-label">Customers</div><div class="p33-kpi-value">'||to_char(customer_count,'FM999G999G990')||'</div></div>'||
+                 '<div class="p33-kpi"><div class="p33-kpi-label">Open Items</div><div class="p33-kpi-value">'||to_char(open_item_count,'FM999G999G990')||'</div></div>'||
+                 '<div class="p33-kpi"><div class="p33-kpi-label">AR Open Accounted</div><div class="p33-kpi-value">'||to_char(open_amount,'FM999G999G999G990D00')||'</div></div>'||
+                 '<div class="p33-kpi"><div class="p33-kpi-label">Past Due Accounted</div><div class="p33-kpi-value">'||to_char(past_due_amount,'FM999G999G999G990D00')||'</div></div>'||
+                 '<div class="p33-kpi p33-kpi--alert"><div class="p33-kpi-label">Outside Control Accounts</div><div class="p33-kpi-value">'||to_char(exception_amount,'FM999G999G999G990D00')||'</div></div></div>' kpi_html from k
+                ```
+            pageItemsToSubmit: [
+                P33_SNAPSHOT_READY
+                P33_DB_LINK
+                P33_LEDGER_ID
+                P33_COMPANY
+                P33_PERIOD_NAME
+                P33_AGING_BUCKET_ID
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+                t-Region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        serverSideCondition {
+            type: item=value
+            item: P33_SNAPSHOT_READY
+            value: Y
+        }
+        reportLayout {
+            numberOfRows: 1
+        }
+        componentAppearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Report--noBorders
+            ]
+        }
+        pagination {
+            type: showAll
+        }
+
+        column KPI_HTML (
+            reportColumnQueryId: 1
+            derivedColumn: N
+            heading {
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            sorting {
+                sortable: false
+            }
+            exportPrinting {
+                includeInExportPrint: false
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+    )
+
+    region customer-aging-detail (
+        name: Customer Aging Detail
+        title: Customer Aging Detail
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select class_code,trx_number,trx_date,due_date,days_past_due,bucket_heading,currency_code,
+                 entered_balance_asof,accounted_balance_asof,account_segments,
+                 case control_account_flag when 'Y' then '<span class="p33-control-ok">Control Account</span>' else '<span class="p33-control-exception">Outside Control Account</span>' end control_account_status,
+                 customer_number,customer_name,payment_schedule_id,customer_trx_id,receivable_ccid,org_id,bucket_sequence,control_account_flag
+                 from table(xxme_ar_recon_v2_pkg.get_aging_detail(
+                   :P33_DB_LINK,to_number(:P33_LEDGER_ID),:P33_COMPANY,:P33_PERIOD_NAME,to_number(:P33_AGING_BUCKET_ID),
+                   case when :P33_SELECTED_CUSTOMER_ID is null then null else to_number(:P33_SELECTED_CUSTOMER_ID) end,
+                   case when :P33_SELECTED_BUCKET_SEQUENCE is null then null else to_number(:P33_SELECTED_BUCKET_SEQUENCE) end,null))
+                 where :P33_SNAPSHOT_READY='Y'
+                ```
+            pageItemsToSubmit: [
+                P33_SNAPSHOT_READY
+                P33_DB_LINK
+                P33_LEDGER_ID
+                P33_COMPANY
+                P33_PERIOD_NAME
+                P33_AGING_BUCKET_ID
+                P33_SELECTED_CUSTOMER_ID
+                P33_SELECTED_BUCKET_SEQUENCE
+            ]
+        }
+        layout {
+            sequence: 60
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: customer-aging-detail
+        }
+        serverSideCondition {
+            type: item=value
+            item: P33_SNAPSHOT_READY
+            value: Y
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No open items match the selected customer and aging bucket.
+        }
+        advanced {
+            savedReportMappingIdentifier: 933160000000686655
+        }
+
+        column ACCOUNTED_BALANCE_ASOF (
+            type: plainText
+            heading {
+                heading: Accounted Open Balance
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column ACCOUNT_SEGMENTS (
+            type: plainText
+            heading {
+                heading: Receivable Account
+                alignment: center
+            }
+            layout {
+                sequence: 100
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column BUCKET_HEADING (
+            type: plainText
+            heading {
+                heading: Aging Bucket
+                alignment: center
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column BUCKET_SEQUENCE (
+            type: hidden
+            heading {
+                heading: Bucket Sequence
+            }
+            layout {
+                sequence: 180
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: R
+            }
+        )
+
+        column CLASS_CODE (
+            type: plainText
+            heading {
+                heading: Transaction Class
+                alignment: center
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column CONTROL_ACCOUNT_FLAG (
+            type: hidden
+            heading {
+                heading: Control Flag
+            }
+            layout {
+                sequence: 190
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: S
+            }
+        )
+
+        column CONTROL_ACCOUNT_STATUS (
+            type: plainText
+            heading {
+                heading: Control Account Status
+                alignment: center
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+            security {
+                escapeSpecialChars: false
+            }
+        )
+
+        column CURRENCY_CODE (
+            type: plainText
+            heading {
+                heading: Transaction Currency
+                alignment: center
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column CUSTOMER_NAME (
+            type: hidden
+            heading {
+                heading: Customer Name
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column CUSTOMER_NUMBER (
+            type: hidden
+            heading {
+                heading: Customer Number
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column CUSTOMER_TRX_ID (
+            type: hidden
+            heading {
+                heading: Customer Transaction ID
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column DAYS_PAST_DUE (
+            type: plainText
+            heading {
+                heading: Days Past Due
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column DUE_DATE (
+            type: plainText
+            heading {
+                heading: Due Date
+                alignment: center
+            }
+            layout {
+                sequence: 40
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column ENTERED_BALANCE_ASOF (
+            type: plainText
+            heading {
+                heading: Entered Open Balance
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column ORG_ID (
+            type: hidden
+            heading {
+                heading: Organization ID
+            }
+            layout {
+                sequence: 170
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column PAYMENT_SCHEDULE_ID (
+            type: hidden
+            heading {
+                heading: Payment Schedule ID
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column RECEIVABLE_CCID (
+            type: hidden
+            heading {
+                heading: Receivable CCID
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column TRX_DATE (
+            type: plainText
+            heading {
+                heading: Transaction Date
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            appearance {
+                formatMask: DD-MON-YYYY
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column TRX_NUMBER (
+            type: plainText
+            heading {
+                heading: Transaction Number
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        page {
+            width: 14
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Customer Aging Detail
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCOUNTED_BALANCE_ASOF (
+                sequence: 9
+            )
+
+            displayColumn ACCOUNT_SEGMENTS (
+                sequence: 10
+            )
+
+            displayColumn BUCKET_HEADING (
+                sequence: 6
+            )
+
+            displayColumn CLASS_CODE (
+                sequence: 1
+            )
+
+            displayColumn CONTROL_ACCOUNT_STATUS (
+                sequence: 11
+            )
+
+            displayColumn CURRENCY_CODE (
+                sequence: 7
+            )
+
+            displayColumn DAYS_PAST_DUE (
+                sequence: 5
+            )
+
+            displayColumn DUE_DATE (
+                sequence: 4
+            )
+
+            displayColumn ENTERED_BALANCE_ASOF (
+                sequence: 8
+            )
+
+            displayColumn TRX_DATE (
+                sequence: 3
+            )
+
+            displayColumn TRX_NUMBER (
+                sequence: 2
+            )
+
+            sort (
+                column: DUE_DATE
+                sort {
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region customer-aging-summary (
+        name: Customer Aging Summary
+        title: Customer Aging Summary
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select customer_id,max(customer_number) customer_number,max(customer_name) customer_name,
+                 sum(case when bucket_sequence=1 then accounted_balance_asof else 0 end) bucket_1_amount,
+                 sum(case when bucket_sequence=2 then accounted_balance_asof else 0 end) bucket_2_amount,
+                 sum(case when bucket_sequence=3 then accounted_balance_asof else 0 end) bucket_3_amount,
+                 sum(case when bucket_sequence=4 then accounted_balance_asof else 0 end) bucket_4_amount,
+                 sum(case when bucket_sequence=5 then accounted_balance_asof else 0 end) bucket_5_amount,
+                 sum(case when bucket_sequence=6 then accounted_balance_asof else 0 end) bucket_6_amount,
+                 sum(case when bucket_sequence=7 then accounted_balance_asof else 0 end) bucket_7_amount,
+                 sum(accounted_balance_asof) total_amount,
+                 sum(case when control_account_flag='N' then accounted_balance_asof else 0 end) control_exception_amount,
+                 count(*) schedule_count
+                 from xxme_ar_recon_v2_snap
+                 where :P33_SNAPSHOT_READY='Y' and db_link_name=:P33_DB_LINK and ledger_id=to_number(:P33_LEDGER_ID)
+                   and company_segment=:P33_COMPANY and period_name=:P33_PERIOD_NAME and aging_bucket_id=to_number(:P33_AGING_BUCKET_ID)
+                 group by customer_id
+                ```
+            pageItemsToSubmit: [
+                P33_SNAPSHOT_READY
+                P33_DB_LINK
+                P33_LEDGER_ID
+                P33_COMPANY
+                P33_PERIOD_NAME
+                P33_AGING_BUCKET_ID
+            ]
+        }
+        layout {
+            sequence: 40
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        advanced {
+            htmlDomId: customer-aging-summary
+        }
+        serverSideCondition {
+            type: item=value
+            item: P33_SNAPSHOT_READY
+            value: Y
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No customers are available for the selected snapshot.
+        }
+        advanced {
+            savedReportMappingIdentifier: 933160000000686645
+        }
+
+        column BUCKET_1_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_1_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 40
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'1','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_1_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column BUCKET_2_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_2_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 50
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'2','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_2_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column BUCKET_3_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_3_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 60
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'3','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_3_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column BUCKET_4_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_4_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 70
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'4','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_4_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column BUCKET_5_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_5_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'5','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_5_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column BUCKET_6_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_6_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'6','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_6_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column BUCKET_7_AMOUNT (
+            type: link
+            heading {
+                heading: &P33_BUCKET_7_LABEL.
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'7','','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #BUCKET_7_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column CONTROL_EXCEPTION_AMOUNT (
+            type: plainText
+            heading {
+                heading: Outside Control Accounts
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column CUSTOMER_ID (
+            type: hidden
+            heading {
+                heading: Customer ID
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column CUSTOMER_NAME (
+            type: link
+            heading {
+                heading: Customer Name
+                alignment: center
+            }
+            layout {
+                sequence: 20
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'','All aging buckets','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #CUSTOMER_NAME#
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column CUSTOMER_NUMBER (
+            type: plainText
+            heading {
+                heading: Customer Number
+                alignment: center
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column SCHEDULE_COUNT (
+            type: plainText
+            heading {
+                heading: Open Items
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column TOTAL_AMOUNT (
+            type: link
+            heading {
+                heading: Total Accounted Open
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990D00
+            }
+            link {
+                target: {
+                    type: url
+                    url: javascript:p33Controller.drill(#CUSTOMER_ID#,'','All aging buckets','#CUSTOMER_NAME!JS#','#CUSTOMER_NUMBER!JS#');
+                }
+                linkText: #TOTAL_AMOUNT#
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        page {
+            width: 14
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: Customer Aging Summary
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn BUCKET_1_AMOUNT (
+                sequence: 3
+            )
+
+            displayColumn BUCKET_2_AMOUNT (
+                sequence: 4
+            )
+
+            displayColumn BUCKET_3_AMOUNT (
+                sequence: 5
+            )
+
+            displayColumn BUCKET_4_AMOUNT (
+                sequence: 6
+            )
+
+            displayColumn BUCKET_5_AMOUNT (
+                sequence: 7
+            )
+
+            displayColumn BUCKET_6_AMOUNT (
+                sequence: 8
+            )
+
+            displayColumn BUCKET_7_AMOUNT (
+                sequence: 9
+            )
+
+            displayColumn CONTROL_EXCEPTION_AMOUNT (
+                sequence: 11
+            )
+
+            displayColumn CUSTOMER_NAME (
+                sequence: 1
+            )
+
+            displayColumn CUSTOMER_NUMBER (
+                sequence: 2
+            )
+
+            displayColumn SCHEDULE_COUNT (
+                sequence: 12
+            )
+
+            displayColumn TOTAL_AMOUNT (
+                sequence: 10
+            )
+
+            sort (
+                column: TOTAL_AMOUNT
+                sort {
+                    direction: desc
+                    sequence: 1
+                }
+            )
+
+        )
+
+    )
+
+    region customer-detail-context (
+        name: Customer Detail Context
+        title: Selected Customer / Aging Bucket
+        type: staticContent
+        source {
+            htmlCode: <div class="p33-detail-banner"><span id="p33-detail-selection"></span></div>
+        }
+        layout {
+            sequence: 50
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        advanced {
+            htmlDomId: customer-detail-context
+        }
+        serverSideCondition {
+            type: item=value
+            item: P33_SNAPSHOT_READY
+            value: Y
+        }
+    )
+
+    region interactive-report-ai-notice (
+        name: Interactive Report AI Notice
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <div class="t-Alert t-Alert--info t-Alert--horizontal" role="note">
+                  <div class="t-Alert-wrap">
+                    <div class="t-Alert-icon">
+                      <span class="t-Icon fa fa-info-circle" aria-hidden="true"></span>
+                    </div>
+                    <div class="t-Alert-content">
+                      AI Assistant available: Use it to filter, sort, summarize, and create informational charts from this report. It cannot update data, and AI-generated charts are not drillable. Verify important conclusions against the report rows.
+                    </div>
+                  </div>
+                </div>
+                ```
+        }
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    pageItem P33_AGING_BUCKET_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 100
+            slot: body
+        }
+    )
+
+    pageItem P33_AS_OF_DATE (
+        type: displayOnly
+        label {
+            label: As-of Date
+            alignment: left
+        }
+        layout {
+            sequence: 30
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_BACK_URL (
+        type: hidden
+        settings {
+            valueProtected: true
+        }
+        layout {
+            sequence: 104
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_1_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 105
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_2_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 106
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_3_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 107
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_4_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 108
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_5_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 109
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_6_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 110
+            slot: body
+        }
+    )
+
+    pageItem P33_BUCKET_7_LABEL (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 111
+            slot: body
+        }
+    )
+
+    pageItem P33_COMPANY (
+        type: displayOnly
+        label {
+            label: Company Code
+            alignment: left
+        }
+        layout {
+            sequence: 50
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_DB_LINK (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 10
+            region: @ar-aging-context
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: ADG
+        }
+    )
+
+    pageItem P33_GENERATED_BY (
+        type: displayOnly
+        label {
+            label: Generated By
+            alignment: left
+        }
+        layout {
+            sequence: 70
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_GENERATED_ON (
+        type: displayOnly
+        label {
+            label: Generated On
+            alignment: left
+        }
+        layout {
+            sequence: 60
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_LEDGER_ID (
+        type: displayOnly
+        label {
+            label: Ledger ID
+            alignment: left
+        }
+        layout {
+            sequence: 40
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_PERIOD_NAME (
+        type: displayOnly
+        label {
+            label: Receivables Period
+            alignment: left
+        }
+        layout {
+            sequence: 20
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_ROW_COUNT (
+        type: displayOnly
+        label {
+            label: Rows
+            alignment: left
+        }
+        layout {
+            sequence: 80
+            region: @ar-aging-context
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 1
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P33_SELECTED_BUCKET_SEQUENCE (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 103
+            slot: body
+        }
+    )
+
+    pageItem P33_SELECTED_CUSTOMER_ID (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 102
+            slot: body
+        }
+    )
+
+    pageItem P33_SNAPSHOT_READY (
+        type: hidden
+        settings {
+            valueProtected: false
+        }
+        layout {
+            sequence: 101
+            slot: body
+        }
+    )
+
+    button analyze-aging-with-ai (
+        buttonName: ANALYZE_AGING_AI
+        label: Analyze Aging with AI
+        layout {
+            sequence: 10
+            region: @ar-aging-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-sparkles
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: analyze-aging-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    button close-detail (
+        buttonName: CLOSE_DETAIL
+        label: Close Detail
+        layout {
+            sequence: 10
+            region: @customer-detail-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-times
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: close-detail
+        }
+    )
+
+    button close-page (
+        buttonName: CLOSE_PAGE
+        label: Close
+        layout {
+            sequence: 20
+            region: @ar-aging-context
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-times
+        }
+        behavior {
+            action: definedByDynamicAction
+        }
+        advanced {
+            htmlDomId: close-page
+        }
+    )
+
+    dynamicAction close-detail (
+        name: Close Detail
+        execution {
+            sequence: 20
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-detail
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p33Controller.closeDetail();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction close-page (
+        name: Close Page
+        execution {
+            sequence: 10
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @close-page
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p33Controller.closePage();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+        )
+
+    )
+
+    dynamicAction open-aging-ai-analyst (
+        name: Open Aging AI Analyst
+        execution {
+            sequence: 30
+        }
+        when {
+            event: click
+            selectionType: button
+            button: @analyze-aging-with-ai
+        }
+        config {
+            buildOption: @feature-ai
+        }
+
+        action native-javascript-code (
+            action: executeJsCode
+            settings {
+                jsCode: p33Controller.openAi();
+            }
+            execution {
+                sequence: 10
+                fireOnInit: false
+            }
+            config {
+                buildOption: @feature-ai
+            }
+        )
+
+    )
+
+    process p33-get-ai-url (
+        name: P33_GET_AI_URL
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare l_count number; l_asof date; l_url varchar2(32767);
+                begin
+                 if :P33_SNAPSHOT_READY<>'Y' or :P33_DB_LINK not in ('ADG') or not regexp_like(:P33_PERIOD_NAME,'^[A-Z0-9 _./-]{1,30}$') or not regexp_like(:P33_LEDGER_ID,'^[0-9]{1,18}$') or not regexp_like(:P33_COMPANY,'^[A-Z0-9_.-]{1,25}$') or not regexp_like(:P33_AGING_BUCKET_ID,'^[0-9]{1,18}$') then raise_application_error(-20337,'Invalid AR aging context.'); end if;
+                 select count(*),max(as_of_date) into l_count,l_asof from xxme_ar_recon_v2_snap where db_link_name=:P33_DB_LINK and ledger_id=to_number(:P33_LEDGER_ID) and company_segment=:P33_COMPANY and period_name=:P33_PERIOD_NAME and aging_bucket_id=to_number(:P33_AGING_BUCKET_ID);
+                 if l_count=0 then raise_application_error(-20338,'The selected AR snapshot is no longer available.'); end if;
+                 l_url:=apex_page.get_url(p_page=>50,p_clear_cache=>'50',p_items=>'P50_DB_LINK,P50_PERIOD_NAME,P50_AR_SCOPE_AS_OF_DATE,P50_AR_LEDGER_ID,P50_AR_COMPANY,P50_AR_AGING_BUCKET_ID,P50_AR_SOURCE_PAGE,P50_AR_RECON_READY',p_values=>:P33_DB_LINK||','||:P33_PERIOD_NAME||','||to_char(l_asof,'YYYY-MM-DD')||','||:P33_LEDGER_ID||','||:P33_COMPANY||','||:P33_AGING_BUCKET_ID||',33,N');
+                 apex_json.open_object;apex_json.write('ok',true);apex_json.write('url',l_url);apex_json.close_object;
+                exception when others then apex_json.open_object;apex_json.write('ok',false);apex_json.write('message',case when sqlcode between -20999 and -20000 then substr(sqlerrm,12) else 'Unable to prepare the AI Analyst URL.' end);apex_json.close_object;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+            point: ajaxCallback
+        }
+        advanced {
+            executionMappingIdentifier: 933160000000686106
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    process validate-ar-snapshot-context (
+        name: Validate AR Snapshot Context
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                 l_db varchar2(128):=upper(trim(:P33_DB_LINK)); l_period varchar2(30):=upper(trim(:P33_PERIOD_NAME));
+                 l_ledger_text varchar2(30):=trim(:P33_LEDGER_ID); l_company varchar2(25):=upper(trim(:P33_COMPANY)); l_bucket_text varchar2(30):=trim(:P33_AGING_BUCKET_ID);
+                 l_ledger number; l_bucket number; l_count number; l_by varchar2(128); l_on timestamp; l_asof date;
+                 l_b1 varchar2(120);l_b2 varchar2(120);l_b3 varchar2(120);l_b4 varchar2(120);l_b5 varchar2(120);l_b6 varchar2(120);l_b7 varchar2(120);
+                begin
+                 :P33_BACK_URL:=apex_page.get_url(p_page=>32,p_clear_cache=>'32'); :P33_SNAPSHOT_READY:='N';
+                 if l_db not in ('ADG') or l_period is null or not regexp_like(l_period,'^[A-Z0-9 _./-]{1,30}$')
+                    or not regexp_like(l_ledger_text,'^[0-9]{1,18}$') or l_company is null or not regexp_like(l_company,'^[A-Z0-9_.-]{1,25}$')
+                    or not regexp_like(l_bucket_text,'^[0-9]{1,18}$') then
+                   apex_error.add_error(p_message=>'Select an available AR snapshot on Page 32 before opening Aging Analysis.',p_display_location=>apex_error.c_inline_in_notification); return; end if;
+                 l_ledger:=to_number(l_ledger_text);l_bucket:=to_number(l_bucket_text);
+                 select count(*),max(loaded_by),max(loaded_at),max(as_of_date),
+                  max(case when bucket_sequence=1 then bucket_heading end),max(case when bucket_sequence=2 then bucket_heading end),max(case when bucket_sequence=3 then bucket_heading end),
+                  max(case when bucket_sequence=4 then bucket_heading end),max(case when bucket_sequence=5 then bucket_heading end),max(case when bucket_sequence=6 then bucket_heading end),max(case when bucket_sequence=7 then bucket_heading end)
+                 into l_count,l_by,l_on,l_asof,l_b1,l_b2,l_b3,l_b4,l_b5,l_b6,l_b7
+                 from xxme_ar_recon_v2_snap where db_link_name=l_db and ledger_id=l_ledger and company_segment=l_company and period_name=l_period and aging_bucket_id=l_bucket;
+                 :P33_DB_LINK:=l_db;:P33_PERIOD_NAME:=l_period;:P33_LEDGER_ID:=to_char(l_ledger);:P33_COMPANY:=l_company;:P33_AGING_BUCKET_ID:=to_char(l_bucket);
+                 :P33_AS_OF_DATE:=to_char(l_asof,'DD-MON-YYYY');:P33_GENERATED_ON:=to_char(l_on,'DD-MON-YYYY HH24:MI:SS');:P33_GENERATED_BY:=l_by;:P33_ROW_COUNT:=to_char(l_count,'FM999G999G999G990');
+                 :P33_BUCKET_1_LABEL:=nvl(l_b1,'Bucket 1');:P33_BUCKET_2_LABEL:=nvl(l_b2,'Bucket 2');:P33_BUCKET_3_LABEL:=nvl(l_b3,'Bucket 3');:P33_BUCKET_4_LABEL:=nvl(l_b4,'Bucket 4');
+                 :P33_BUCKET_5_LABEL:=nvl(l_b5,'Bucket 5');:P33_BUCKET_6_LABEL:=nvl(l_b6,'Bucket 6');:P33_BUCKET_7_LABEL:=nvl(l_b7,'Bucket 7');
+                 if l_count>0 then :P33_SNAPSHOT_READY:='Y'; else apex_error.add_error(p_message=>'The selected AR snapshot is no longer available. Return to Page 32 and run it again.',p_display_location=>apex_error.c_inline_in_notification); end if;
+                exception when others then :P33_SNAPSHOT_READY:='N'; apex_error.add_error(p_message=>'Unable to validate the selected AR snapshot. Check the APEX debug log.',p_display_location=>apex_error.c_inline_in_notification);
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 933160000000686105
+        }
+    )
+
+)
+

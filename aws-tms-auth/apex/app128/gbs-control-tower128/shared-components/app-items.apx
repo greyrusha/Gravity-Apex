@@ -1,0 +1,12 @@
+appItem G_AI_SERVICE_ID (
+    config {
+        buildOption: @feature-ai
+    }
+)
+
+appItem G_DASHBOARD_READY (
+)
+
+appItem G_DB_LINK (
+)
+

@@ -1,0 +1,24 @@
+page 20 (
+    name: Redirect to Unified Workbench (Site Uses)
+    alias: SITE-USES-CONTACTS
+    title: Redirecting to Customer Master Workbench
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    branch (
+        name: Redirect Legacy Page 20 to Unified Workbench Page 10
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        behavior {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+)
+

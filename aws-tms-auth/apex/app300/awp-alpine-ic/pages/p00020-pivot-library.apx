@@ -1,0 +1,102 @@
+page 20 (
+    name: Pivot Library
+    alias: PIVOT-LIBRARY
+    title: Pivot Library
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    css {
+        inline:
+            ```css
+            .ic-pivot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1rem; margin-top:1rem; }
+            .ic-pivot-card { display:block; min-height:150px; padding:1.25rem; border:1px solid #d1d5db; border-radius:.65rem; background:#fff; color:inherit; text-decoration:none; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+            .ic-pivot-card:hover { border-color:#2563eb; box-shadow:0 4px 12px rgba(37,99,235,.16); }
+            .ic-pivot-card h2 { margin:0 0 .5rem; font-size:1.1rem; }
+            .ic-pivot-card p { color:#4b5563; margin:.25rem 0; }
+            .ic-pivot-card--tbd { background:#f9fafb; color:#6b7280; cursor:default; }
+            .ic-pivot-card__tag { display:inline-block; margin-top:.75rem; font-size:.75rem; font-weight:700; color:#2563eb; }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region pivot-library (
+        name: Pivot Library
+        title: Choose a Pivot
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                    l_product_line_url varchar2(4000);
+                    l_destination_url  varchar2(4000);
+                    l_icp_payables_url varchar2(4000);
+                    l_mfg_org_url      varchar2(4000);
+                    l_designer_url     varchar2(4000);
+                begin
+                    l_product_line_url := apex_page.get_url(
+                        p_page => 21, p_clear_cache => '21',
+                        p_items => 'P21_EBS_INSTANCE', p_values => :P20_EBS_INSTANCE);
+                    l_destination_url := apex_page.get_url(
+                        p_page => 23, p_clear_cache => '23',
+                        p_items => 'P23_EBS_INSTANCE', p_values => :P20_EBS_INSTANCE);
+                    l_icp_payables_url := apex_page.get_url(
+                        p_page => 24, p_clear_cache => '24',
+                        p_items => 'P24_EBS_INSTANCE', p_values => :P20_EBS_INSTANCE);
+                    l_mfg_org_url := apex_page.get_url(
+                        p_page => 25, p_clear_cache => '25',
+                        p_items => 'P25_EBS_INSTANCE', p_values => :P20_EBS_INSTANCE);
+                    l_designer_url := apex_page.get_url(
+                        p_page => 10, p_clear_cache => '10',
+                        p_items => 'P10_EBS_INSTANCE', p_values => :P20_EBS_INSTANCE);
+                
+                    return '<p>Select a prepared view. All prepared pivots default to unsold units.</p>' ||
+                           '<div class="ic-pivot-grid">' ||
+                           '<a class="ic-pivot-card" href="' || apex_escape.html_attribute(l_product_line_url) || '">' ||
+                           '<h2>Product Line by Ledger</h2><p>USD markup by product line and ledger.</p><span class="ic-pivot-card__tag">OPEN PIVOT</span></a>' ||
+                           '<a class="ic-pivot-card" href="' || apex_escape.html_attribute(l_destination_url) || '">' ||
+                           '<h2>Product Line by Destination Country</h2><p>USD markup by product line and destination country.</p><span class="ic-pivot-card__tag">OPEN PIVOT</span></a>' ||
+                           '<a class="ic-pivot-card" href="' || apex_escape.html_attribute(l_icp_payables_url) || '">' ||
+                           '<h2>ICP Payables by Ledger</h2><p>USD markup by ICP Payables and ledger.</p><span class="ic-pivot-card__tag">OPEN PIVOT</span></a>' ||
+                           '<a class="ic-pivot-card" href="' || apex_escape.html_attribute(l_mfg_org_url) || '">' ||
+                           '<h2>Product Line by Manufacturing Organization</h2><p>USD markup by product line and manufacturing organization.</p><span class="ic-pivot-card__tag">OPEN PIVOT</span></a>' ||
+                           '<a class="ic-pivot-card" href="' || apex_escape.html_attribute(l_designer_url) || '" target="_blank" rel="noopener">' ||
+                           '<h2>Design Your Own Pivot</h2><p>Open the full report and use Actions / Pivot.</p><span class="ic-pivot-card__tag">OPEN DESIGNER</span></a>' ||
+                           '</div>';
+                end;
+                ```
+            pageItemsToSubmit: P20_EBS_INSTANCE
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P20_EBS_INSTANCE (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @pivot-library
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: PTRXI
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+)
+

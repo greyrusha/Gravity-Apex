@@ -1,0 +1,102 @@
+page 0 (
+    name: Global Page
+
+    region global-project-bar (
+        name: Active Conversion Project & Role Context
+        title: Active Conversion Project & Segregation of Duties Role
+        type: staticContent
+        source {
+            htmlCode:
+                ```html
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  var sel = document.getElementById('P0_PROJECT_ID');
+                  if (sel && !sel.dataset.xxcrBound) {
+                    sel.dataset.xxcrBound = 'Y';
+                    sel.addEventListener('change', function() {
+                      apex.submit({ request: 'SWITCH_PROJECT', showWait: true });
+                    });
+                  }
+                });
+                </script>
+                ```
+        }
+        layout {
+            sequence: 1
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--removeHeader js-removeLandmark
+                t-Region--accent1
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: :APP_PAGE_ID in (1, 10, 40, 50)
+        }
+    )
+
+    pageItem P0_PROJECT_ID (
+        type: selectList
+        label {
+            label: Active Conversion Project (Source OU -> Target OU | Your SoD Role)
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select p.project_code
+                       || ' — Source: ' || nvl(p.src_ou_name, 'OU ' || p.src_org_id) || ' (' || p.src_org_id || ')'
+                       || ' -> Target: ' || nvl(p.tgt_ou_name, 'TBD')
+                       || ' [BSV: ' || nvl(p.tgt_bsv, 'TBD') || ']'
+                       || '  |  Role: ' || xxcr_security_pkg.role_label(xxcr_security_pkg.effective_role(p.project_id, :APP_USER)) as d,
+                       p.project_id as r
+                  from xxcr_projects p
+                 where xxcr_security_pkg.effective_role(p.project_id, :APP_USER) is not null
+                 order by p.project_id
+                ```
+            displayExtraValues: false
+            displayNullValue: false
+        }
+        layout {
+            sequence: 10
+            region: @global-project-bar
+            slot: regionBody
+            columnSpan: 10
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button btn-switch-project (
+        buttonName: SWITCH_PROJECT
+        label: Switch Project
+        layout {
+            sequence: 20
+            region: @global-project-bar
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+                t-Button--stretch
+                t-Button--padTop
+            ]
+            icon: fa-exchange
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)
+

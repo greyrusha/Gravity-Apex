@@ -1,0 +1,98 @@
+list navigation-menu (
+    name: Navigation Menu
+
+    entry about-app (
+        label: About This App
+        icon {
+            imageIconCssClasses: fa-info-circle
+        }
+        layout {
+            sequence: 90
+        }
+        link {
+            target: {
+                page: 90
+            }
+        }
+    )
+
+    entry customer-workbench (
+        label: 2. Customer Master Workbench
+        icon {
+            imageIconCssClasses: fa-table
+        }
+        layout {
+            sequence: 20
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+    entry find-duplicates (
+        label: 3. Find Duplicates
+        icon {
+            imageIconCssClasses: fa-copy
+        }
+        layout {
+            sequence: 30
+        }
+        link {
+            target: {
+                page: 40
+            }
+        }
+    )
+
+    entry home (
+        label: 1. Scope, Extract & Remap
+        icon {
+            imageIconCssClasses: fa-database
+        }
+        layout {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry security-admin (
+        label: 5. Security, Roles & SoD
+        icon {
+            imageIconCssClasses: fa-shield
+        }
+        layout {
+            sequence: 50
+        }
+        link {
+            target: {
+                page: 80
+            }
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+    entry validation-phase (
+        label: 4. Validation & Triage
+        icon {
+            imageIconCssClasses: fa-check-circle-o
+        }
+        layout {
+            sequence: 40
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+    )
+
+)
+

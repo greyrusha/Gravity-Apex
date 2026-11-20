@@ -1,0 +1,112 @@
+breadcrumb breadcrumb (
+    name: Breadcrumb
+
+    entry ai-month-end-analyst (
+        name: AI Month-End Analyst
+        pageNumber: 50
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 50
+            }
+        }
+        config {
+            buildOption: @feature-ai
+        }
+    )
+
+    entry ap-active-holds (
+        name: AP Active Holds
+        pageNumber: 21
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 21
+            }
+        }
+    )
+
+    entry ar-unapplied-receipts-current (
+        name: AR Unapplied Receipts — Current
+        pageNumber: 31
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 31
+            }
+        }
+    )
+
+    entry general-ledger (
+        name: General Ledger
+        pageNumber: 10
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 10
+            }
+        }
+    )
+
+    entry gl-unposted-journals (
+        name: GL Unposted Journals
+        pageNumber: 11
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 11
+            }
+        }
+    )
+
+    entry home (
+        name: Home
+        pageNumber: 1
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 1
+            }
+        }
+    )
+
+    entry receivables (
+        name: Receivables
+        pageNumber: 30
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 30
+            }
+        }
+    )
+
+    entry sla-analysis-test (
+        name: Cost Management SLA
+        pageNumber: 41
+        execution {
+            sequence: 10
+        }
+        link {
+            target: {
+                page: 41
+            }
+        }
+    )
+
+)
+

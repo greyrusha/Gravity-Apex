@@ -1,0 +1,471 @@
+page 22 (
+    name: Pivot Detail
+    alias: PIVOT-DETAIL
+    title: Pivot Detail
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region pivot-detail (
+        name: Pivot Detail
+        title: Unsold Units
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select serial_number,
+                       model_name,
+                       item_number,
+                       prod_line,
+                       ledger_name,
+                       usd_amount,
+                       receiving_inventory_org,
+                       shipping_inventory_org,
+                       accounting_date,
+                       period_name,
+                       trade_flow,
+                       rec_org_location,
+                       icp_from,
+                       destination_country,
+                       concatenated_segments,
+                       line_description
+                  from xx_ic_markup_user_review_v
+                 where ebs_instance_code = :P22_EBS_INSTANCE
+                   and sold_yes_no = 'NO'
+                   and (:P22_PROD_LINE is null or prod_line = :P22_PROD_LINE)
+                   and (:P22_LEDGER_NAME is null or ledger_name = :P22_LEDGER_NAME)
+                ```
+            pageItemsToSubmit: [
+                P22_EBS_INSTANCE
+                P22_PROD_LINE
+                P22_LEDGER_NAME
+            ]
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        advanced {
+            savedReportMappingIdentifier: 300022002
+        }
+
+        column ACCOUNTING_DATE (
+            type: plainText
+            heading {
+                heading: Accounting Date
+            }
+            layout {
+                sequence: 9
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column CONCATENATED_SEGMENTS (
+            type: plainText
+            heading {
+                heading: Full GL Account
+            }
+            layout {
+                sequence: 15
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column DESTINATION_COUNTRY (
+            type: plainText
+            heading {
+                heading: Destination Country
+            }
+            layout {
+                sequence: 14
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column ICP_FROM (
+            type: plainText
+            heading {
+                heading: Intercompany From
+            }
+            layout {
+                sequence: 13
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column ITEM_NUMBER (
+            type: plainText
+            heading {
+                heading: Item Number
+            }
+            layout {
+                sequence: 3
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column LINE_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Line Description
+            }
+            layout {
+                sequence: 16
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column MODEL_NAME (
+            type: plainText
+            heading {
+                heading: Model
+            }
+            layout {
+                sequence: 2
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column PERIOD_NAME (
+            type: plainText
+            heading {
+                heading: Period
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column PROD_LINE (
+            type: plainText
+            heading {
+                heading: Product Line
+            }
+            layout {
+                sequence: 4
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column RECEIVING_INVENTORY_ORG (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Organization
+            }
+            layout {
+                sequence: 7
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column REC_ORG_LOCATION (
+            type: plainText
+            heading {
+                heading: Receiving Organization/Location
+            }
+            layout {
+                sequence: 12
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column SERIAL_NUMBER (
+            type: plainText
+            heading {
+                heading: Serial Number
+            }
+            layout {
+                sequence: 1
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column SHIPPING_INVENTORY_ORG (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Organization
+            }
+            layout {
+                sequence: 8
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column TRADE_FLOW (
+            type: plainText
+            heading {
+                heading: Trade Flow
+            }
+            layout {
+                sequence: 11
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column USD_AMOUNT (
+            type: plainText
+            heading {
+                heading: USD Markup Amount
+                alignment: end
+            }
+            layout {
+                sequence: 6
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCOUNTING_DATE (
+                sequence: 9
+            )
+
+            displayColumn CONCATENATED_SEGMENTS (
+                sequence: 15
+            )
+
+            displayColumn DESTINATION_COUNTRY (
+                sequence: 14
+            )
+
+            displayColumn ICP_FROM (
+                sequence: 13
+            )
+
+            displayColumn ITEM_NUMBER (
+                sequence: 3
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 5
+            )
+
+            displayColumn LINE_DESCRIPTION (
+                sequence: 16
+            )
+
+            displayColumn MODEL_NAME (
+                sequence: 2
+            )
+
+            displayColumn PERIOD_NAME (
+                sequence: 10
+            )
+
+            displayColumn PROD_LINE (
+                sequence: 4
+            )
+
+            displayColumn RECEIVING_INVENTORY_ORG (
+                sequence: 7
+            )
+
+            displayColumn REC_ORG_LOCATION (
+                sequence: 12
+            )
+
+            displayColumn SERIAL_NUMBER (
+                sequence: 1
+            )
+
+            displayColumn SHIPPING_INVENTORY_ORG (
+                sequence: 8
+            )
+
+            displayColumn TRADE_FLOW (
+                sequence: 11
+            )
+
+            displayColumn USD_AMOUNT (
+                sequence: 6
+            )
+
+        )
+
+    )
+
+    pageItem P22_EBS_INSTANCE (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @pivot-detail
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: PTRXI
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P22_LEDGER_NAME (
+        type: hidden
+        layout {
+            sequence: 30
+            region: @pivot-detail
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P22_PROD_LINE (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @pivot-detail
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    button back-to-pivot (
+        buttonName: BACK_TO_PIVOT
+        label: Back to Pivot
+        layout {
+            sequence: 10
+            region: @pivot-detail
+            slot: rightOfInteractiveReportSearchBar
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 21
+                clearCache: 21
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)
+

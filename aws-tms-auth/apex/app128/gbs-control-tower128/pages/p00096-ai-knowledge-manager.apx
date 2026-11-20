@@ -1,0 +1,658 @@
+page 96 (
+    name: AI Knowledge Manager
+    alias: AI-KNOWLEDGE-MANAGER
+    title: AI Knowledge Manager
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    navigation {
+        warnOnUnsavedChanges: false
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+    config {
+        buildOption: @feature-ai
+    }
+
+    region effective-knowledge (
+        name: Effective Human-Readable Knowledge
+        title: Effective Human-Readable Knowledge
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select k.item_id,
+                       k.title,
+                       k.source_name,
+                       k.ownership_code,
+                       k.edit_mode,
+                       k.domain_name,
+                       k.knowledge_type,
+                       k.lifecycle_status,
+                       k.is_mandatory,
+                       k.version_no,
+                       k.embedding_status,
+                       k.embedding_model,
+                       k.embedded_on,
+                       k.updated_by,
+                       k.updated_on,
+                       apex_page.get_url(
+                           p_page        => 97,
+                           p_clear_cache => '97',
+                           p_items       => 'P97_ITEM_ID',
+                           p_values      => k.item_id
+                       ) open_url
+                  from xxme_ai_km_effective_v k
+                 where (:P96_SOURCE_CODE is null or k.source_code = :P96_SOURCE_CODE)
+                   and (:P96_OWNERSHIP is null or k.ownership_code = :P96_OWNERSHIP)
+                   and (:P96_EDIT_MODE is null or k.edit_mode = :P96_EDIT_MODE)
+                   and (:P96_STATUS is null or k.lifecycle_status = :P96_STATUS)
+                 order by k.title, k.item_id
+                ```
+            pageItemsToSubmit: [
+                P96_SOURCE_CODE
+                P96_OWNERSHIP
+                P96_EDIT_MODE
+                P96_STATUS
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        performance {
+            lazyLoading: true
+        }
+        messages {
+            whenNoDataFound: No effective human-readable knowledge matches the selected filters.
+        }
+        advanced {
+            savedReportMappingIdentifier: 981170000000000650
+        }
+
+        column DOMAIN_NAME (
+            type: plainText
+            heading {
+                heading: Domain
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        column EDIT_MODE (
+            type: plainText
+            heading {
+                heading: Editability
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column EMBEDDED_ON (
+            type: plainText
+            heading {
+                heading: Embedded On
+            }
+            layout {
+                sequence: 130
+            }
+            source {
+                dataType: date
+                timezoneAware: Y
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column EMBEDDING_MODEL (
+            type: plainText
+            heading {
+                heading: Embedding Model
+            }
+            layout {
+                sequence: 120
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column EMBEDDING_STATUS (
+            type: plainText
+            heading {
+                heading: Embedding Status
+            }
+            layout {
+                sequence: 110
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column IS_MANDATORY (
+            type: plainText
+            heading {
+                heading: Mandatory
+                alignment: center
+            }
+            layout {
+                sequence: 90
+                columnAlignment: center
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column ITEM_ID (
+            type: hidden
+            heading {
+                heading: Item Id
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column KNOWLEDGE_TYPE (
+            type: plainText
+            heading {
+                heading: Type
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column LIFECYCLE_STATUS (
+            type: plainText
+            heading {
+                heading: Status
+            }
+            layout {
+                sequence: 80
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column OPEN_URL (
+            type: hidden
+            heading {
+                heading: Open Url
+            }
+            layout {
+                sequence: 160
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column OWNERSHIP_CODE (
+            type: plainText
+            heading {
+                heading: Ownership
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column SOURCE_NAME (
+            type: plainText
+            heading {
+                heading: Source
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column TITLE (
+            type: link
+            heading {
+                heading: Knowledge
+            }
+            layout {
+                sequence: 20
+            }
+            accessibility {
+                valueIdentifiesRow: true
+            }
+            link {
+                target: {
+                    type: url
+                    url: #OPEN_URL#
+                }
+                linkText: #TITLE#
+                linkAttributes: class="t-Button t-Button--link"
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column UPDATED_BY (
+            type: plainText
+            heading {
+                heading: Updated By
+            }
+            layout {
+                sequence: 140
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column UPDATED_ON (
+            type: plainText
+            heading {
+                heading: Updated On
+            }
+            layout {
+                sequence: 150
+            }
+            source {
+                dataType: date
+                timezoneAware: Y
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column VERSION_NO (
+            type: plainText
+            heading {
+                heading: Version
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+        pageHeader {
+            pageHeaderText: AI Knowledge Manager
+        }
+
+        savedReport primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn DOMAIN_NAME (
+                sequence: 6
+            )
+
+            displayColumn EDIT_MODE (
+                sequence: 5
+            )
+
+            displayColumn EMBEDDED_ON (
+                sequence: 13
+            )
+
+            displayColumn EMBEDDING_MODEL (
+                sequence: 12
+            )
+
+            displayColumn EMBEDDING_STATUS (
+                sequence: 11
+            )
+
+            displayColumn IS_MANDATORY (
+                sequence: 9
+            )
+
+            displayColumn ITEM_ID (
+                sequence: 1
+            )
+
+            displayColumn KNOWLEDGE_TYPE (
+                sequence: 7
+            )
+
+            displayColumn LIFECYCLE_STATUS (
+                sequence: 8
+            )
+
+            displayColumn OPEN_URL (
+                sequence: 16
+            )
+
+            displayColumn OWNERSHIP_CODE (
+                sequence: 4
+            )
+
+            displayColumn SOURCE_NAME (
+                sequence: 3
+            )
+
+            displayColumn TITLE (
+                sequence: 2
+            )
+
+            displayColumn UPDATED_BY (
+                sequence: 14
+            )
+
+            displayColumn UPDATED_ON (
+                sequence: 15
+            )
+
+            displayColumn VERSION_NO (
+                sequence: 10
+            )
+
+        )
+
+    )
+
+    region knowledge-administration (
+        name: Knowledge Administration
+        type: staticContent
+        layout {
+            sequence: 5
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--hideHeader
+            ]
+        }
+        serverSideCondition {
+            type: expression
+            plsqlExpression: 1 = 0
+        }
+    )
+
+    region knowledge-filters (
+        name: Knowledge Filters
+        title: Knowledge Filters
+        type: staticContent
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P96_EDIT_MODE (
+        type: selectList
+        label {
+            label: Editability
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Direct;DIRECT,Governed Source;GOVERNED_SOURCE,Override Only;OVERRIDE_ONLY,Tool Definition;TOOL_DEFINITION
+            displayExtraValues: false
+            nullDisplayValue: - All Edit Modes -
+        }
+        layout {
+            sequence: 30
+            region: @knowledge-filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+    )
+
+    pageItem P96_OWNERSHIP (
+        type: selectList
+        label {
+            label: Ownership
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Knowledge Manager;KM_OWNED,Application;APP_OWNED,External;EXTERNAL,APEX Tool;APEX_OWNED
+            displayExtraValues: false
+            nullDisplayValue: - All Ownership -
+        }
+        layout {
+            sequence: 20
+            region: @knowledge-filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+    )
+
+    pageItem P96_SOURCE_CODE (
+        type: selectList
+        label {
+            label: Source
+            alignment: left
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery: select source_name d, source_code r from xxme_ai_km_sources where is_enabled='Y' order by source_name
+            displayExtraValues: false
+            nullDisplayValue: - All Sources -
+        }
+        layout {
+            sequence: 10
+            region: @knowledge-filters
+            slot: regionBody
+            alignment: left
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+    )
+
+    pageItem P96_STATUS (
+        type: selectList
+        label {
+            label: Status
+            alignment: left
+        }
+        lov {
+            type: staticValues
+            staticValues: STATIC2:Active;ACTIVE,Retired;RETIRED
+            displayExtraValues: false
+            nullDisplayValue: - All Statuses -
+        }
+        layout {
+            sequence: 40
+            region: @knowledge-filters
+            slot: regionBody
+            alignment: left
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            height: 1
+        }
+    )
+
+    button apply-filters (
+        buttonName: APPLY_FILTERS
+        label: Apply Filters
+        layout {
+            sequence: 10
+            region: @knowledge-filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-search
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button reset-filters (
+        buttonName: RESET_FILTERS
+        label: Reset Filters
+        layout {
+            sequence: 20
+            region: @knowledge-filters
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+            icon: fa-undo
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 96
+                clearCache: 96
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button teach-new-knowledge (
+        buttonName: TEACH_NEW_KNOWLEDGE
+        label: Teach New Knowledge
+        layout {
+            sequence: 10
+            region: @knowledge-administration
+            slot: create
+        }
+        appearance {
+            buttonTemplate: @/text
+            hot: true
+            templateOptions: #DEFAULT#
+            icon: fa-plus
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 97
+                items: {
+                    P97_MODE: NEW
+                }
+                clearCache: 97
+                action: resetPagination
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)
+

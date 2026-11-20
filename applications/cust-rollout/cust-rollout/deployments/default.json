@@ -1,0 +1,11 @@
+{
+  "workspace": {
+    "name": "GL_ACCOUNTS"
+  },
+  "app": {
+    "id": 600,
+    "databaseSession": {
+      "parsingSchema": "GL_ACCOUNTS"
+    }
+  }
+}

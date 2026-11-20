@@ -1,0 +1,20 @@
+lov lov-cust-action (
+    name: CUSTOMER_ROLLOUT_ACTION
+    source {
+        location: staticValues
+    }
+
+    entry act-extend (
+        sequence: 10
+        display: EXTEND_OU — Extend Existing Account to Target OU
+        return: EXTEND_OU
+    )
+
+    entry act-new (
+        sequence: 20
+        display: NEW_ACCT — Create New Account in Target OU
+        return: NEW_ACCT
+    )
+
+)
+

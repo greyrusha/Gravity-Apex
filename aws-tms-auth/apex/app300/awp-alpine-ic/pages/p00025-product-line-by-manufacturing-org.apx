@@ -1,0 +1,641 @@
+page 25 (
+    name: Product Line by Manufacturing Organization
+    alias: PRODUCT-LINE-BY-MANUFACTURING-ORG
+    title: Product Line by Manufacturing Organization
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+    css {
+        inline:
+            ```css
+            .ic-pivot-table { width:100%; border-collapse:collapse; }
+            .ic-pivot-table th,.ic-pivot-table td { border:1px solid #d1d5db; padding:.55rem .7rem; text-align:right; }
+            .ic-pivot-table th:first-child,.ic-pivot-table td:first-child { text-align:left; position:sticky; left:0; background:#fff; }
+            .ic-pivot-table thead th { background:#f3f4f6; font-weight:700; }
+            .ic-pivot-table tfoot th,.ic-pivot-table tfoot td { background:#f3f4f6; font-weight:700; }
+            .ic-pivot-table a { font-variant-numeric:tabular-nums; }
+            .ic-pivot-wrap { overflow:auto; }
+            .ic-pivot-actions { margin:0 0 1rem; }
+            #pivot-detail { scroll-margin-top:1rem; }
+            ```
+    }
+    security {
+        authorizationScheme: @tms-application-access
+    }
+
+    region pivot-detail (
+        name: Pivot Detail
+        title: Supporting Unsold Units
+        type: interactiveReport
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select serial_number,
+                       model_name,
+                       item_number,
+                       prod_line,
+                       factory_org as manufacturing_organization,
+                       ledger_name,
+                       usd_amount,
+                       receiving_inventory_org,
+                       shipping_inventory_org,
+                       accounting_date,
+                       period_name,
+                       trade_flow,
+                       rec_org_location,
+                       icp_from,
+                       destination_country,
+                       concatenated_segments,
+                       line_description
+                  from xx_ic_markup_user_review_v
+                 where ebs_instance_code = :P25_EBS_INSTANCE
+                   and sold_yes_no = 'NO'
+                   and (:P25_DETAIL_PROD_LINE is null
+                        or (:P25_DETAIL_PROD_LINE = '~NULL~' and prod_line is null)
+                        or prod_line = :P25_DETAIL_PROD_LINE)
+                   and (:P25_DETAIL_MANUFACTURING_ORG is null
+                        or (:P25_DETAIL_MANUFACTURING_ORG = '~NULL~' and factory_org is null)
+                        or factory_org = :P25_DETAIL_MANUFACTURING_ORG)
+                ```
+            pageItemsToSubmit: [
+                P25_EBS_INSTANCE
+                P25_DETAIL_PROD_LINE
+                P25_DETAIL_MANUFACTURING_ORG
+                P25_SHOW_DETAIL
+            ]
+        }
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/interactive-report
+            templateOptions: [
+                #DEFAULT#
+                t-IRR-region--hideHeader js-addHiddenHeadingRoleDesc
+            ]
+        }
+        serverSideCondition {
+            type: itemIsNotNull
+            item: P25_SHOW_DETAIL
+        }
+        pagination {
+            type: rowRangesXToY
+        }
+        advanced {
+            savedReportMappingIdentifier: 300025011
+        }
+
+        column ACCOUNTING_DATE (
+            type: plainText
+            heading {
+                heading: Accounting Date
+            }
+            layout {
+                sequence: 10
+            }
+            source {
+                dataType: date
+            }
+            advanced {
+                endUserAlias: I
+            }
+        )
+
+        column CONCATENATED_SEGMENTS (
+            type: plainText
+            heading {
+                heading: Full GL Account
+            }
+            layout {
+                sequence: 16
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: O
+            }
+        )
+
+        column DESTINATION_COUNTRY (
+            type: plainText
+            heading {
+                heading: Destination Country
+            }
+            layout {
+                sequence: 15
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: N
+            }
+        )
+
+        column ICP_FROM (
+            type: plainText
+            heading {
+                heading: Intercompany From
+            }
+            layout {
+                sequence: 14
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: M
+            }
+        )
+
+        column ITEM_NUMBER (
+            type: plainText
+            heading {
+                heading: Item Number
+            }
+            layout {
+                sequence: 3
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: C
+            }
+        )
+
+        column LEDGER_NAME (
+            type: plainText
+            heading {
+                heading: Ledger
+            }
+            layout {
+                sequence: 6
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: E
+            }
+        )
+
+        column LINE_DESCRIPTION (
+            type: plainText
+            heading {
+                heading: Line Description
+            }
+            layout {
+                sequence: 17
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: P
+            }
+        )
+
+        column MANUFACTURING_ORGANIZATION (
+            type: plainText
+            heading {
+                heading: Manufacturing Organization
+            }
+            layout {
+                sequence: 5
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: Q
+            }
+        )
+
+        column MODEL_NAME (
+            type: plainText
+            heading {
+                heading: Model
+            }
+            layout {
+                sequence: 2
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: B
+            }
+        )
+
+        column PERIOD_NAME (
+            type: plainText
+            heading {
+                heading: Period
+            }
+            layout {
+                sequence: 11
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: J
+            }
+        )
+
+        column PROD_LINE (
+            type: plainText
+            heading {
+                heading: Product Line
+            }
+            layout {
+                sequence: 4
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: D
+            }
+        )
+
+        column RECEIVING_INVENTORY_ORG (
+            type: plainText
+            heading {
+                heading: Receiving Inventory Organization
+            }
+            layout {
+                sequence: 8
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: G
+            }
+        )
+
+        column REC_ORG_LOCATION (
+            type: plainText
+            heading {
+                heading: Receiving Organization/Location
+            }
+            layout {
+                sequence: 13
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: L
+            }
+        )
+
+        column SERIAL_NUMBER (
+            type: plainText
+            heading {
+                heading: Serial Number
+            }
+            layout {
+                sequence: 1
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: A
+            }
+        )
+
+        column SHIPPING_INVENTORY_ORG (
+            type: plainText
+            heading {
+                heading: Shipping Inventory Organization
+            }
+            layout {
+                sequence: 9
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: H
+            }
+        )
+
+        column TRADE_FLOW (
+            type: plainText
+            heading {
+                heading: Trade Flow
+            }
+            layout {
+                sequence: 12
+            }
+            source {
+                dataType: varchar2
+            }
+            advanced {
+                endUserAlias: K
+            }
+        )
+
+        column USD_AMOUNT (
+            type: plainText
+            heading {
+                heading: USD Markup Amount
+                alignment: end
+            }
+            layout {
+                sequence: 7
+                columnAlignment: end
+            }
+            appearance {
+                formatMask: FM999G999G999G990
+            }
+            source {
+                dataType: number
+            }
+            advanced {
+                endUserAlias: F
+            }
+        )
+
+        page {
+            borderWidth: 0.5
+            borderColor: #666666
+        }
+
+        savedReport pivot-manufacturing-org-detail-primary (
+            visibility: primaryDefault
+            view {
+                rowsPerPage: 50
+            }
+
+            displayColumn ACCOUNTING_DATE (
+                sequence: 10
+            )
+
+            displayColumn CONCATENATED_SEGMENTS (
+                sequence: 16
+            )
+
+            displayColumn DESTINATION_COUNTRY (
+                sequence: 15
+            )
+
+            displayColumn ICP_FROM (
+                sequence: 14
+            )
+
+            displayColumn ITEM_NUMBER (
+                sequence: 3
+            )
+
+            displayColumn LEDGER_NAME (
+                sequence: 6
+            )
+
+            displayColumn LINE_DESCRIPTION (
+                sequence: 17
+            )
+
+            displayColumn MANUFACTURING_ORGANIZATION (
+                sequence: 5
+            )
+
+            displayColumn MODEL_NAME (
+                sequence: 2
+            )
+
+            displayColumn PERIOD_NAME (
+                sequence: 11
+            )
+
+            displayColumn PROD_LINE (
+                sequence: 4
+            )
+
+            displayColumn RECEIVING_INVENTORY_ORG (
+                sequence: 8
+            )
+
+            displayColumn REC_ORG_LOCATION (
+                sequence: 13
+            )
+
+            displayColumn SERIAL_NUMBER (
+                sequence: 1
+            )
+
+            displayColumn SHIPPING_INVENTORY_ORG (
+                sequence: 9
+            )
+
+            displayColumn TRADE_FLOW (
+                sequence: 12
+            )
+
+            displayColumn USD_AMOUNT (
+                sequence: 7
+            )
+
+        )
+
+    )
+
+    region product-line-by-manufacturing-org (
+        name: Product Line by Manufacturing Organization
+        title: Product Line by Manufacturing Organization - Unsold Units
+        type: dynamicContent
+        source {
+            plsqlFunctionBody:
+                ```plsql
+                declare
+                    type t_mfg_org_tab is table of varchar2(240) index by pls_integer;
+                    l_mfg_orgs t_mfg_org_tab;
+                    l_amount number;
+                    l_grand_total number;
+                    l_url varchar2(4000);
+                    l_library_url varchar2(4000);
+                    l_html clob := '<div class="ic-pivot-wrap"><table class="ic-pivot-table"><thead><tr><th>Product Line</th>';
+                begin
+                    l_library_url := apex_page.get_url(
+                        p_page => 20, p_clear_cache => '20',
+                        p_items => 'P20_EBS_INSTANCE', p_values => :P25_EBS_INSTANCE);
+                    l_html := '<div class="ic-pivot-actions"><a class="t-Button" href="' ||
+                              apex_escape.html_attribute(l_library_url) ||
+                              '">Back to Pivot Library</a></div>' || l_html;
+                
+                    select factory_org bulk collect into l_mfg_orgs
+                      from (select distinct factory_org
+                              from xx_ic_markup_user_review_v
+                             where ebs_instance_code = :P25_EBS_INSTANCE
+                               and sold_yes_no = 'NO'
+                             order by factory_org nulls last);
+                
+                    for i in 1 .. l_mfg_orgs.count loop
+                        l_html := l_html || '<th>' || apex_escape.html(nvl(l_mfg_orgs(i), 'Unassigned')) || '</th>';
+                    end loop;
+                    l_html := l_html || '<th>Total</th></tr></thead><tbody>';
+                
+                    for p in (select prod_line, sum(usd_amount) total_amount
+                                from xx_ic_markup_user_review_v
+                               where ebs_instance_code = :P25_EBS_INSTANCE
+                                 and sold_yes_no = 'NO'
+                               group by prod_line
+                               order by prod_line) loop
+                        l_html := l_html || '<tr><td>' || apex_escape.html(nvl(p.prod_line, 'Unassigned')) || '</td>';
+                        for i in 1 .. l_mfg_orgs.count loop
+                            select sum(usd_amount) into l_amount
+                              from xx_ic_markup_user_review_v
+                             where ebs_instance_code = :P25_EBS_INSTANCE
+                               and sold_yes_no = 'NO'
+                               and ((factory_org = l_mfg_orgs(i))
+                                    or (factory_org is null and l_mfg_orgs(i) is null))
+                               and ((prod_line = p.prod_line) or (prod_line is null and p.prod_line is null));
+                            if l_amount is null then
+                                l_html := l_html || '<td>-</td>';
+                            else
+                                l_url := apex_page.get_url(
+                                    p_page => 25, p_clear_cache => '25',
+                                    p_items => 'P25_EBS_INSTANCE,P25_DETAIL_PROD_LINE,P25_DETAIL_MANUFACTURING_ORG,P25_SHOW_DETAIL',
+                                    p_values => :P25_EBS_INSTANCE || ',' || nvl(p.prod_line, '~NULL~') || ',' || nvl(l_mfg_orgs(i), '~NULL~') || ',Y');
+                                l_html := l_html || '<td><a href="' || apex_escape.html_attribute(l_url || '#pivot-detail') || '">' ||
+                                          to_char(l_amount, 'FM999G999G999G990') || '</a></td>';
+                            end if;
+                        end loop;
+                        l_url := apex_page.get_url(
+                            p_page => 25, p_clear_cache => '25',
+                            p_items => 'P25_EBS_INSTANCE,P25_DETAIL_PROD_LINE,P25_DETAIL_MANUFACTURING_ORG,P25_SHOW_DETAIL',
+                            p_values => :P25_EBS_INSTANCE || ',' || nvl(p.prod_line, '~NULL~') || ',,Y');
+                        l_html := l_html || '<td><strong><a href="' || apex_escape.html_attribute(l_url || '#pivot-detail') || '">' ||
+                                  to_char(p.total_amount, 'FM999G999G999G990') || '</a></strong></td></tr>';
+                    end loop;
+                
+                    l_html := l_html || '</tbody><tfoot><tr><th>Grand Total</th>';
+                    for i in 1 .. l_mfg_orgs.count loop
+                        select sum(usd_amount) into l_amount
+                          from xx_ic_markup_user_review_v
+                         where ebs_instance_code = :P25_EBS_INSTANCE
+                           and sold_yes_no = 'NO'
+                           and ((factory_org = l_mfg_orgs(i))
+                                or (factory_org is null and l_mfg_orgs(i) is null));
+                        l_url := apex_page.get_url(
+                            p_page => 25, p_clear_cache => '25',
+                            p_items => 'P25_EBS_INSTANCE,P25_DETAIL_PROD_LINE,P25_DETAIL_MANUFACTURING_ORG,P25_SHOW_DETAIL',
+                            p_values => :P25_EBS_INSTANCE || ',,' || nvl(l_mfg_orgs(i), '~NULL~') || ',Y');
+                        l_html := l_html || '<td><a href="' || apex_escape.html_attribute(l_url || '#pivot-detail') || '">' ||
+                                  to_char(l_amount, 'FM999G999G999G990') || '</a></td>';
+                    end loop;
+                
+                    select sum(usd_amount) into l_grand_total
+                      from xx_ic_markup_user_review_v
+                     where ebs_instance_code = :P25_EBS_INSTANCE
+                       and sold_yes_no = 'NO';
+                    l_url := apex_page.get_url(
+                        p_page => 25, p_clear_cache => '25',
+                        p_items => 'P25_EBS_INSTANCE,P25_DETAIL_PROD_LINE,P25_DETAIL_MANUFACTURING_ORG,P25_SHOW_DETAIL',
+                        p_values => :P25_EBS_INSTANCE || ',,,Y');
+                    l_html := l_html || '<td><a href="' || apex_escape.html_attribute(l_url || '#pivot-detail') || '">' ||
+                              to_char(l_grand_total, 'FM999G999G999G990') || '</a></td></tr></tfoot>';
+                
+                    return l_html || '</table></div>';
+                end;
+                ```
+            pageItemsToSubmit: P25_EBS_INSTANCE
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--scrollBody
+            ]
+        }
+    )
+
+    pageItem P25_DETAIL_MANUFACTURING_ORG (
+        type: hidden
+        layout {
+            sequence: 30
+            region: @product-line-by-manufacturing-org
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P25_DETAIL_PROD_LINE (
+        type: hidden
+        layout {
+            sequence: 20
+            region: @product-line-by-manufacturing-org
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P25_EBS_INSTANCE (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @product-line-by-manufacturing-org
+            slot: regionBody
+        }
+        default {
+            type: static
+            staticValue: PTRXI
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    pageItem P25_SHOW_DETAIL (
+        type: hidden
+        layout {
+            sequence: 40
+            region: @product-line-by-manufacturing-org
+            slot: regionBody
+        }
+        security {
+            sessionStateProtection: checksumRequiredSessionLevel
+        }
+    )
+
+    button back-to-pivot (
+        buttonName: BACK_TO_PIVOT
+        label: Back to Pivot
+        layout {
+            sequence: 10
+            region: @pivot-detail
+            slot: rightOfInteractiveReportSearchBar
+        }
+        appearance {
+            buttonTemplate: @/text
+            templateOptions: #DEFAULT#
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 25
+                clearCache: 25
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+)
+

@@ -1,0 +1,1190 @@
+page 1 (
+    name: Scope, Extract & Remap
+    alias: HOME
+    title: 1. Scope, Extract & Remap — EBS Customer OU Rollout Workbench
+    appearance {
+        pageTemplate: @/standard
+        templateOptions: #DEFAULT#
+    }
+
+    region app-hero (
+        name: EBS Customer OU Rollout Workbench
+        title: EBS Customer OU Rollout Workbench (@ADG -> Target LE / Ledger / OU)
+        type: staticContent
+        source {
+            htmlCode: Extract Customer Accounts, Addresses/Sites, Site Uses, GL Accounts, and Contacts over @ADG (using DRIVING_SITE), manipulate in APEX or Excel, deduplicate, and validate for the new Operating Unit.
+        }
+        layout {
+            sequence: 10
+            slot: breadcrumbBar
+        }
+        appearance {
+            template: @/hero
+            templateOptions: #DEFAULT#
+        }
+        image {
+            fileUrl: #APP_FILES#icons/app-icon-512.png
+        }
+    )
+
+    region bulk-manipulate (
+        name: Step 2: Bulk Data Manipulation & Target OU Remapping
+        title: Step 2: Bulk Data Manipulation Across Extracted Staging Records
+        type: staticContent
+        layout {
+            sequence: 30
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region create-project-reg (
+        name: Create Concurrent Conversion Project (Add Another Source OU)
+        title: + Add Concurrent Conversion Project (Extract Another Source Operating Unit)
+        type: staticContent
+        source {
+            htmlCode: <p style="margin:0 0 .75rem;color:var(--ut-component-text-muted-color);font-size:.9rem;">Run multiple Customer OU conversions simultaneously (e.g., keep <strong>AU_AWP_17001_ROLLOUT</strong> active while adding another Source OU). Each project maintains isolated staging tables, duplicate clusters, validation queues, Connected 8-Tab Excel workbooks, and per-project SoD access.</p>
+        }
+        layout {
+            sequence: 15
+            slot: body
+        }
+        appearance {
+            template: @/collapsible
+            templateOptions: [
+                #DEFAULT#
+                is-collapsed
+                t-Region--scrollBody
+            ]
+            icon: fa-plus-circle
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+    region extract-config (
+        name: Step 1: Extract Scope & Target OU Configuration (@ADG DRIVING_SITE)
+        title: Step 1: Configure Source/Target OU & Extract Customers from @ADG
+        type: staticContent
+        layout {
+            sequence: 20
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    region kpi-summary (
+        name: Concurrent Conversion Projects & Staging KPI Summary
+        title: All Authorized Conversion Projects & Local Staging Summary (Active Project Marked ★)
+        type: interactiveGrid
+        source {
+            location: localDatabase
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select p.project_id,
+                       case when p.project_id = :P0_PROJECT_ID then '★ ' || p.project_code || ' (ACTIVE)' else p.project_code end as project_code,
+                       p.src_ou_name || ' (' || p.src_org_id || ')' as source_operating_unit,
+                       nvl(p.tgt_legal_entity_name, 'TBD (Not Set)') as target_legal_entity,
+                       case when p.tgt_ledger_name is not null then p.tgt_ledger_name || ' (' || p.tgt_currency_code || ')' else 'TBD (Not Set)' end as target_ledger,
+                       case when p.tgt_org_id is not null then p.tgt_ou_name || ' (' || p.tgt_org_id || ')' else 'TBD (Not Yet Set Up in EBS)' end as target_operating_unit,
+                       nvl(p.tgt_bsv, 'TBD (Unmapped)') as target_bsv,
+                       (select count(*) from xxcr_stg_customers c where c.project_id = p.project_id and c.include_yn = 'Y') as included_customers,
+                       (select count(*) from xxcr_stg_sites s where s.project_id = p.project_id and s.include_yn = 'Y') as included_sites,
+                       (select count(*) from xxcr_stg_site_uses su where su.project_id = p.project_id and su.include_yn = 'Y') as included_site_uses,
+                       (select count(*) from xxcr_stg_contacts ct where ct.project_id = p.project_id and ct.include_yn = 'Y') as included_contacts,
+                       (select count(*) from xxcr_stg_sites s where s.project_id = p.project_id and s.modified_yn = 'Y') +
+                       (select count(*) from xxcr_stg_site_uses su where su.project_id = p.project_id and su.modified_yn = 'Y') as modified_records,
+                       (select count(*) from xxcr_duplicates d where d.project_id = p.project_id and d.resolution_action = 'OPEN') as open_duplicates,
+                       (select count(*) from xxcr_val_errors e where e.project_id = p.project_id and e.severity = 'ERROR') as val_errors,
+                       (select count(*) from xxcr_val_errors e where e.project_id = p.project_id and e.severity = 'WARNING' and e.ack_yn = 'N') as val_warnings
+                  from xxcr_projects p
+                 where xxcr_security_pkg.effective_role(p.project_id, :APP_USER) is not null
+                 order by case when p.project_id = :P0_PROJECT_ID then 0 else 1 end, p.project_id
+                ```
+            pageItemsToSubmit: P0_PROJECT_ID
+        }
+        layout {
+            sequence: 10
+            slot: body
+        }
+        appearance {
+            template: @/standard
+            templateOptions: [
+                #DEFAULT#
+                t-Region--noPadding
+            ]
+        }
+        pagination {
+            type: page
+        }
+        toolbar {
+            controls: [
+                searchField
+                actionsMenu
+                resetButton
+            ]
+        }
+        enableUsersTo {
+            download: false
+        }
+        advanced {
+            savedReportMappingIdentifier: 60000101
+        }
+
+        savedReport 60000102 (
+            visibility: primary
+            view {
+                default: grid
+                rowsPerPage: 10
+            }
+            singleRowView {
+                displayedColumns: true
+            }
+
+            displayColumn (
+                column: @PROJECT_CODE
+                layout {
+                    sequence: 10
+                }
+            )
+
+            displayColumn (
+                column: @SOURCE_OPERATING_UNIT
+                layout {
+                    sequence: 20
+                }
+            )
+
+            displayColumn (
+                column: @TARGET_LEGAL_ENTITY
+                layout {
+                    sequence: 30
+                }
+            )
+
+            displayColumn (
+                column: @TARGET_LEDGER
+                layout {
+                    sequence: 40
+                }
+            )
+
+            displayColumn (
+                column: @TARGET_OPERATING_UNIT
+                layout {
+                    sequence: 50
+                }
+            )
+
+            displayColumn (
+                column: @TARGET_BSV
+                layout {
+                    sequence: 60
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDED_CUSTOMERS
+                layout {
+                    sequence: 70
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDED_SITES
+                layout {
+                    sequence: 80
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDED_SITE_USES
+                layout {
+                    sequence: 90
+                }
+            )
+
+            displayColumn (
+                column: @INCLUDED_CONTACTS
+                layout {
+                    sequence: 100
+                }
+            )
+
+            displayColumn (
+                column: @MODIFIED_RECORDS
+                layout {
+                    sequence: 110
+                }
+            )
+
+            displayColumn (
+                column: @OPEN_DUPLICATES
+                layout {
+                    sequence: 120
+                }
+            )
+
+            displayColumn (
+                column: @VAL_ERRORS
+                layout {
+                    sequence: 130
+                }
+            )
+
+            displayColumn (
+                column: @VAL_WARNINGS
+                layout {
+                    sequence: 140
+                }
+            )
+
+        )
+
+        column INCLUDED_CONTACTS (
+            type: numberField
+            heading {
+                heading: Contacts
+                alignment: end
+            }
+            layout {
+                sequence: 110
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: INCLUDED_CONTACTS
+                dataType: number
+            }
+        )
+
+        column INCLUDED_CUSTOMERS (
+            type: numberField
+            heading {
+                heading: Customers
+                alignment: end
+            }
+            layout {
+                sequence: 80
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: INCLUDED_CUSTOMERS
+                dataType: number
+            }
+        )
+
+        column INCLUDED_SITES (
+            type: numberField
+            heading {
+                heading: Sites / Addresses
+                alignment: end
+            }
+            layout {
+                sequence: 90
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: INCLUDED_SITES
+                dataType: number
+            }
+        )
+
+        column INCLUDED_SITE_USES (
+            type: numberField
+            heading {
+                heading: Site Uses
+                alignment: end
+            }
+            layout {
+                sequence: 100
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: INCLUDED_SITE_USES
+                dataType: number
+            }
+        )
+
+        column MODIFIED_RECORDS (
+            type: numberField
+            heading {
+                heading: Manipulated Rows
+                alignment: end
+            }
+            layout {
+                sequence: 120
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: MODIFIED_RECORDS
+                dataType: number
+            }
+        )
+
+        column OPEN_DUPLICATES (
+            type: numberField
+            heading {
+                heading: Open Duplicates
+                alignment: end
+            }
+            layout {
+                sequence: 130
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: OPEN_DUPLICATES
+                dataType: number
+            }
+        )
+
+        column PROJECT_CODE (
+            type: textField
+            heading {
+                heading: Project Code
+            }
+            layout {
+                sequence: 20
+            }
+            source {
+                databaseColumn: PROJECT_CODE
+                dataType: varchar2
+            }
+        )
+
+        column PROJECT_ID (
+            type: hidden
+            layout {
+                sequence: 10
+            }
+            source {
+                databaseColumn: PROJECT_ID
+                dataType: number
+                primaryKey: true
+            }
+        )
+
+        column SOURCE_OPERATING_UNIT (
+            type: textField
+            heading {
+                heading: Source OU (@ADG)
+            }
+            layout {
+                sequence: 30
+            }
+            source {
+                databaseColumn: SOURCE_OPERATING_UNIT
+                dataType: varchar2
+            }
+        )
+
+        column TARGET_BSV (
+            type: textField
+            heading {
+                heading: Target BSV
+            }
+            layout {
+                sequence: 70
+            }
+            source {
+                databaseColumn: TARGET_BSV
+                dataType: varchar2
+            }
+        )
+
+        column TARGET_LEDGER (
+            type: textField
+            heading {
+                heading: Target Ledger
+            }
+            layout {
+                sequence: 50
+            }
+            source {
+                databaseColumn: TARGET_LEDGER
+                dataType: varchar2
+            }
+        )
+
+        column TARGET_LEGAL_ENTITY (
+            type: textField
+            heading {
+                heading: Target Legal Entity
+            }
+            layout {
+                sequence: 40
+            }
+            source {
+                databaseColumn: TARGET_LEGAL_ENTITY
+                dataType: varchar2
+            }
+        )
+
+        column TARGET_OPERATING_UNIT (
+            type: textField
+            heading {
+                heading: Target OU
+            }
+            layout {
+                sequence: 60
+            }
+            source {
+                databaseColumn: TARGET_OPERATING_UNIT
+                dataType: varchar2
+            }
+        )
+
+        column VAL_ERRORS (
+            type: numberField
+            heading {
+                heading: Red Errors
+                alignment: end
+            }
+            layout {
+                sequence: 140
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: VAL_ERRORS
+                dataType: number
+            }
+        )
+
+        column VAL_WARNINGS (
+            type: numberField
+            heading {
+                heading: Amber Warnings
+                alignment: end
+            }
+            layout {
+                sequence: 150
+                columnAlignment: end
+            }
+            source {
+                databaseColumn: VAL_WARNINGS
+                dataType: number
+            }
+        )
+
+    )
+
+    pageItem P1_ACTIVE_MONTHS (
+        type: numberField
+        label {
+            label: AR Activity Window (Months)
+        }
+        layout {
+            sequence: 50
+            region: @extract-config
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_AWP_SEG7_RE (
+        type: textField
+        label {
+            label: AWP Segment 7 Regex (Product Line)
+        }
+        layout {
+            sequence: 45
+            region: @extract-config
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_BULK_BSV (
+        type: textField
+        label {
+            label: Remap GL Accounts to Target BSV
+        }
+        layout {
+            sequence: 10
+            region: @bulk-manipulate
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_BULK_ORDER_TYPE (
+        type: popupLov
+        label {
+            label: Set Target Order Type (EBS Lookup)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-order-types
+            nullDisplayValue: — Unchanged —
+        }
+        layout {
+            sequence: 40
+            region: @bulk-manipulate
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_BULK_PAYMENT_TERM (
+        type: popupLov
+        label {
+            label: Set Target Payment Term (EBS Lookup)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-payment-terms
+            nullDisplayValue: — Unchanged —
+        }
+        layout {
+            sequence: 20
+            region: @bulk-manipulate
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_BULK_WAREHOUSE (
+        type: popupLov
+        label {
+            label: Set Target Warehouse Code (EBS Lookup)
+        }
+        lov {
+            type: sharedComponent
+            lov: @lov-ebs-warehouses
+            nullDisplayValue: — Unchanged —
+        }
+        layout {
+            sequence: 30
+            region: @bulk-manipulate
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_MAX_CUSTOMERS (
+        type: numberField
+        label {
+            label: Max Customers (Blank = ALL AWP)
+        }
+        layout {
+            sequence: 70
+            region: @extract-config
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_NAME_FILTER (
+        type: textField
+        label {
+            label: Customer Name / Account Filter (Optional)
+        }
+        layout {
+            sequence: 60
+            region: @extract-config
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_NEW_PROJ_CODE (
+        type: textField
+        label {
+            label: New Project Code (Unique Short Code)
+        }
+        layout {
+            sequence: 10
+            region: @create-project-reg
+            slot: regionBody
+            columnSpan: 3
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: e.g. US_AWP_OU82_ROLLOUT
+        }
+    )
+
+    pageItem P1_NEW_PROJ_NAME (
+        type: textField
+        label {
+            label: New Project Name / Business Description
+        }
+        layout {
+            sequence: 20
+            region: @create-project-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 5
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: e.g. North America AWP Customer Rollout to New OU
+        }
+    )
+
+    pageItem P1_NEW_SEG7_RE (
+        type: textField
+        label {
+            label: "Product Segment 7 Regex (^1[0-9]{3}$ = AWP, .* = ALL)"
+        }
+        layout {
+            sequence: 30
+            region: @create-project-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 4
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: "^1[0-9]{3}$"
+        }
+        default {
+            type: static
+            staticValue: "^1[0-9]{3}$"
+        }
+    )
+
+    pageItem P1_NEW_SRC_ORG_ID (
+        type: selectList
+        label {
+            label: Source Operating Unit (@ADG)
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select operating_unit_name || ' (OU ' || org_id || ' | Ledger: ' || ledger_name || ' | ' || currency_code || ')' as d,
+                       org_id as r
+                  from xxcr_ebs_ou_cache
+                 order by operating_unit_name
+                ```
+            nullDisplayValue: — Select Source Operating Unit —
+        }
+        layout {
+            sequence: 40
+            region: @create-project-reg
+            slot: regionBody
+            columnSpan: 5
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_NEW_TGT_BSV (
+        type: textField
+        label {
+            label: Target BSV (Optional)
+        }
+        layout {
+            sequence: 60
+            region: @create-project-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: TBD
+        }
+    )
+
+    pageItem P1_NEW_TGT_ORG_ID (
+        type: selectList
+        label {
+            label: Target Operating Unit (Optional — TBD Allowed)
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select operating_unit_name || ' (OU ' || org_id || ' | LE: ' || legal_entity_name || ' | Ledger: ' || ledger_name || ')' as d,
+                       org_id as r
+                  from xxcr_ebs_ou_cache
+                 order by operating_unit_name
+                ```
+            nullDisplayValue: — TBD (Target OU Not Yet Set Up in EBS) —
+        }
+        layout {
+            sequence: 50
+            region: @create-project-reg
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 5
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_PROJECT_ID (
+        type: hidden
+        layout {
+            sequence: 10
+            region: @extract-config
+            slot: regionBody
+        }
+    )
+
+    pageItem P1_SRC_ORG_ID (
+        type: selectList
+        label {
+            label: Source Operating Unit (@ADG)
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select operating_unit_name || ' (OU ' || org_id || ' | Ledger: ' || ledger_name || ' | ' || currency_code || ')' as d,
+                       org_id as r
+                  from xxcr_ebs_ou_cache
+                 order by operating_unit_name
+                ```
+            displayNullValue: false
+        }
+        layout {
+            sequence: 20
+            region: @extract-config
+            slot: regionBody
+            columnSpan: 6
+        }
+        appearance {
+            template: @/required-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    pageItem P1_TGT_BSV (
+        type: textField
+        label {
+            label: Target Legal Entity BSV (Optional — Leave Blank or Set Independently)
+        }
+        layout {
+            sequence: 40
+            region: @extract-config
+            slot: regionBody
+            columnSpan: 2
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+            valuePlaceholder: TBD (Blank)
+        }
+    )
+
+    pageItem P1_TGT_ORG_ID (
+        type: selectList
+        label {
+            label: Target Operating Unit / Ledger / LE (Optional — TBD Allowed)
+        }
+        lov {
+            type: sqlQuery
+            sqlQuery:
+                ```sql
+                select operating_unit_name || ' (OU ' || org_id || ' | LE: ' || legal_entity_name || ' | Ledger: ' || ledger_name || ')' as d,
+                       org_id as r
+                  from xxcr_ebs_ou_cache
+                 order by operating_unit_name
+                ```
+            nullDisplayValue: — TBD (Target OU Not Yet Set Up in EBS) —
+        }
+        layout {
+            sequence: 30
+            region: @extract-config
+            slot: regionBody
+            startNewRow: false
+            columnSpan: 6
+        }
+        appearance {
+            template: @/optional-floating
+            templateOptions: #DEFAULT#
+        }
+    )
+
+    button btn-apply-bulk (
+        buttonName: APPLY_BULK
+        label: Apply Bulk Manipulation & Re-Validate
+        layout {
+            sequence: 10
+            region: @bulk-manipulate
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-magic
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-approve-finance
+        }
+    )
+
+    button btn-create-project (
+        buttonName: CREATE_PROJECT
+        label: Create Conversion Project & Switch Active Scope
+        layout {
+            sequence: 10
+            region: @create-project-reg
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-plus
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+    button btn-download-xlsx-home (
+        buttonName: DOWNLOAD_CONNECTED_HOME
+        label: Download Connected 8-Tab Workbook (.xlsx)
+        layout {
+            sequence: 5
+            region: @extract-config
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-file-excel-o
+        }
+        behavior {
+            action: redirectThisApp
+            target: {
+                page: 10
+                request: DOWNLOAD_CONNECTED_XLSX
+            }
+            warnOnUnsavedChanges: doNotCheck
+        }
+    )
+
+    button btn-extract-adg (
+        buttonName: EXTRACT_ADG
+        label: Extract Customers from @ADG (DRIVING_SITE)
+        layout {
+            sequence: 10
+            region: @extract-config
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            hot: true
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-cloud-download
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-admin-project
+        }
+    )
+
+    button btn-save-target-scope (
+        buttonName: SAVE_TARGET_SCOPE
+        label: Save Target OU / BSV Scope (Keep Staged Data)
+        layout {
+            sequence: 8
+            region: @extract-config
+            slot: edit
+        }
+        appearance {
+            buttonTemplate: @/text-with-icon
+            templateOptions: [
+                #DEFAULT#
+                t-Button--iconLeft
+            ]
+            icon: fa-check
+        }
+        behavior {
+            warnOnUnsavedChanges: doNotCheck
+        }
+        security {
+            authorizationScheme: @can-approve-finance
+        }
+    )
+
+    process create-new-project-proc (
+        name: Create Concurrent Conversion Project & Switch Context
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_new_id number;
+                begin
+                  xxcr_rollout_pkg.create_project(
+                    p_project_code   => :P1_NEW_PROJ_CODE,
+                    p_project_name   => :P1_NEW_PROJ_NAME,
+                    p_src_org_id     => :P1_NEW_SRC_ORG_ID,
+                    p_tgt_org_id     => :P1_NEW_TGT_ORG_ID,
+                    p_tgt_bsv        => :P1_NEW_TGT_BSV,
+                    p_awp_seg7_re    => nvl(trim(:P1_NEW_SEG7_RE), '^1[0-9]{3}$'),
+                    p_active_months  => 24,
+                    p_new_project_id => l_new_id
+                  );
+                  :P0_PROJECT_ID   := l_new_id;
+                  :P1_PROJECT_ID   := l_new_id;
+                  :P1_NEW_PROJ_CODE := null;
+                  :P1_NEW_PROJ_NAME := null;
+                  :P1_NEW_TGT_BSV   := null;
+                end;
+                ```
+        }
+        execution {
+            sequence: 3
+        }
+        successMessage {
+            successMessage: New concurrent Conversion Project created and selected as your Active Project! Click "Extract Customers from @ADG" whenever you are ready to stage its Source OU data.
+        }
+        advanced {
+            executionMappingIdentifier: 60000115
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-create-project
+        }
+        security {
+            authorizationScheme: @rollout-admin
+        }
+    )
+
+    process init-project-defaults (
+        name: Initialize Active Project Context & Form Values
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_seed_id   number;
+                  l_active_id number;
+                begin
+                  xxcr_rollout_pkg.seed_default_project(l_seed_id);
+                  l_active_id := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                  :P0_PROJECT_ID := l_active_id;
+                  :P1_PROJECT_ID := l_active_id;
+                
+                  for r in (
+                    select src_org_id, tgt_org_id, tgt_bsv, filter_awp_seg7_re,
+                           filter_active_months, filter_cust_name_like, max_customers
+                      from xxcr_projects
+                     where project_id = l_active_id
+                  ) loop
+                    :P1_SRC_ORG_ID    := r.src_org_id;
+                    :P1_TGT_ORG_ID    := r.tgt_org_id;
+                    :P1_TGT_BSV       := r.tgt_bsv;
+                    :P1_AWP_SEG7_RE   := nvl(r.filter_awp_seg7_re, '^1[0-9]{3}$');
+                    :P1_ACTIVE_MONTHS := r.filter_active_months;
+                    :P1_NAME_FILTER   := r.filter_cust_name_like;
+                    :P1_MAX_CUSTOMERS := r.max_customers;
+                  end loop;
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+            point: beforeHeader
+        }
+        advanced {
+            executionMappingIdentifier: 60000111
+        }
+    )
+
+    process run-adg-extract (
+        name: Save Scope & Extract Customers from @ADG
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  update xxcr_projects
+                     set src_org_id            = :P1_SRC_ORG_ID,
+                         tgt_org_id            = :P1_TGT_ORG_ID,
+                         tgt_bsv               = trim(:P1_TGT_BSV),
+                         filter_awp_seg7_re    = nvl(trim(:P1_AWP_SEG7_RE), '^1[0-9]{3}$'),
+                         filter_active_months  = nvl(:P1_ACTIVE_MONTHS, 24),
+                         filter_cust_name_like = trim(:P1_NAME_FILTER),
+                         max_customers         = :P1_MAX_CUSTOMERS
+                   where project_id = l_proj_id;
+                
+                  xxcr_rollout_pkg.refresh_ebs_ref_lovs;
+                  xxcr_rollout_pkg.extract_project_data(l_proj_id);
+                end;
+                ```
+        }
+        execution {
+            sequence: 10
+        }
+        successMessage {
+            successMessage: Customers, Addresses, Site Uses, GL Accounts, and Contacts extracted from @ADG (using DRIVING_SITE) for active project, deduplicated, and validated!
+        }
+        advanced {
+            executionMappingIdentifier: 60000112
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-extract-adg
+        }
+        security {
+            authorizationScheme: @can-admin-project
+        }
+    )
+
+    process run-bulk-manipulation (
+        name: Apply Bulk Manipulation to Staging Rows
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  xxcr_rollout_pkg.bulk_manipulate_data(
+                    p_project_id     => l_proj_id,
+                    p_new_bsv        => :P1_BULK_BSV,
+                    p_payment_term   => :P1_BULK_PAYMENT_TERM,
+                    p_warehouse_code => :P1_BULK_WAREHOUSE,
+                    p_order_type     => :P1_BULK_ORDER_TYPE,
+                    p_only_included  => 'Y'
+                  );
+                  if trim(:P1_BULK_BSV) is not null then
+                    :P1_TGT_BSV := trim(:P1_BULK_BSV);
+                  end if;
+                end;
+                ```
+        }
+        execution {
+            sequence: 20
+        }
+        successMessage {
+            successMessage: Bulk data manipulation applied to active project staging tables, deltas recorded, and validation refreshed!
+        }
+        advanced {
+            executionMappingIdentifier: 60000113
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-apply-bulk
+        }
+        security {
+            authorizationScheme: @can-approve-finance
+        }
+    )
+
+    process save-target-scope-only (
+        name: Update Target OU & Target BSV Without Re-Extracting
+        type: executeCode
+        source {
+            plsqlCode:
+                ```plsql
+                declare
+                  l_proj_id number := xxcr_security_pkg.resolve_active_project(
+                    to_number(:P0_PROJECT_ID default null on conversion error)
+                  );
+                begin
+                  xxcr_rollout_pkg.update_target_scope(
+                    p_project_id => l_proj_id,
+                    p_tgt_org_id => :P1_TGT_ORG_ID,
+                    p_tgt_bsv    => :P1_TGT_BSV
+                  );
+                end;
+                ```
+        }
+        execution {
+            sequence: 5
+        }
+        successMessage {
+            successMessage: Target OU and Target BSV scope updated (empty/TBD values allowed) and staged GL accounts & validation refreshed without re-extracting!
+        }
+        advanced {
+            executionMappingIdentifier: 60000114
+        }
+        serverSideCondition {
+            whenButtonPressed: @btn-save-target-scope
+        }
+        security {
+            authorizationScheme: @can-approve-finance
+        }
+    )
+
+)
+
